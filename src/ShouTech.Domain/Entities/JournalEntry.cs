@@ -1,0 +1,91 @@
+namespace ShouTech.Domain.Entities;
+
+public sealed class JournalEntry
+{
+    private readonly List<JournalLine> _lines = new();
+
+    public Guid Id { get; } = Guid.NewGuid();
+    public DateOnly EntryDate { get; }
+    public string Description { get; }
+    public JournalEntryStatus Status { get; private set; } = JournalEntryStatus.Draft;
+    public IReadOnlyCollection<JournalLine> Lines => _lines.AsReadOnly();
+
+    public JournalEntry(DateOnly entryDate, string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Description is required.", nameof(description));
+
+        EntryDate = entryDate;
+        Description = description.Trim();
+    }
+
+    public void AddLine(Guid accountId, decimal debit, decimal credit, string? note = null)
+    {
+        var line = new JournalLine(accountId, debit, credit, note);
+        _lines.Add(line);
+    }
+
+    public void EnsureBalanced()
+    {
+        if (_lines.Count < 2)
+            throw new InvalidOperationException("A journal entry requires at least two lines.");
+
+        var totalDebit = _lines.Sum(line => line.Debit);
+        var totalCredit = _lines.Sum(line => line.Credit);
+
+        if (totalDebit != totalCredit)
+            throw new InvalidOperationException("Journal entry debit and credit totals must balance.");
+
+        if (totalDebit == 0)
+            throw new InvalidOperationException("A journal entry must have a non-zero amount.");
+    }
+
+    public void Post()
+    {
+        if (Status != JournalEntryStatus.Draft)
+            throw new InvalidOperationException("Only draft journal entries can be posted.");
+
+        EnsureBalanced();
+        Status = JournalEntryStatus.Posted;
+    }
+
+    public void Reverse()
+    {
+        if (Status != JournalEntryStatus.Posted)
+            throw new InvalidOperationException("Only posted journal entries can be reversed.");
+
+        Status = JournalEntryStatus.Reversed;
+    }
+}
+
+public enum JournalEntryStatus
+{
+    Draft,
+    Posted,
+    Reversed
+}
+
+public sealed class JournalLine
+{
+    public Guid AccountId { get; }
+    public decimal Debit { get; }
+    public decimal Credit { get; }
+    public string? Note { get; }
+
+    public JournalLine(Guid accountId, decimal debit, decimal credit, string? note = null)
+    {
+        if (accountId == Guid.Empty)
+            throw new ArgumentException("Account is required.", nameof(accountId));
+        if (debit < 0 || credit < 0)
+            throw new ArgumentOutOfRangeException(nameof(debit), "Amounts cannot be negative.");
+        if (debit > 0 && credit > 0)
+            throw new ArgumentException("A line cannot contain both debit and credit.");
+        if (debit == 0 && credit == 0)
+            throw new ArgumentException("A line must contain a debit or credit amount.");
+
+        AccountId = accountId;
+        Debit = debit;
+        Credit = credit;
+        Note = note?.Trim();
+    }
+}

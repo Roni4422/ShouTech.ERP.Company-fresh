@@ -1,0 +1,378 @@
+<Window x:Class="ShouTech.App.Views.StpWiz"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Company setup wizard"
+        Width="650"
+        Height="600"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResizeWithGrip"
+        ShowInTaskbar="True"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource TextBrush}">
+
+    <Window.Resources>
+
+		<Style x:Key="WizardTextBoxStyle"
+			   TargetType="TextBox"
+			   BasedOn="{StaticResource AppTextBoxStyle}">
+			<Setter Property="Height" Value="26"/>
+			<Setter Property="MinHeight" Value="26"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Padding" Value="4,0"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+		</Style>
+
+		<Style x:Key="WizardPasswordStyle"
+			   TargetType="PasswordBox"
+			   BasedOn="{StaticResource AppPasswordBoxStyle}">
+			<Setter Property="Height" Value="26"/>
+			<Setter Property="MinHeight" Value="26"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Padding" Value="4,0"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+		</Style>
+
+		<Style x:Key="WizardComboStyle"
+			   TargetType="ComboBox">
+			<Setter Property="Height" Value="26"/>
+			<Setter Property="MinHeight" Value="26"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Padding" Value="4,0"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+		</Style>
+
+		<Style x:Key="WizardDateStyle"
+			   TargetType="DatePicker">
+			<Setter Property="Height" Value="28"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+
+		<Style x:Key="WizardLabelStyle"
+			   TargetType="TextBlock">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Margin" Value="0,0,0,2"/>
+		</Style>
+
+	</Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!--Head				 -->
+        <Border Grid.Row="0"
+                CornerRadius="8"
+                Background="{DynamicResource SurfaceLightBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Padding="12,8"
+                Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock x:Name="txtHeaderTitle"
+                           Text="معالج تهيئة المؤسسة"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryBrush}"/>
+                <TextBlock x:Name="txtStepTitle"
+                           Text="الخطوة 1 من 6"
+                           Margin="0,2,0,0"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </StackPanel>
+        </Border>
+
+        
+        <Border Grid.Row="1"
+                CornerRadius="8"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Padding="12">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid x:Name="pageContainer">
+                    
+                    
+                    <StackPanel x:Name="Page1">
+                        <TextBlock x:Name="txtPage1Title"
+                                   Text="معلومات عن البرنامج"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock x:Name="txtPage1Body"
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock x:Name="txtPage1Hint"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource PrimaryBrush}"/>
+                    </StackPanel>
+
+                    
+                    <Grid x:Name="Page2" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/> 
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" x:Name="lblPage2Section" Text="بيانات الشركة الأساسية" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" x:Name="lblCompanyNameAr" Text="اسم الشركة (محلي) *" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtCompanyName" Grid.Row="2" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="lblCompanyNameEn" Text="اسم الشركة (إنجليزي) — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtCompanyNameEn" Grid.Row="2" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" x:Name="lblTaxNumber" Text="الرقم الضريبي (Tax Number) — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtTaxNumber" Grid.Row="4" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="lblLicense" Text="رقم الترخيص التجاري/الصناعي — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtLicense" Grid.Row="4" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        
+                        <TextBlock Grid.Row="5" Grid.Column="0" x:Name="lblEmail" Text="البريد الإلكتروني — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtEmail" Grid.Row="6" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="1" x:Name="lblWebsite" Text="الموقع الإلكتروني (Website) — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtWebsite" Grid.Row="6" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        
+                        <TextBlock Grid.Row="7" Grid.Column="0" x:Name="lblAuto8" Text="الهاتف — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtPhone" Grid.Row="8" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        <TextBlock Grid.Row="7" Grid.Column="1" x:Name="lblAuto9" Text="الموبايل — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtMobile" Grid.Row="8" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        
+                        <TextBlock Grid.Row="9" Grid.Column="0" x:Name="lblAuto10" Text="العنوان السطر الأول — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtAddressLine1" Grid.Row="10" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        <TextBlock Grid.Row="9" Grid.Column="1" x:Name="lblAuto11" Text="العنوان السطر الثاني — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtAddressLine2" Grid.Row="10" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        <TextBlock Grid.Row="11" Grid.Column="0" x:Name="lblCity" Text="المدينة — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtCity" Grid.Row="12" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        <TextBlock Grid.Row="11" Grid.Column="1" x:Name="lblCountry" Text="الدولة — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtCountry" Grid.Row="12" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+
+                        
+                        <TextBlock Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2" x:Name="lblAuto14" Text="ملاحظات (اختياري)" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtNotes" Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+                    </Grid>
+
+                    
+                    <Grid x:Name="PageFiscal" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" x:Name="lblAuto15" Text="السنة المالية" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8"
+                                   x:Name="lblAuto16" Text="بداية ونهاية السنة المالية. يُفضّل عدم تغييرها بعد بدء الترحيل."/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" x:Name="lblAuto17" Text="من تاريخ *" Style="{StaticResource WizardLabelStyle}"/>
+                        <DatePicker x:Name="dpFiscalStart" Grid.Row="3" Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource WizardDateStyle}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="lblAuto18" Text="إلى تاريخ *" Style="{StaticResource WizardLabelStyle}"/>
+                        <DatePicker x:Name="dpFiscalEnd" Grid.Row="3" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource WizardDateStyle}"/>
+                        <TextBlock x:Name="txtFiscalHint" Grid.Row="4" Grid.ColumnSpan="2" Margin="0,8,0,0" FontSize="11" Foreground="{DynamicResource PrimaryBrush}"/>
+                    </Grid>
+
+                    
+                    <Grid x:Name="PageCurrency" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" x:Name="lblAuto19" Text="العملة · التقويم · اللغة · المستودع" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" x:Name="lblAuto20" Text="العملة الافتراضية *" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbCurrency" Grid.Row="2" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardComboStyle}" DisplayMemberPath="Display"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="lblAuto21" Text="عدد المنازل بعد الفاصلة" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbDecimalPlaces" Grid.Row="2" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardComboStyle}">
+                            <ComboBoxItem Content="0"/>
+                            <ComboBoxItem Content="1"/>
+                            <ComboBoxItem Content="2" IsSelected="True"/>
+                            <ComboBoxItem Content="3"/>
+                            <ComboBoxItem Content="4"/>
+                        </ComboBox>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" x:Name="lblAuto22" Text="نوع التاريخ" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbCalendarType" Grid.Row="4" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardComboStyle}">
+                            <ComboBoxItem Content="ميلادي" IsSelected="True"/>
+                            <ComboBoxItem Content="هجري"/>
+                        </ComboBox>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="lblAuto23" Text="تقسيم الأرقام" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbNumberGrouping" Grid.Row="4" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardComboStyle}">
+                            <ComboBoxItem Content="3-3-3" IsSelected="True"/>
+                            <ComboBoxItem Content="2-3-3"/>
+                        </ComboBox>
+
+                        
+                        <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="lblAuto24" Text="لغة الواجهة الأساسية" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbLanguageCode" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,6" Style="{StaticResource WizardComboStyle}">
+                            <ComboBoxItem Content="العربية - عام (ar)" Tag="ar"/>
+                            <ComboBoxItem Content="English (en-US)" Tag="en-US"/>
+                            <ComboBoxItem Content="English (en)" Tag="en"/>
+                            <ComboBoxItem Content="Français (fr-FR)" Tag="fr-FR"/>
+                            <ComboBoxItem Content="Français (fr)" Tag="fr"/>
+                            <ComboBoxItem Content="Türkçe (tr-TR)" Tag="tr-TR"/>
+                            <ComboBoxItem Content="Türkçe (tr)" Tag="tr"/>
+                        </ComboBox>
+
+                        
+                        <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" x:Name="lblCoaTemplate"
+                                   Text="دليل الحسابات (قالب)" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbCoaTemplate" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                                  Margin="0,0,0,6" Style="{StaticResource WizardComboStyle}"
+                                  DisplayMemberPath="Display"
+                                  SelectedValuePath="Code"
+                                  IsEditable="False"/>
+
+                        
+                        <TextBlock Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" x:Name="lblDefaultWarehouse"
+                                   Text="اسم المستودع الافتراضي" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtDefaultWarehouse" Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2"
+                                 Margin="0,0,0,0" Style="{StaticResource WizardTextBoxStyle}"
+                                 Text="Main Warehouse"
+                                 ToolTip="Created automatically with the company"/>
+                    </Grid>
+
+                    
+                    <Grid x:Name="PageAdmin" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" x:Name="lblAuto25" Text="مدير النظام الأول" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8"
+                                   x:Name="lblAuto26" Text="أنشئ حساب المدير الأول للشركة (كما في Sage 100 وSAP B1)."/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" x:Name="lblAuto27" Text="اسم المستخدم *" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtAdminUser" Grid.Row="3" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="lblAuto28" Text="الاسم الكامل — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtAdminFullName" Grid.Row="3" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Row="4" Grid.Column="0" x:Name="lblAuto29" Text="كلمة المرور *" Style="{StaticResource WizardLabelStyle}"/>
+                        <PasswordBox x:Name="txtAdminPassword" Grid.Row="5" Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource WizardPasswordStyle}"/>
+                        
+                        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="lblAuto30" Text="تأكيد كلمة المرور *" Style="{StaticResource WizardLabelStyle}"/>
+                        <PasswordBox x:Name="txtAdminPasswordConfirm" Grid.Row="5" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource WizardPasswordStyle}"/>
+
+                        <TextBlock x:Name="txtAdminPasswordAvailabilityError"
+                                   Grid.Row="6"
+                                   Grid.Column="0"
+                                   Grid.ColumnSpan="2"
+                                   Margin="0,6,0,0"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ErrorBrush}"
+                                   Visibility="Collapsed"
+                                   Text="كلمة المرور غير متاحة."/>
+                    </Grid>
+
+                    
+                    <Grid x:Name="PageStorage" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" x:Name="lblAuto31" Text="التخزين والنسخ الاحتياطي" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" x:Name="lblAuto32" Text="مسار قاعدة البيانات" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtDbPath" Grid.Row="2" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}" IsReadOnly="True"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="lblAuto33" Text="مسار بديل — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtAltDbPath" Grid.Row="2" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" x:Name="lblAuto34" Text="مسار النسخ الاحتياطي" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtBkpPath" Grid.Row="4" Grid.Column="0" Margin="0,0,6,6" Style="{StaticResource WizardTextBoxStyle}" IsReadOnly="True"/>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="lblAuto35" Text="نسخ احتياطي إضافي — اختياري" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtAltBkpPath" Grid.Row="4" Grid.Column="1" Margin="6,0,0,6" Style="{StaticResource WizardTextBoxStyle}"/>
+                        
+                        <CheckBox x:Name="chkAutoBackup" Grid.Row="5" Grid.Column="0" Content="تفعيل النسخ الاحتياطي الآلي" Margin="0,2,0,4" FontSize="12" IsChecked="True"/>
+                        
+                        <TextBlock Grid.Row="6" Grid.Column="0" x:Name="lblAuto36" Text="التكرار" Style="{StaticResource WizardLabelStyle}"/>
+                        <ComboBox x:Name="cmbBackupSchedule" Grid.Row="7" Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource WizardComboStyle}">
+                            <ComboBoxItem Content="كل ساعة"/>
+                            <ComboBoxItem Content="يومي" IsSelected="True"/>
+                            <ComboBoxItem Content="أسبوعي"/>
+                            <ComboBoxItem Content="شهري"/>
+                        </ComboBox>
+                        
+                        <TextBlock Grid.Row="6" Grid.Column="1" x:Name="lblAuto37" Text="توقيت النسخ" Style="{StaticResource WizardLabelStyle}"/>
+                        <TextBox x:Name="txtBackupTime" Grid.Row="7" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource WizardTextBoxStyle}" Text="02:00"/>
+                    </Grid>
+                    
+                </Grid>
+            </ScrollViewer>
+        </Border>
+
+        
+        <StackPanel x:Name="navigationButtons"
+                    Grid.Row="2"
+                    Orientation="Horizontal"
+                    FlowDirection="LeftToRight"
+                    HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+            <Button x:Name="btnCancel" Content="Cancel" Width="110" Height="38" Margin="4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Style="{DynamicResource SecondaryButtonStyle}"/>
+            <Button x:Name="btnBack" Content="Back" Width="110" Height="38" Margin="4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Style="{DynamicResource SecondaryButtonStyle}"/>
+            <Button x:Name="btnNext" Content="Next" Width="120" Height="38" Margin="4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Style="{DynamicResource PrimaryButtonStyle}"/>
+            <Button x:Name="btnFinish" Content="Finish" Width="120" Height="38" Margin="4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Style="{DynamicResource PrimaryButtonStyle}" Visibility="Collapsed"/>
+        </StackPanel>
+    </Grid>
+</Window>

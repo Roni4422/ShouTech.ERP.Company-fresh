@@ -1,0 +1,135 @@
+<UserControl x:Class="ShouTech.App.Views.Modules.ModuleWorkspaceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="900">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Module header -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource ModuleHeaderBackgroundBrush}"
+                CornerRadius="8"
+                Padding="20,16"
+                Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding ModuleDisplayName}"
+                               FontSize="13"
+                               Foreground="#CCFFFFFF"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Title}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Description}"
+                               FontSize="14"
+                               Foreground="#E6FFFFFF"
+                               Margin="0,6,0,0"/>
+                </StackPanel>
+                <Border Grid.Column="1"
+                        Background="#33FFFFFF"
+                        CornerRadius="6"
+                        Padding="12,8"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="Enterprise Module"
+                               Foreground="White"
+                               FontSize="12"
+                               FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Status card -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource ModuleCardBackgroundBrush}"
+                BorderBrush="{DynamicResource ModuleCardBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="ℹ️" FontSize="18" Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding StatusHint}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="14"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Workspace placeholder -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource ModuleCardBackgroundBrush}"
+                BorderBrush="{DynamicResource ModuleCardBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Background="{DynamicResource SurfaceDarkBrush}"
+                        Padding="12,8"
+                        CornerRadius="8,8,0,0">
+                    <TextBlock Text="Workspace"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
+
+                <StackPanel Grid.Row="1"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    <TextBlock Text="📋"
+                               FontSize="48"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextTertiaryBrush}"/>
+                    <TextBlock Text="Click an item or account to show related actions and reports"
+                               FontSize="13"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0"/>
+                    <ItemsControl ItemsSource="{Binding ItemActions}"
+                                  Margin="0,16,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel HorizontalAlignment="Center"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Label}"
+                                        Margin="4"
+                                        Padding="10,6"
+                                        Command="{Binding DataContext.OpenContextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding ActionTitle}"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,12,0,4"/>
+                    <TextBlock Text="Data and forms will appear here"
+                               FontSize="14"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
