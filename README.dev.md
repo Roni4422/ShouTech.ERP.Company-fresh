@@ -19,3 +19,11 @@ The Windows background service currently runs the provider-neutral outbound webh
 ## Accounting chart and fiscal close controls
 
 The provider-neutral `AccountingStructureRepository` is exposed through `AppHost.AccountingStructure`. It creates company-specific chart accounts and calendar fiscal years with monthly periods, closes periods in chronological order, and closes years only after all periods are closed and revenue/expense balances have been cleared by a posted closing entry. See `docs/ACCOUNTING_CHART_PERIODS_YEAR_CLOSE.md` before using these controls. Existing databases should be backed up and their chart of accounts and fiscal-year dates reviewed before new postings are enabled.
+
+## Migration maintenance
+
+- Treat every applied migration as immutable. Add a new migration for future changes instead of editing an applied SQL file.
+- Give migration files unique, consistently ordered IDs within each provider directory. The migrator orders relative file paths lexicographically; numeric prefixes are not interpreted as semantic versions.
+- Do not remove or rename a migration without reviewing `schema_migrations` on supported existing databases and documenting the compatibility plan.
+- Test both an empty database and an upgrade from a representative existing database. Use a disposable copy for migration tests and back up real databases first.
+- Review `docs/DATABASE_MIGRATIONS.md` for the PostgreSQL duplicate-migration cleanup and compatibility notes.
