@@ -415,6 +415,10 @@ public partial class DatWin : Window
                     LogOp("ImportExcel.Start",
                         $"key={importOption.Key} | mode={(replaceMode ? "Replace" : "Upsert")} | user={actor} | company={company} | at={startedAt:yyyy-MM-dd HH:mm:ss} | file={path}");
 
+                    // Hash the source before preview so we can reject a changed workbook
+                    // before committing the reviewed operation.
+                    var previewHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+
                     // Execute the same database validations and writes inside a transaction,
                     // then roll it back. This gives users a real constraint-aware preview
                     // before the committed import, rather than a header-only estimate.
@@ -446,17 +450,17 @@ public partial class DatWin : Window
                         return;
                     }
 
-                    // Confirm the source file did not change while the user reviewed the preview.
-                    var previewHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+                    // The user may edit/replace the workbook while the confirmation dialog is open.
+                    // Compare before any committed writes; never report an error after a successful commit.
+                    var confirmedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+                    if (!string.Equals(previewHash, confirmedHash, StringComparison.Ordinal))
+                        throw new InvalidDataException(L("ImportFileChanged", "The workbook changed after preview. Preview it again before importing."));
                     var importResult = await DataExportSvc.ImportExcelAsync(
                         path,
                         importOption,
                         AppState.CurrentCompanyCode ?? string.Empty,
                         replaceMode: replaceMode,
                         ct: CancellationToken.None);
-                    var finalHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
-                    if (!string.Equals(previewHash, finalHash, StringComparison.Ordinal))
-                        throw new InvalidDataException(L("ImportFileChanged", "The workbook changed during import. Verify the result before retrying."));
 
                     var finishedAt = DateTime.Now;
                     ResultStatusText.Text = L("Success", "Completed successfully");
