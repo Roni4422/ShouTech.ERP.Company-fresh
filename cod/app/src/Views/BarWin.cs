@@ -1,12 +1,17 @@
 using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
+using ShouTech.App.Common;
 
 namespace ShouTech.App.Views;
 
 /// <summary>
+/// "Create barcode" (Inventory > Barcode) — Phase 7B role 3.
+/// Creates a barcode label for ONE material (picked from the materials
+/// card or entered manually) and prints the requested number of copies.
+/// The preview and print output use the real Code-128 encoder.
 /// </summary>
 public sealed class BarWin : BaseWin
 {
@@ -21,19 +26,20 @@ public sealed class BarWin : BaseWin
 
     private readonly Button _btnGen = new();
     private readonly Button _btnPrint = new();
+    private readonly Button _btnPick = new();
 
     private readonly Border _previewCard = new();
     private readonly TextBlock _prevName = new();
     private readonly TextBlock _prevPrice = new();
-    private readonly TextBlock _prevCode = new();
     private readonly StackPanel _prevBarcodeBars = new();
+    private readonly TextBlock _prevCode = new();
 
     public BarWin()
     {
-        Width = 740;
-        Height = 490;
-        MinWidth = 650;
-        MinHeight = 420;
+        Width = 760;
+        Height = 500;
+        MinWidth = 660;
+        MinHeight = 430;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         BuildUi();
@@ -47,18 +53,21 @@ public sealed class BarWin : BaseWin
 
         // 1. Toolbar
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
-        StyleButton(_btnGen, "Common.New");
-        StyleButton(_btnPrint, "BarcodeTool.Print");
+        StyleButton(_btnPick, T("Invoice.FindMaterial"));
+        StyleButton(_btnGen, T("Common.New"));
+        StyleButton(_btnPrint, T("BarcodeTool.Print"));
 
+        _btnPick.Click += (_, _) => PickMaterial();
+        _btnPrint.Click += (_, _) => PrintCopies();
         _btnGen.Click += (_, _) =>
         {
             var rnd = new Random();
-            _txtBarcode.Text = "628" + rnd.Next(100000000, 999999999);
+            _txtBarcode.Text = "628" + rnd.Next(100000000, 999999999)
+                .ToString(CultureInfo.InvariantCulture);
             UpdatePreview();
         };
 
-        _btnPrint.Click += (_, _) => MessageBox.Show(this, T("BarcodeTool.PrintSuccess"), T("BarcodeTool.Print"), MessageBoxButton.OK, MessageBoxImage.Information);
-
+        toolbar.Children.Add(_btnPick);
         toolbar.Children.Add(_btnGen);
         toolbar.Children.Add(_btnPrint);
         DockPanel.SetDock(toolbar, Dock.Top);
@@ -151,7 +160,6 @@ public sealed class BarWin : BaseWin
 
         _prevBarcodeBars.Orientation = Orientation.Horizontal;
         _prevBarcodeBars.HorizontalAlignment = HorizontalAlignment.Center;
-        _prevBarcodeBars.Height = 44;
         _prevBarcodeBars.Margin = new Thickness(0, 0, 0, 4);
         cardContent.Children.Add(_prevBarcodeBars);
 
@@ -172,6 +180,43 @@ public sealed class BarWin : BaseWin
         Content = root;
     }
 
+    // ------------------------------------------------------------------
+    // Material picker
+    // ------------------------------------------------------------------
+
+    private void PickMaterial()
+    {
+        try
+        {
+            var material = SerWin.PickMaterial(this, _txtItemCode.Text);
+            if (material == null)
+                return;
+
+            _txtItemCode.Text = material.Code;
+
+            var name = string.Equals(
+                App.CurrentLanguageCode,
+                "ar",
+                StringComparison.OrdinalIgnoreCase)
+                ? material.NameAr
+                : string.IsNullOrWhiteSpace(material.NameEn) ? material.NameAr : material.NameEn;
+            _txtItemName.Text = name;
+
+            if (string.IsNullOrWhiteSpace(_txtBarcode.Text))
+                _txtBarcode.Text = material.Code;
+
+            UpdatePreview();
+        }
+        catch
+        {
+            // The picker is optional; failures must not break the window.
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Preview (real Code-128)
+    // ------------------------------------------------------------------
+
     private void UpdatePreview()
     {
         _prevName.Text = _chkIncludeName.IsChecked == true ? _txtItemName.Text : string.Empty;
@@ -182,24 +227,61 @@ public sealed class BarWin : BaseWin
         var code = _txtBarcode.Text;
         if (string.IsNullOrWhiteSpace(code)) code = "12345678";
 
-        for (var i = 0; i < code.Length * 3; i++)
+        // Real Code-128 render, compact module width to fit the 240pt card.
+        _prevBarcodeBars.Children.Add(Code128.BuildVisual(
+            code,
+            moduleWidth: 0.9,
+            barHeight: 44,
+            quietZone: 4));
+    }
+
+    // ------------------------------------------------------------------
+    // Printing
+    // ------------------------------------------------------------------
+
+    private void PrintCopies()
+    {
+        var code = (_txtBarcode.Text ?? string.Empty).Trim();
+        if (code.Length == 0)
         {
-            var isBar = (i * 7 + (code[i % code.Length])) % 2 == 0;
-            var width = (i % 5 == 0) ? 2.5 : 1.2;
-            var bar = new Rectangle
-            {
-                Width = width,
-                Height = 44,
-                Fill = isBar ? Brushes.Black : Brushes.White,
-                Margin = new Thickness(0.5, 0, 0.5, 0)
-            };
-            _prevBarcodeBars.Children.Add(bar);
+            MessageBox.Show(this, T("Messages.InvalidInput"), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _ = int.TryParse(_txtCopies.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var copies);
+        if (copies < 1) copies = 1;
+        if (copies > 500) copies = 500;
+
+        var name = _chkIncludeName.IsChecked == true ? _txtItemName.Text : string.Empty;
+        var priceText = _chkIncludePrice.IsChecked == true ? _txtPrice.Text : null;
+
+        var printed = BarcodeLabelPrinter.PrintCopies(
+            this,
+            T("BarcodeTool.Print"),
+            name,
+            code,
+            priceText,
+            copies,
+            columns: 3);
+
+        if (printed)
+        {
+            MessageBox.Show(
+                this,
+                T("BarcodeTool.PrintSuccess"),
+                T("BarcodeTool.Print"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
     }
 
+    // ------------------------------------------------------------------
+    // Localization helpers
+    // ------------------------------------------------------------------
+
     protected override void ApplyLocalizedText()
     {
-        Title = T("BarcodeTool.Title");
+        Title = L("Inventory.CreateBarcode", "Create barcode");
         _chkIncludeName.Content = T("BarcodeTool.IncludeName");
         _chkIncludePrice.Content = T("BarcodeTool.IncludePrice");
 
@@ -211,6 +293,21 @@ public sealed class BarWin : BaseWin
 
         RefreshLocalizedContent(Content as DependencyObject);
         UpdatePreview();
+    }
+
+    private static string L(string key, string fallback)
+    {
+        try
+        {
+            var s = T(key);
+            return string.IsNullOrWhiteSpace(s) || string.Equals(s, key, StringComparison.Ordinal)
+                ? fallback
+                : s;
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     private static void RefreshLocalizedContent(DependencyObject? parent)
