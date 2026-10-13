@@ -146,12 +146,18 @@ public static class RptNav
             case "Orders.PurchaseOrder":
             case "OrderDoc.TitlePurchase":
                 OpenPurchaseOrder(owner); return true;
-            case "Invoices.PrintBarcode":
-            case "Inventory.DesignBarcode":
-            case "Inventory.GenerateBarcode":
+            // Phase 7B - three DISTINCT barcode windows:
+            //   Create   = single material, N copies      (BarWin)
+            //   Generate = auto-assign barcodes for ALL materials (BcdGenWin)
+            //   Design  = label designer with style toolbar (BcdDesWin)
             case "Inventory.CreateBarcode":
+            case "Invoices.PrintBarcode":
             case "BarcodeTool.Title":
                 OpenBarcodeTool(owner); return true;
+            case "Inventory.GenerateBarcode":
+                OpenBarcodeGenerator(owner); return true;
+            case "Inventory.DesignBarcode":
+                OpenBarcodeDesigner(owner); return true;
             case "Reports.Statistics":
                 OpenTrialBalance(owner); return true;
             default:
@@ -197,6 +203,8 @@ public static class RptNav
     public static void OpenSalesOrder(Window? owner = null) => Show(new OrdWin(OrdKind.Sales), owner);
     public static void OpenPurchaseOrder(Window? owner = null) => Show(new OrdWin(OrdKind.Purchase), owner);
     public static void OpenBarcodeTool(Window? owner = null) => Show(new BarWin(), owner);
+    public static void OpenBarcodeGenerator(Window? owner = null) => Show(new BcdGenWin(), owner);
+    public static void OpenBarcodeDesigner(Window? owner = null) => Show(new BcdDesWin(), owner);
     public static void OpenCustomerAging(Window? owner = null) => Show(new CustAgingWin(), owner);
     public static void OpenSupplierAging(Window? owner = null) => Show(new SupAgingWin(), owner);
     public static void OpenItemProfitability(Window? owner = null) => Show(new ItemProfitWin(), owner);
