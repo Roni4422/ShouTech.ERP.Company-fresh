@@ -327,14 +327,18 @@ public static class DataExportSvc
             if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                     x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("The selected dataset cannot be imported.");
+            if (!IsMasterDataImportAllowed(option))
+                throw new InvalidOperationException(
+                    "Spreadsheet import is limited to approved master-data datasets. Sales, purchases, vouchers, journals, stock movements, and other transactional records must be created or corrected through their business workflows, not imported or overwritten from Excel.");
 
             var sheet = ReadExcelSheet(path);
+            ValidateReplaceImportHasData(sheet, replaceMode);
             var markerIndexes = sheet.Headers
                 .Select((header, index) => (header, index))
                 .Where(x => x.header.StartsWith(DatasetIdentityPrefix, StringComparison.Ordinal))
                 .ToArray();
             if (markerIndexes.Length > 1)
-                throw new InvalidDataException("This workbook contains more than one ShouTech dataset identity column.");
+                throw new InvalidDataException("The workbook contains more than one ShouTech dataset identity column.");
 
             DatasetIdentity identity;
             var identityColumnIndex = -1;
@@ -356,11 +360,18 @@ public static class DataExportSvc
                 if (identity.Version != DatasetIdentityVersion ||
                     !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
                     !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("The workbook belongs to a different dataset. Select its original dataset type and do not edit its column headers.");
+                    throw new InvalidDataException("The selected dataset does not match this Excel file. In the import window, choose the same dataset type used to export the workbook; do not rename its column headers.");
+            }
+            else if (markerIndexes.Length == 0)
+            {
+                // Generic workbooks are accepted only when every header maps to a real
+                // column in the explicitly selected, allow-listed dataset. No SQL
+                // identifiers are ever taken directly from an unvalidated workbook.
+                identity = await CreateGenericDatasetIdentityAsync(sheet, option, ct);
             }
             else
             {
-                (identity, sheet) = await BuildPlainWorkbookIdentityAsync(sheet, option, ct);
+                throw new InvalidDataException("The workbook contains more than one ShouTech dataset identity column.");
             }
 
             var result = await ImportRowsAsync(
@@ -388,6 +399,9 @@ public static class DataExportSvc
         if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                 x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidOperationException("The selected dataset cannot be imported.");
+        if (!IsMasterDataImportAllowed(option))
+            throw new InvalidOperationException(
+                "Encrypted dataset imports are limited to approved master-data datasets. Transactional records must use their business workflows.");
 
         if (!string.Equals(Path.GetExtension(path), ".shx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Only .shx encrypted dataset files can be imported here.");
@@ -465,6 +479,9 @@ public static class DataExportSvc
         if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                 x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidOperationException("The selected dataset cannot be imported from a package.");
+        if (!IsMasterDataImportAllowed(option))
+            throw new InvalidOperationException(
+                "Encrypted dataset imports are limited to approved master-data datasets. Transactional records must use their business workflows.");
         return SteiSvc.ImportDatasetAsync(
             path, password, option.Key, option.TableName, simulation, progress, ct);
     }
@@ -521,7 +538,7 @@ public static class DataExportSvc
         if (visibleHeaders.Length != identity.Headers.Length ||
             !visibleHeaders.OrderBy(x => x, StringComparer.Ordinal)
                 .SequenceEqual(identity.Headers.OrderBy(x => x, StringComparer.Ordinal), StringComparer.Ordinal))
-            throw new InvalidDataException("The workbook column headers were changed. Restore the original headers before importing.");
+            throw new InvalidDataException("The Excel column headers do not match this ShouTech export. Keep the original column names unchanged; edit only the data cells, and select the same dataset type that was exported.");
 
         await using var connection = CreateConnection();
         await connection.OpenAsync(ct);
@@ -538,24 +555,41 @@ public static class DataExportSvc
                 throw new InvalidDataException("The workbook fields do not match the selected dataset.");
         }
 
-        var keyColumns = await GetPrimaryKeyColumnsAsync(connection, option.TableName, ct);
-        if (keyColumns.Count == 0 || keyColumns.Any(key => !identity.Fields.Contains(key, StringComparer.OrdinalIgnoreCase)))
-            throw new InvalidDataException("The workbook does not contain the complete primary key required for a safe import.");
-
-        var companyId = await FindCompanyIdAsync(connection, companyCode, ct);
         var companyColumn = columns.FirstOrDefault(x =>
             x.Equals("company_id", StringComparison.OrdinalIgnoreCase) ||
             x.Equals("companyid", StringComparison.OrdinalIgnoreCase));
         // Legacy tenant tables store the company CODE in company_id; newer tables
-        // store the internal companies.company_id. Keep this mapping explicit so an
-        // import cannot silently write an internal numeric ID into a text code column.
-        var companyScopeValue = IsCompanyCodeScopedTable(option.TableName)
-            ? companyCode.Trim()
-            : companyId;
+        // store the internal companies.company_id. Do not consult the global registry
+        // for legacy code-scoped tables or truly global datasets: a valid company-
+        // scoped database may intentionally have an empty companies registry.
+        var companyCodeScoped = IsCompanyCodeScopedTable(option.TableName);
+        var companyId = companyColumn is not null && !companyCodeScoped
+            ? await FindCompanyIdAsync(connection, companyCode, ct)
+            : null;
+        var companyScopeValue = companyCodeScoped ? companyCode.Trim() : companyId;
         if (companyColumn != null && companyScopeValue == null)
             throw new InvalidOperationException("The active company could not be matched to the current database.");
         if (companyColumn == null && !IsCompanyIndependent(option.TableName))
             throw new InvalidOperationException("This dataset cannot be safely restricted to the active company, so it was not imported.");
+
+        // Prefer the declared primary key when the workbook supplies it. Otherwise
+        // allow a database-enforced UNIQUE key (for example company_id + code) so
+        // ordinary master-data spreadsheets need not contain generated surrogate IDs.
+        var availableKeyFields = new HashSet<string>(identity.Fields, StringComparer.OrdinalIgnoreCase);
+        if (companyColumn is not null)
+            availableKeyFields.Add(companyColumn);
+
+        var databasePrimaryKeys = await GetPrimaryKeyColumnsAsync(connection, option.TableName, ct);
+        foreach (var primaryKey in databasePrimaryKeys)
+        {
+            if (companyColumn is not null &&
+                primaryKey.Equals(companyColumn, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (!HasNonBlankWorkbookValuesForField(sheet, identity, primaryKey))
+                availableKeyFields.Remove(primaryKey);
+        }
+
+        var keyColumns = await GetImportKeyColumnsAsync(connection, option.TableName, availableKeyFields, ct);
 
         var headerToField = identity.Headers
             .Select((header, i) => new { header, field = identity.Fields[i], type = identity.Types[i] })
@@ -590,11 +624,19 @@ public static class DataExportSvc
                 if (companyColumn != null)
                     values[companyColumn] = companyScopeValue!;
 
+                foreach (var keyColumn in keyColumns)
+                {
+                    if (!values.TryGetValue(keyColumn, out var keyValue) ||
+                        keyValue is null ||
+                        keyValue is string keyText && string.IsNullOrWhiteSpace(keyText))
+                        throw new InvalidDataException($"Required import key field '{keyColumn}' is blank.");
+                }
+
                 try
                 {
                     ValidateDatasetRow(option, values);
                     processed += await UpsertExcelRowAsync(
-                        connection, transaction, option.TableName, values, columns, keyColumns, ct);
+                        connection, transaction, option.TableName, values, columns, keyColumns, databasePrimaryKeys, ct);
                     if (replaceMode)
                         importedKeys.Add(BuildCompositeKey(values, keyColumns));
                 }
@@ -874,68 +916,367 @@ public static class DataExportSvc
         };
     }
 
+    private static bool IsMasterDataImportAllowed(DataExportOption option)
+        => option.Key is
+            "Branches" or "Accounts" or "AccountTypes" or "Products" or "ProductClasses" or
+            "Brands" or "ProductAttributes" or "ProductClassAttributes" or "ProductSuppliers" or
+            "ProductBarcodes" or "ProductUnits" or "Customers" or "CustomerGroups" or
+            "CustomerContacts" or "CustomerAddresses" or "Suppliers" or "SupplierGroups" or
+            "SupplierContacts" or "SalesRepresentatives" or "SalesRepresentativeTargets" or
+            "Employees" or "Departments" or "JobTitles" or "Warehouses" or
+            "WarehouseLocations" or "WarehouseZones" or "WarehouseTypes" or "Units" or
+            "Currencies" or "CurrencyRates" or "Banks" or "BankAccounts" or "TaxCodes";
+
+    private static async Task<DatasetIdentity> CreateGenericDatasetIdentityAsync(
+        ExcelSheet sheet,
+        DataExportOption option,
+        CancellationToken ct)
+    {
+        if (sheet.Headers.Count == 0 ||
+            sheet.Headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != sheet.Headers.Count)
+            throw new InvalidDataException("The generic Excel file must have unique, non-empty headers.");
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(ct);
+        var columns = await GetColumnNamesAsync(connection, option.TableName, ct);
+        if (columns.Count == 0)
+            throw new InvalidOperationException("The selected dataset table is not available in the current database.");
+
+        var fields = new List<string>(sheet.Headers.Count);
+        foreach (var header in sheet.Headers)
+        {
+            var field = ResolveImportFieldAlias(option.TableName, header, columns);
+            if (field is null)
+                throw new InvalidDataException(
+                    $"Excel column '{header}' does not match a database field in '{option.TableName}'. For a generic workbook, use database field names or supported field aliases as the first-row headers.");
+
+            fields.Add(field);
+        }
+
+        var types = await GetColumnImportTypesAsync(connection, option.TableName, ct);
+        var mappedTypes = fields.Select(field =>
+        {
+            if (!types.TryGetValue(field, out var databaseType))
+                throw new InvalidDataException($"The database type for field '{field}' could not be determined.");
+            return databaseType;
+        }).ToArray();
+
+        return new DatasetIdentity(
+            DatasetIdentityVersion,
+            option.Key,
+            option.TableName,
+            sheet.Headers.ToArray(),
+            fields.ToArray(),
+            mappedTypes);
+    }
+
+    private static string? ResolveImportFieldAlias(
+        string tableName,
+        string header,
+        IReadOnlyList<string> columns)
+    {
+        var normalizedHeader = header.Trim();
+        var exact = columns.FirstOrDefault(column =>
+            string.Equals(column, normalizedHeader, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+            return exact;
+
+        // Common material spreadsheets call the display name simply "name".
+        // Map it to the existing Arabic-name storage column; do not create a
+        // second competing name column or weaken the database NOT NULL constraint.
+        if (tableName.Equals("materials", StringComparison.OrdinalIgnoreCase) &&
+            (normalizedHeader.Equals("name", StringComparison.OrdinalIgnoreCase) ||
+             normalizedHeader.Equals("الاسم", StringComparison.Ordinal) ||
+             normalizedHeader.Equals("اسم المادة", StringComparison.Ordinal) ||
+             normalizedHeader.Equals("اسم الصنف", StringComparison.Ordinal) ||
+             normalizedHeader.Equals("material name", StringComparison.OrdinalIgnoreCase) ||
+             normalizedHeader.Equals("item name", StringComparison.OrdinalIgnoreCase)))
+        {
+            return columns.FirstOrDefault(column =>
+                column.Equals("name_ar", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Permit harmless header-format differences (for example "company id"
+        // versus "company_id") and humanized English field labels. Do not discard
+        // unknown columns: the caller rejects them so no input data disappears silently.
+        static string Compact(string value)
+            => new string(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+
+        var compactHeader = Compact(normalizedHeader);
+        foreach (var column in columns)
+        {
+            if (Compact(column) == compactHeader ||
+                string.Equals(Humanize(column), normalizedHeader, StringComparison.OrdinalIgnoreCase))
+                return column;
+        }
+
+        return null;
+    }
+
+    private static async Task<Dictionary<string, string>> GetColumnImportTypesAsync(
+        DbConnection connection,
+        string table,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        await using var command = connection.CreateCommand();
+        if (DatabaseRuntime.IsSqlite())
+        {
+            command.CommandText = $"PRAGMA table_info({QuoteIdentifier(table)})";
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(1);
+                var sqlType = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
+                result[name] = NormalizeDatabaseImportType(name, sqlType);
+            }
+            return result;
+        }
+
+        command.CommandText = """
+            SELECT column_name, data_type, udt_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = @table
+            ORDER BY ordinal_position
+            """;
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@table";
+        parameter.Value = table;
+        command.Parameters.Add(parameter);
+        await using (var reader = await command.ExecuteReaderAsync(ct))
+        {
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(0);
+                var sqlType = reader.GetString(1);
+                var underlyingType = reader.GetString(2);
+                result[name] = NormalizeDatabaseImportType(name, sqlType + " " + underlyingType);
+            }
+        }
+        return result;
+    }
+
+    private static string NormalizeDatabaseImportType(string columnName, string databaseType)
+    {
+        var type = databaseType.ToLowerInvariant();
+        var name = columnName.ToLowerInvariant();
+        if (type.Contains("bool", StringComparison.Ordinal) ||
+            ((name.StartsWith("is_", StringComparison.Ordinal) ||
+              name.StartsWith("has_", StringComparison.Ordinal) ||
+              name.StartsWith("allow_", StringComparison.Ordinal) ||
+              name.StartsWith("can_", StringComparison.Ordinal) ||
+              name.StartsWith("enable_", StringComparison.Ordinal)) &&
+             (type.Contains("int", StringComparison.Ordinal) || type.Contains("bit", StringComparison.Ordinal))))
+            return RptColType.Boolean.ToString();
+        if (type.Contains("timestamp", StringComparison.Ordinal) || type.Contains("datetime", StringComparison.Ordinal))
+            return RptColType.DateTime.ToString();
+        if (type.Contains("date", StringComparison.Ordinal) || type.Contains("time", StringComparison.Ordinal))
+            return RptColType.Date.ToString();
+        if (type.Contains("int", StringComparison.Ordinal) || type.Contains("serial", StringComparison.Ordinal))
+            return RptColType.WholeNumber.ToString();
+        if (type.Contains("numeric", StringComparison.Ordinal) || type.Contains("decimal", StringComparison.Ordinal) ||
+            type.Contains("real", StringComparison.Ordinal) || type.Contains("double", StringComparison.Ordinal) ||
+            type.Contains("float", StringComparison.Ordinal))
+        {
+            return name.Contains("amount", StringComparison.Ordinal) || name.Contains("price", StringComparison.Ordinal) ||
+                   name.Contains("cost", StringComparison.Ordinal) || name.Contains("balance", StringComparison.Ordinal) ||
+                   name.Contains("total", StringComparison.Ordinal)
+                ? RptColType.Money.ToString()
+                : RptColType.FractionalNumber.ToString();
+        }
+        return RptColType.Text.ToString();
+    }
+
+    private static void ValidateReplaceImportHasData(ExcelSheet sheet, bool replaceMode)
+    {
+        if (replaceMode && !sheet.Rows.Any(row => !row.All(string.IsNullOrWhiteSpace)))
+            throw new InvalidDataException(
+                "Replace mode cannot run with an empty workbook because it could mark every existing record as deleted. Add at least one data row or use upsert mode.");
+    }
+
     private static ExcelSheet ReadExcelSheet(string path)
     {
         if (!string.Equals(Path.GetExtension(path), ".xlsx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Only .xlsx workbooks can be imported as editable datasets.");
 
         using var archive = ZipFile.OpenRead(path);
-        var sheetEntry = archive.GetEntry("xl/worksheets/sheet1.xml")
-            ?? throw new InvalidDataException("The workbook does not contain a first worksheet.");
+        const long maxUncompressedBytes = 64L * 1024 * 1024;
+        const int maxArchiveEntries = 4096;
+        if (archive.Entries.Count > maxArchiveEntries ||
+            archive.Entries.Sum(entry => entry.Length) > maxUncompressedBytes)
+            throw new InvalidDataException("The Excel workbook exceeds the supported package size limits.");
+
+        var sheetEntry = ResolveFirstWorksheetEntry(archive);
+        if (sheetEntry.Length > 32L * 1024 * 1024)
+            throw new InvalidDataException("The selected worksheet is too large to import safely.");
+
+        var sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
+        if (sharedStringsEntry is not null && sharedStringsEntry.Length > 24L * 1024 * 1024)
+            throw new InvalidDataException("The workbook shared-string table is too large to import safely.");
+
         var sharedStrings = ReadSharedStrings(archive);
+        var dateStyleIndexes = ReadDateStyleIndexes(archive);
         using var stream = sheetEntry.Open();
         var document = XDocument.Load(stream);
         XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         var rows = document.Root?.Element(ns + "sheetData")?.Elements(ns + "row").ToArray()
-            ?? throw new InvalidDataException("The workbook worksheet is empty.");
+            ?? throw new InvalidDataException("The selected worksheet is empty.");
+
+        if (rows.Length > 100_001)
+            throw new InvalidDataException("The workbook exceeds the 100,000 data-row import limit.");
+
         var matrix = new List<IReadOnlyList<string?>>();
+        var maximumColumn = -1;
         foreach (var row in rows)
         {
             var cells = new Dictionary<int, string?>();
             foreach (var cell in row.Elements(ns + "c"))
             {
+                if (cell.Element(ns + "f") is not null)
+                    throw new InvalidDataException("Formula cells are not supported for import. Replace formulas with their intended values first.");
+
                 var reference = (string?)cell.Attribute("r")
                     ?? throw new InvalidDataException("A workbook cell has no column reference.");
                 var index = ExcelColumnIndex(reference);
+                if (index >= 512)
+                    throw new InvalidDataException("The workbook exceeds the 512-column import limit.");
                 var type = (string?)cell.Attribute("t");
-                var value = type switch
+                var rawValue = cell.Element(ns + "v")?.Value;
+                string? value = type switch
                 {
                     "inlineStr" => string.Concat(cell.Element(ns + "is")?.Descendants(ns + "t").Select(x => x.Value) ?? []),
-                    "s" => SharedStringValue(cell.Element(ns + "v")?.Value, sharedStrings),
-                    "b" => cell.Element(ns + "v")?.Value == "1" ? "true" : "false",
-                    _ => cell.Element(ns + "v")?.Value
+                    "s" => SharedStringValue(rawValue, sharedStrings),
+                    "b" => rawValue == "1" ? "true" : "false",
+                    "str" => rawValue,
+                    "e" => throw new InvalidDataException($"Cell {reference} contains an Excel formula error."),
+                    _ => rawValue
                 };
-                cells[index] = value;
+
+                if (type is null or "n")
+                {
+                    var styleText = (string?)cell.Attribute("s");
+                    if (value is not null &&
+                        int.TryParse(styleText, NumberStyles.None, CultureInfo.InvariantCulture, out var styleIndex) &&
+                        dateStyleIndexes.Contains(styleIndex) &&
+                        double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var serial))
+                    {
+                        try { value = DateTime.FromOADate(serial).ToString("O", CultureInfo.InvariantCulture); }
+                        catch (ArgumentException) { throw new InvalidDataException($"Cell {reference} contains an invalid Excel date."); }
+                    }
+                }
+
+                if (!cells.TryAdd(index, value))
+                    throw new InvalidDataException($"Row {((string?)row.Attribute("r") ?? "?")} contains duplicate cells for column {index + 1}.");
+                maximumColumn = Math.Max(maximumColumn, index);
             }
 
-            var width = cells.Count == 0 ? 0 : cells.Keys.Max() + 1;
-            var values = new string?[width];
+            var values = new string?[maximumColumn + 1];
             foreach (var pair in cells)
                 values[pair.Key] = pair.Value;
             matrix.Add(values);
         }
 
-        if (matrix.Count == 0 || matrix[0].Count == 0)
-            throw new InvalidDataException("The workbook header row is missing.");
+        if (matrix.Count == 0 || matrix[0].Count == 0 || matrix[0].Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("The workbook header row is missing or contains an empty column name.");
 
-        var header = matrix[0].Select(x => x?.Trim()).ToArray();
-        var last = header.Length - 1;
-        while (last >= 0 && string.IsNullOrWhiteSpace(header[last]))
-            last--;
-        if (last < 0)
-            throw new InvalidDataException("The workbook header row is missing.");
-        header = header.Take(last + 1).Select(x => x ?? string.Empty).ToArray();
-        if (header.Any(string.IsNullOrWhiteSpace))
-            throw new InvalidDataException("The workbook header row contains an empty column name.");
+        var headers = matrix[0].Select(x => x!.Trim()).ToArray();
+        if (headers.Any(string.IsNullOrWhiteSpace) ||
+            headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != headers.Length)
+            throw new InvalidDataException("The workbook header row contains blank or duplicate column names.");
 
-        var body = matrix.Skip(1).Select(row =>
+        foreach (var row in matrix.Skip(1))
         {
-            var values = new string?[header.Length];
-            for (var i = 0; i < header.Length && i < row.Count; i++)
-                values[i] = row[i];
-            return (IReadOnlyList<string?>)values;
-        }).ToArray();
-        return new ExcelSheet(header, body);
+            if (row.Skip(headers.Length).Any(value => !string.IsNullOrWhiteSpace(value)))
+                throw new InvalidDataException("A data row contains values beyond the last header column.");
+        }
+
+        return new ExcelSheet(headers, matrix.Skip(1).ToArray());
+    }
+
+    private static ZipArchiveEntry ResolveFirstWorksheetEntry(ZipArchive archive)
+    {
+        XNamespace main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        XNamespace rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XNamespace packageRel = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+        var workbookEntry = archive.GetEntry("xl/workbook.xml")
+            ?? throw new InvalidDataException("The XLSX package does not contain xl/workbook.xml.");
+        XDocument workbook;
+        using (var stream = workbookEntry.Open()) workbook = XDocument.Load(stream);
+        var relationshipId = (string?)workbook.Root?
+            .Element(main + "sheets")?
+            .Elements(main + "sheet")
+            .FirstOrDefault()?
+            .Attribute(rel + "id");
+        if (string.IsNullOrWhiteSpace(relationshipId))
+            throw new InvalidDataException("The workbook does not declare a worksheet.");
+
+        var relationshipsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels")
+            ?? throw new InvalidDataException("The XLSX package is missing workbook relationships.");
+        XDocument relationships;
+        using (var stream = relationshipsEntry.Open()) relationships = XDocument.Load(stream);
+        var target = (string?)relationships.Root?
+            .Elements(packageRel + "Relationship")
+            .FirstOrDefault(x => string.Equals((string?)x.Attribute("Id"), relationshipId, StringComparison.Ordinal))?
+            .Attribute("Target");
+        if (string.IsNullOrWhiteSpace(target))
+            throw new InvalidDataException("The first worksheet relationship is missing or invalid.");
+
+        var segments = (target.StartsWith("/", StringComparison.Ordinal) ? target.TrimStart('/') : "xl/" + target)
+            .Replace('\\', '/')
+            .Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var normalized = new List<string>();
+        foreach (var segment in segments)
+        {
+            if (segment == ".") continue;
+            if (segment == "..")
+            {
+                if (normalized.Count == 0) throw new InvalidDataException("The worksheet path escapes the XLSX package.");
+                normalized.RemoveAt(normalized.Count - 1);
+            }
+            else normalized.Add(segment);
+        }
+
+        var entry = archive.GetEntry(string.Join("/", normalized));
+        return entry ?? throw new InvalidDataException("The worksheet referenced by the workbook could not be found.");
+    }
+
+    private static HashSet<int> ReadDateStyleIndexes(ZipArchive archive)
+    {
+        var result = new HashSet<int>();
+        var entry = archive.GetEntry("xl/styles.xml");
+        if (entry is null) return result;
+
+        using var stream = entry.Open();
+        var document = XDocument.Load(stream);
+        XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        var customFormats = document.Root?.Element(ns + "numFmts")?
+            .Elements(ns + "numFmt")
+            .ToDictionary(
+                x => (uint?)x.Attribute("numFmtId") ?? 0,
+                x => (string?)x.Attribute("formatCode") ?? string.Empty) ?? new Dictionary<uint, string>();
+        var cellFormats = document.Root?.Element(ns + "cellXfs")?.Elements(ns + "xf").ToArray() ?? [];
+        for (var index = 0; index < cellFormats.Length; index++)
+        {
+            var formatId = (uint?)cellFormats[index].Attribute("numFmtId") ?? 0;
+            if ((formatId >= 14 && formatId <= 22) || (formatId >= 45 && formatId <= 47) ||
+                (customFormats.TryGetValue(formatId, out var format) && IsDateNumberFormat(format)))
+                result.Add(index);
+        }
+        return result;
+    }
+
+    private static bool IsDateNumberFormat(string format)
+    {
+        // Remove quoted literals, escaped characters, fill/alignment directives,
+        // and color/locale/condition brackets. Preserve [h], [m], and [s] elapsed-time
+        // tokens because those are legitimate Excel time formats.
+        var cleaned = Regex.Replace(
+            format,
+            "\"[^\"]*\"|\\\\.|_.|\\*.|\\[(?![hms]\\])[^\\]]*\\]",
+            string.Empty,
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return Regex.IsMatch(cleaned, "[ymdhis]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static string[] ReadSharedStrings(ZipArchive archive)
@@ -998,147 +1339,9 @@ public static class DataExportSvc
                     : throw new InvalidDataException($"'{value}' is not a valid Boolean value."),
             RptColType.Date or RptColType.DateTime => DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var date)
                 ? date
-                : value,
+                : throw new InvalidDataException($"'{value}' is not a valid date or date-time value."),
             _ => value
         };
-    }
-
-
-    /// <summary>
-    /// Accepts a plain .xlsx whose first row uses database column names,
-    /// exported headers, or the same names with spaces instead of underscores.
-    /// Columns that do not match the selected table are dropped.
-    /// </summary>
-    private static async Task<(DatasetIdentity Identity, ExcelSheet Sheet)> BuildPlainWorkbookIdentityAsync(
-        ExcelSheet sheet,
-        DataExportOption option,
-        CancellationToken ct)
-    {
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(ct);
-        var columns = await GetColumnNamesAsync(connection, option.TableName, ct);
-        var types = await GetColumnTypeMapAsync(connection, option.TableName, ct);
-        if (columns.Count == 0)
-            throw new InvalidOperationException("The selected dataset table has no columns.");
-
-        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var keepIndexes = new List<int>();
-        var headers = new List<string>();
-        var fields = new List<string>();
-        var typeNames = new List<string>();
-        for (var i = 0; i < sheet.Headers.Count; i++)
-        {
-            var header = sheet.Headers[i];
-            var match = MatchImportColumn(header, columns);
-            if (match == null || !used.Add(match))
-                continue;
-            keepIndexes.Add(i);
-            headers.Add(header);
-            fields.Add(match);
-            typeNames.Add(types.TryGetValue(match, out var columnType)
-                ? columnType
-                : RptColType.Text.ToString());
-        }
-
-        if (fields.Count == 0)
-            throw new InvalidDataException(
-                "No columns in this Excel file match the selected dataset. Put the database column names (or a ShouTech export header row) in the first row, then import again.");
-
-        var rows = new List<IReadOnlyList<string?>>(sheet.Rows.Count);
-        foreach (var source in sheet.Rows)
-        {
-            var values = new string?[keepIndexes.Count];
-            for (var i = 0; i < keepIndexes.Count; i++)
-            {
-                var index = keepIndexes[i];
-                values[i] = index < source.Count ? source[index] : null;
-            }
-            rows.Add(values);
-        }
-
-        var identity = new DatasetIdentity(
-            DatasetIdentityVersion,
-            option.Key,
-            option.TableName,
-            headers.ToArray(),
-            fields.ToArray(),
-            typeNames.ToArray());
-        return (identity, new ExcelSheet(headers, rows));
-    }
-
-    private static string? MatchImportColumn(string header, IReadOnlyList<string> columns)
-    {
-        if (string.IsNullOrWhiteSpace(header))
-            return null;
-
-        static string Compact(string value)
-            => new string(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
-
-        var compactHeader = Compact(header);
-        var snakeHeader = Compact(ToSnakeCase(header.Replace(' ', '_')));
-        foreach (var column in columns)
-        {
-            if (string.Equals(column, header, StringComparison.OrdinalIgnoreCase))
-                return column;
-            var compactColumn = Compact(column);
-            if (compactColumn.Length > 0 &&
-                (compactColumn == compactHeader || compactColumn == snakeHeader || compactColumn == Compact(Humanize(column)) && compactColumn == compactHeader))
-                return column;
-            if (string.Equals(Humanize(column), header.Trim(), StringComparison.OrdinalIgnoreCase))
-                return column;
-        }
-        return null;
-    }
-
-    private static async Task<Dictionary<string, string>> GetColumnTypeMapAsync(
-        DbConnection connection,
-        string table,
-        CancellationToken ct)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (DatabaseRuntime.IsSqlite())
-        {
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"PRAGMA table_info({QuoteIdentifier(table)})";
-            await using var reader = await command.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-                map[reader.GetString(1)] = MapStorageType(reader.IsDBNull(2) ? null : reader.GetString(2));
-            return map;
-        }
-
-        await using (var command = connection.CreateCommand())
-        {
-            command.CommandText = """
-                SELECT column_name, data_type
-                FROM information_schema.columns
-                WHERE table_schema = current_schema() AND table_name = @table
-                """;
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = "@table";
-            parameter.Value = table;
-            command.Parameters.Add(parameter);
-            await using var reader = await command.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-                map[reader.GetString(0)] = MapStorageType(reader.GetString(1));
-        }
-        return map;
-    }
-
-    private static string MapStorageType(string? storageType)
-    {
-        var value = (storageType ?? string.Empty).ToLowerInvariant();
-        if (value.Contains("bool"))
-            return RptColType.Boolean.ToString();
-        if (value.Contains("int") || value is "serial" or "bigserial" or "smallserial")
-            return RptColType.WholeNumber.ToString();
-        if (value.Contains("real") || value.Contains("double") || value.Contains("float") ||
-            value.Contains("numeric") || value.Contains("decimal") || value.Contains("money"))
-            return RptColType.FractionalNumber.ToString();
-        if (value.Contains("timestamp") || value.Contains("datetime"))
-            return RptColType.DateTime.ToString();
-        if (value == "date")
-            return RptColType.Date.ToString();
-        return RptColType.Text.ToString();
     }
 
     private static async Task<List<string>> GetColumnNamesAsync(DbConnection connection, string table, CancellationToken ct)
@@ -1166,6 +1369,142 @@ public static class DataExportSvc
                 columns.Add(reader.GetString(0));
         }
         return columns;
+    }
+
+    private static bool HasNonBlankWorkbookValuesForField(
+        ExcelSheet sheet,
+        DatasetIdentity identity,
+        string field)
+    {
+        var identityIndex = Array.FindIndex(identity.Fields, value =>
+            value.Equals(field, StringComparison.OrdinalIgnoreCase));
+        if (identityIndex < 0)
+            return false;
+
+        var header = identity.Headers[identityIndex];
+        var sheetIndex = -1;
+        for (var index = 0; index < sheet.Headers.Count; index++)
+        {
+            if (sheet.Headers[index].Equals(header, StringComparison.Ordinal))
+            {
+                sheetIndex = index;
+                break;
+            }
+        }
+        if (sheetIndex < 0)
+            return false;
+
+        foreach (var row in sheet.Rows)
+        {
+            if (row.All(string.IsNullOrWhiteSpace))
+                continue;
+            if (sheetIndex >= row.Count || string.IsNullOrWhiteSpace(row[sheetIndex]))
+                return false;
+        }
+        return sheet.Rows.Any(row => !row.All(string.IsNullOrWhiteSpace));
+    }
+
+    private static async Task<List<string>> GetImportKeyColumnsAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlySet<string> availableFields,
+        CancellationToken ct)
+    {
+        var primaryKeys = await GetPrimaryKeyColumnsAsync(connection, table, ct);
+        var uniqueKeys = await GetUniqueConstraintColumnsAsync(connection, table, ct);
+        var usableKey = SelectUsableImportKeyColumns(primaryKeys, uniqueKeys, availableFields);
+        return usableKey ?? throw new InvalidDataException(
+            "The workbook must include either the complete primary key or a complete database-enforced unique key. Generated IDs may be omitted only when the selected dataset has another unique key, such as company plus code.");
+    }
+
+    private static List<string>? SelectUsableImportKeyColumns(
+        IReadOnlyList<string> primaryKeys,
+        IReadOnlyList<List<string>> uniqueKeys,
+        IReadOnlySet<string> availableFields)
+    {
+        if (primaryKeys.Count > 0 && primaryKeys.All(availableFields.Contains))
+            return primaryKeys.ToList();
+
+        return uniqueKeys.FirstOrDefault(key =>
+            key.Count > 0 && key.All(availableFields.Contains));
+    }
+
+    private static async Task<List<List<string>>> GetUniqueConstraintColumnsAsync(
+        DbConnection connection,
+        string table,
+        CancellationToken ct)
+    {
+        var result = new List<List<string>>();
+        if (DatabaseRuntime.IsSqlite())
+        {
+            var indexes = new List<string>();
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = $"PRAGMA index_list({QuoteIdentifier(table)})";
+                await using var reader = await command.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    var isUnique = reader.GetInt32(2) == 1;
+                    var isPartial = reader.FieldCount > 4 && reader.GetInt32(4) == 1;
+                    if (isUnique && !isPartial)
+                        indexes.Add(reader.GetString(1));
+                }
+            }
+
+            foreach (var index in indexes)
+            {
+                var columns = new List<string>();
+                var hasExpression = false;
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"PRAGMA index_info({QuoteIdentifier(index)})";
+                await using var reader = await command.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    if (reader.IsDBNull(2))
+                    {
+                        hasExpression = true;
+                        break;
+                    }
+                    columns.Add(reader.GetString(2));
+                }
+                if (!hasExpression && columns.Count > 0)
+                    result.Add(columns);
+            }
+            return result;
+        }
+
+        var groups = new Dictionary<string, List<(int Ordinal, string Column)>>(StringComparer.Ordinal);
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT tc.constraint_name, kcu.column_name, kcu.ordinal_position
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                 AND tc.constraint_schema = kcu.constraint_schema
+                 AND tc.table_name = kcu.table_name
+                WHERE tc.constraint_type = 'UNIQUE'
+                  AND tc.table_schema = current_schema()
+                  AND tc.table_name = @table
+                ORDER BY tc.constraint_name, kcu.ordinal_position
+                """;
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@table";
+            parameter.Value = table;
+            command.Parameters.Add(parameter);
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(0);
+                if (!groups.TryGetValue(name, out var columns))
+                    groups[name] = columns = new List<(int Ordinal, string Column)>();
+                columns.Add((reader.GetInt32(2), reader.GetString(1)));
+            }
+        }
+
+        result.AddRange(groups.Values
+            .Select(columns => columns.OrderBy(column => column.Ordinal).Select(column => column.Column).ToList()));
+        return result;
     }
 
     private static async Task<List<string>> GetPrimaryKeyColumnsAsync(DbConnection connection, string table, CancellationToken ct)
@@ -1211,13 +1550,16 @@ public static class DataExportSvc
         string table,
         IReadOnlyDictionary<string, object?> row,
         IReadOnlyList<string> columns,
-        IReadOnlyList<string> primaryKeys,
+        IReadOnlyList<string> conflictKeys,
+        IReadOnlyList<string> databasePrimaryKeys,
         CancellationToken ct)
     {
         var selected = columns.Where(row.ContainsKey).ToArray();
         selected = selected.Where(column =>
-            !primaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase) || row[column] != null).ToArray();
-        var nonKeys = selected.Where(column => !primaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase)).ToArray();
+            !databasePrimaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase) || row[column] != null).ToArray();
+        var nonKeys = selected.Where(column =>
+            !conflictKeys.Contains(column, StringComparer.OrdinalIgnoreCase) &&
+            !databasePrimaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase)).ToArray();
         if (selected.Length == 0)
             throw new InvalidDataException("A row contains no importable fields.");
 
@@ -1225,13 +1567,15 @@ public static class DataExportSvc
         command.Transaction = transaction;
         var placeholders = selected.Select((_, index) => $"@p{index}").ToArray();
         const string prefix = "INSERT";
+        if (conflictKeys.Count == 0 || conflictKeys.Any(key => !selected.Contains(key, StringComparer.OrdinalIgnoreCase)))
+            throw new InvalidDataException("The row does not contain all fields required by its selected conflict key.");
+
+        var conflictTarget = $" ({string.Join(",", conflictKeys.Select(QuoteIdentifier))})";
+        var excluded = DatabaseRuntime.IsPostgreSql() ? "EXCLUDED" : "excluded";
         var suffix = nonKeys.Length == 0
-            ? " ON CONFLICT DO NOTHING"
-            : DatabaseRuntime.IsPostgreSql()
-                ? " ON CONFLICT DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
-                    $"{QuoteIdentifier(column)}=EXCLUDED.{QuoteIdentifier(column)}"))
-                : " ON CONFLICT DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
-                    $"{QuoteIdentifier(column)}=excluded.{QuoteIdentifier(column)}"));
+            ? $" ON CONFLICT{conflictTarget} DO NOTHING"
+            : $" ON CONFLICT{conflictTarget} DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
+                $"{QuoteIdentifier(column)}={excluded}.{QuoteIdentifier(column)}"));
         command.CommandText = $"{prefix} INTO {QuoteIdentifier(table)} ({string.Join(",", selected.Select(QuoteIdentifier))}) VALUES ({string.Join(",", placeholders)}){suffix}";
         for (var i = 0; i < selected.Length; i++)
         {
@@ -1297,11 +1641,12 @@ public static class DataExportSvc
         var tables = await GetTableNamesAsync(connection, ct);
         var companyTable = tables.FirstOrDefault(x => string.Equals(x, "companies", StringComparison.OrdinalIgnoreCase));
 
-        // Some development/tenant databases are already scoped to one company and
-        // intentionally do not carry the global companies registry. In that model,
-        // company_id values in tenant tables are the active company code itself.
+        // Only explicitly classified legacy tables may use the company code directly.
+        // If a table requires an internal company ID, the registry is the source of truth;
+        // guessing the code here can write the wrong tenant identifier or fail unpredictably.
         if (companyTable == null)
-            return companyCode.Trim();
+            throw new InvalidOperationException(
+                $"The companies registry is missing, so the internal ID for company '{companyCode}' cannot be resolved. Initialize the company database first. Legacy company-code datasets do not require this lookup.");
 
         var companyColumns = await GetColumnNamesAsync(connection, companyTable, ct);
         var idColumn = companyColumns.FirstOrDefault(x => x.Equals("company_id", StringComparison.OrdinalIgnoreCase));
@@ -1319,8 +1664,21 @@ public static class DataExportSvc
         command.Parameters.Add(parameter);
         var value = await command.ExecuteScalarAsync(ct);
         if (value is null or DBNull)
+        {
+            await using var countCommand = connection.CreateCommand();
+            countCommand.CommandText = $"SELECT COUNT(*) FROM {QuoteIdentifier(companyTable)}";
+            var countValue = await countCommand.ExecuteScalarAsync(ct);
+            var registeredCompanies = countValue is null or DBNull
+                ? 0L
+                : Convert.ToInt64(countValue, CultureInfo.InvariantCulture);
+
+            if (registeredCompanies == 0)
+                throw new InvalidOperationException(
+                    $"The '{companyTable}' registry is empty. Initialize/register company '{companyCode}' before importing datasets that use internal company IDs. Legacy company-code datasets can still be imported without this registry.");
+
             throw new InvalidOperationException(
                 $"Company '{companyCode}' is not registered in the current database. Verify that the selected company and database belong together, or run the company/database initialization step.");
+        }
         return value;
     }
 
