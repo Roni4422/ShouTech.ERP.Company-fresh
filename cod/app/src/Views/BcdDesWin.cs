@@ -94,6 +94,9 @@ public sealed class BcdDesWin : BaseWin
     {
         var root = new DockPanel { Margin = new Thickness(12) };
 
+        foreach (var combo in new[] { _cbFont, _cbFontSize, _cbTextColor, _cbBarColor, _cbBackground })
+            combo.SetResourceReference(StyleProperty, "VisuComboBoxStyle");
+
         root.Children.Add(BuildToolbar());
 
         // Main split: settings (left) + preview (right).
@@ -104,7 +107,7 @@ public sealed class BcdDesWin : BaseWin
 
         var settingsCard = new Border
         {
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = new CornerRadius(8),
             Padding = new Thickness(12),
             BorderThickness = new Thickness(1)
         };
@@ -116,7 +119,7 @@ public sealed class BcdDesWin : BaseWin
 
         var previewCard = new Border
         {
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = new CornerRadius(8),
             Padding = new Thickness(16),
             BorderThickness = new Thickness(1)
         };
@@ -302,7 +305,7 @@ public sealed class BcdDesWin : BaseWin
             Margin = new Thickness(0, 0, 0, 12),
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        caption.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+        caption.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
         host.Children.Add(caption);
 
         _label.BorderThickness = new Thickness(1.5);
@@ -349,7 +352,7 @@ public sealed class BcdDesWin : BaseWin
         _label.Width = w > 40 ? w : 240;
         _label.Height = h > 30 ? h : 150;
         _label.Background = ResolveBrush(_cbBackground.SelectedItem as string, Brushes.White);
-        _label.BorderBrush = new SolidColorBrush(Color.FromRgb(180, 185, 190));
+        _label.SetResourceReference(Border.BorderBrushProperty, "BorderStrongBrush");
 
         // Font styling.
         var family = new FontFamily((_cbFont.SelectedItem as string) ?? "Segoe UI");
@@ -429,12 +432,12 @@ public sealed class BcdDesWin : BaseWin
         var label = new Border
         {
             Background = ResolveBrush(_cbBackground.SelectedItem as string, Brushes.White),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(180, 185, 190)),
             BorderThickness = new Thickness(1.5),
             CornerRadius = new CornerRadius(5),
             Padding = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Center
         };
+        label.SetResourceReference(Border.BorderBrushProperty, "BorderStrongBrush");
 
         _ = double.TryParse(_txtWidth.Text, out var w);
         _ = double.TryParse(_txtHeight.Text, out var h);
@@ -647,7 +650,7 @@ public sealed class BcdDesWin : BaseWin
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 6, 0)
         };
-        block.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+        block.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
         return block;
     }
 
