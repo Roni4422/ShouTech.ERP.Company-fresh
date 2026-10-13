@@ -1195,7 +1195,14 @@ public static class DataExportSvc
 
     private static bool IsDateNumberFormat(string format)
     {
-        var cleaned = Regex.Replace(format, "\"[^\"]*\"|\\.|_.|\\*.", string.Empty);
+        // Remove quoted literals, escaped characters, fill/alignment directives,
+        // and color/locale/condition brackets. Preserve [h], [m], and [s] elapsed-time
+        // tokens because those are legitimate Excel time formats.
+        var cleaned = Regex.Replace(
+            format,
+            "\"[^\"]*\"|\\\\.|_.|\\*.|\\[(?![hms]\\])[^\\]]*\\]",
+            string.Empty,
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         return Regex.IsMatch(cleaned, "[ymdhis]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
