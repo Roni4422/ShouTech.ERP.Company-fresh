@@ -88,7 +88,7 @@ A shared table-name list alone is not sufficient; column types, primary keys, fo
 - [ ] Apply migrations to disposable empty SQLite and PostgreSQL databases.
 - [ ] Compare expected tables, columns, primary keys, foreign keys, unique constraints, and permission codes across both providers.
 - [ ] Test baseline behavior against a disposable existing database and inspect `schema_migrations`.
-- [ ] Verify posted invoices, vouchers, journal entries, and inventory movements cannot be removed by replace-mode spreadsheet imports.
+- [ ] Verify posted invoices, vouchers, journal entries, and inventory movements cannot be imported, overwritten, or removed by spreadsheet operations.
 
 ## References
 
