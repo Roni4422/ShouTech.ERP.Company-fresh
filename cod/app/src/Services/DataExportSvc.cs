@@ -327,14 +327,17 @@ public static class DataExportSvc
             if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                     x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("The selected dataset cannot be imported.");
+            if (replaceMode && !IsReplaceModeAllowed(option))
+                throw new InvalidOperationException(
+                    "Replace mode is limited to approved master-data datasets. Transactional and posted accounting records must be corrected through their business workflows, not removed by spreadsheet import.");
 
             var sheet = ReadExcelSheet(path);
             var markerIndexes = sheet.Headers
                 .Select((header, index) => (header, index))
                 .Where(x => x.header.StartsWith(DatasetIdentityPrefix, StringComparison.Ordinal))
                 .ToArray();
-            if (markerIndexes.Length != 1)
-                throw new InvalidDataException("This Excel file is not a supported ShouTech dataset export. Export the selected dataset from ShouTech as .xlsx, then edit its data cells without deleting or renaming the hidden ShouTech identity column or the visible column headers. Generic Excel templates are not supported by this import path yet.");
+            if (markerIndexes.Length > 1)
+                throw new InvalidDataException("The workbook contains more than one ShouTech dataset identity column.");
 
             DatasetIdentity identity;
             var identityColumnIndex = -1;
@@ -880,6 +883,17 @@ public static class DataExportSvc
             Translate = key => labels.TryGetValue(key, out var label) ? label : key
         };
     }
+
+    private static bool IsReplaceModeAllowed(DataExportOption option)
+        => option.Key is
+            "Branches" or "Accounts" or "AccountTypes" or "Products" or "ProductClasses" or
+            "Brands" or "ProductAttributes" or "ProductClassAttributes" or "ProductSuppliers" or
+            "ProductBarcodes" or "ProductUnits" or "Customers" or "CustomerGroups" or
+            "CustomerContacts" or "CustomerAddresses" or "Suppliers" or "SupplierGroups" or
+            "SupplierContacts" or "SalesRepresentatives" or "SalesRepresentativeTargets" or
+            "Employees" or "Departments" or "JobTitles" or "Warehouses" or
+            "WarehouseLocations" or "WarehouseZones" or "WarehouseTypes" or "Units" or
+            "Currencies" or "CurrencyRates" or "Banks" or "BankAccounts" or "TaxCodes";
 
     private static async Task<DatasetIdentity> CreateGenericDatasetIdentityAsync(
         ExcelSheet sheet,
