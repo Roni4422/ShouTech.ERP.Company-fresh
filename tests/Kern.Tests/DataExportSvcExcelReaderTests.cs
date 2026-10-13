@@ -55,6 +55,35 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void ReadExcelSheet_TrimsTrailingBlankHeaderCells()
+    {
+        var path = CreateWorkbook(
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+                <row r="1">
+                  <c r="A1" t="s"><v>0</v></c>
+                  <c r="B1" t="inlineStr"><is><t></t></is></c>
+                </row>
+                <row r="2"><c r="A2" t="s"><v>1</v></c></row>
+              </sheetData>
+            </worksheet>
+            """);
+
+        try
+        {
+            var sheet = ReadSheet(path);
+            var headers = (IReadOnlyList<string>)GetProperty(sheet, "Headers");
+
+            Assert.Equal(new[] { "code" }, headers);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ReadExcelSheet_RejectsExcelFormulaErrorCells()
     {
         var path = CreateWorkbook(
