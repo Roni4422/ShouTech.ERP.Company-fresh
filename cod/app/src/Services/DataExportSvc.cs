@@ -669,10 +669,7 @@ public static class DataExportSvc
                 LogInfo($"Replace cleanup | key={option.Key} | table={option.TableName} | upserted={processed} | removed={deleted} | company={companyCode}");
             }
 
-            if (previewOnly)
-                await transaction.RollbackAsync(CancellationToken.None);
-            else
-                await transaction.CommitAsync(ct);
+            await CompleteImportTransactionAsync(transaction, previewOnly, ct);
             return new ExcelImportResult(processed, deleted, replaceMode, option.Key, option.TableName);
         }
         catch
@@ -680,6 +677,18 @@ public static class DataExportSvc
             await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
+    }
+
+    internal static async Task CompleteImportTransactionAsync(
+        DbTransaction transaction,
+        bool previewOnly,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+        if (previewOnly)
+            await transaction.RollbackAsync(CancellationToken.None);
+        else
+            await transaction.CommitAsync(ct);
     }
 
     private static string BuildCompositeKey(Dictionary<string, object?> values, IReadOnlyList<string> keyColumns)
