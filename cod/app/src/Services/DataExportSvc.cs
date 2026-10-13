@@ -334,7 +334,7 @@ public static class DataExportSvc
                 .Where(x => x.header.StartsWith(DatasetIdentityPrefix, StringComparison.Ordinal))
                 .ToArray();
             if (markerIndexes.Length != 1)
-                throw new InvalidDataException("This workbook must contain exactly one intact ShouTech dataset identity column.");
+                throw new InvalidDataException("This Excel file is not a supported ShouTech dataset export. Export the selected dataset from ShouTech as .xlsx, then edit its data cells without deleting or renaming the hidden ShouTech identity column or the visible column headers. Generic Excel templates are not supported by this import path yet.");
 
             DatasetIdentity identity;
             try
@@ -352,7 +352,7 @@ public static class DataExportSvc
             if (identity.Version != DatasetIdentityVersion ||
                 !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
                 !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("The workbook belongs to a different dataset. Select its original dataset type and do not edit its column headers.");
+                throw new InvalidDataException("The selected dataset does not match this Excel file. In the import window, choose the same dataset type used to export the workbook; do not rename its column headers.");
 
             var result = await ImportRowsAsync(
                 sheet, identity, option, companyCode, markerIndexes[0].index, replaceMode, ct);
@@ -512,7 +512,7 @@ public static class DataExportSvc
         if (visibleHeaders.Length != identity.Headers.Length ||
             !visibleHeaders.OrderBy(x => x, StringComparer.Ordinal)
                 .SequenceEqual(identity.Headers.OrderBy(x => x, StringComparer.Ordinal), StringComparer.Ordinal))
-            throw new InvalidDataException("The workbook column headers were changed. Restore the original headers before importing.");
+            throw new InvalidDataException("The Excel column headers do not match this ShouTech export. Keep the original column names unchanged; edit only the data cells, and select the same dataset type that was exported.");
 
         await using var connection = CreateConnection();
         await connection.OpenAsync(ct);
