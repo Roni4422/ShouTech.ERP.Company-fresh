@@ -327,9 +327,9 @@ public static class DataExportSvc
             if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                     x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("The selected dataset cannot be imported.");
-            if (replaceMode && !IsReplaceModeAllowed(option))
+            if (!IsMasterDataImportAllowed(option))
                 throw new InvalidOperationException(
-                    "Replace mode is limited to approved master-data datasets. Transactional and posted accounting records must be corrected through their business workflows, not removed by spreadsheet import.");
+                    "Spreadsheet import is limited to approved master-data datasets. Sales, purchases, vouchers, journals, stock movements, and other transactional records must be created or corrected through their business workflows, not imported or overwritten from Excel.");
 
             var sheet = ReadExcelSheet(path);
             var markerIndexes = sheet.Headers
@@ -884,7 +884,7 @@ public static class DataExportSvc
         };
     }
 
-    private static bool IsReplaceModeAllowed(DataExportOption option)
+    private static bool IsMasterDataImportAllowed(DataExportOption option)
         => option.Key is
             "Branches" or "Accounts" or "AccountTypes" or "Products" or "ProductClasses" or
             "Brands" or "ProductAttributes" or "ProductClassAttributes" or "ProductSuppliers" or
