@@ -30,7 +30,7 @@ The work is being developed on `feature/excel-import-sql-audit-clean`, based on 
 
 - Added regression tests with generated XLSX workbooks for relationship-based worksheet selection, shared strings, inline strings, Boolean cells, date serials, formula-error rejection, integer-backed Boolean inference, and blocking transactional datasets.
 - Still add database-backed tests for blank/sparse cells, duplicate headers, generic header mapping, primary-key omission, company scoping, rollback on row failure, and replace-mode restrictions.
-- Add a preview/dry-run stage with row-level errors before committing data.
+- Added a transaction-backed preview/dry-run before commit: the importer runs the real constraint-checked writes and replace cleanup inside a transaction, rolls the transaction back, then displays row counts and requires explicit confirmation. The committed import is bound to the SHA-256 hash of the workbook shown in the preview so a changed file is rejected before writing. Database-backed automated tests for preview rollback and row-level diagnostics remain outstanding.
 - Consider an explicit mapping UI for translated/custom header names. The current generic path intentionally requires actual database field names so it does not guess a mapping.
 - Run the Windows/.NET 8 build and test workflow. A code edit is not considered verified until CI completes successfully.
 
@@ -107,7 +107,7 @@ Regression tests cover formula rejection, extra data columns, legacy company-sco
 
 ## Verification checklist
 
-- [ ] Build `tests/Kern.Tests/Kern.Tests.csproj` on Windows/.NET 8 (including the latest company-scope and XLSX hardening changes).
+- [ ] Build `tests/Kern.Tests/Kern.Tests.csproj` on Windows/.NET 8 (including the latest transaction-backed preview changes).
 - [ ] Run the existing test suite and add import-specific XLSX tests.
 - [ ] Run `SqlMigrator --dry-run` for SQLite and PostgreSQL and record the exact ordered IDs.
 - [ ] Apply migrations to disposable empty SQLite and PostgreSQL databases. A new automated test now executes the entire active SQLite migration chain in an empty in-memory database; the PostgreSQL chain still needs a disposable server-backed test.
