@@ -985,7 +985,14 @@ public static class DataExportSvc
     private static string NormalizeDatabaseImportType(string columnName, string databaseType)
     {
         var type = databaseType.ToLowerInvariant();
-        if (type.Contains("bool", StringComparison.Ordinal))
+        var name = columnName.ToLowerInvariant();
+        if (type.Contains("bool", StringComparison.Ordinal) ||
+            ((name.StartsWith("is_", StringComparison.Ordinal) ||
+              name.StartsWith("has_", StringComparison.Ordinal) ||
+              name.StartsWith("allow_", StringComparison.Ordinal) ||
+              name.StartsWith("can_", StringComparison.Ordinal) ||
+              name.StartsWith("enable_", StringComparison.Ordinal)) &&
+             (type.Contains("int", StringComparison.Ordinal) || type.Contains("bit", StringComparison.Ordinal))))
             return RptColType.Boolean.ToString();
         if (type.Contains("timestamp", StringComparison.Ordinal) || type.Contains("datetime", StringComparison.Ordinal))
             return RptColType.DateTime.ToString();
@@ -997,7 +1004,6 @@ public static class DataExportSvc
             type.Contains("real", StringComparison.Ordinal) || type.Contains("double", StringComparison.Ordinal) ||
             type.Contains("float", StringComparison.Ordinal))
         {
-            var name = columnName.ToLowerInvariant();
             return name.Contains("amount", StringComparison.Ordinal) || name.Contains("price", StringComparison.Ordinal) ||
                    name.Contains("cost", StringComparison.Ordinal) || name.Contains("balance", StringComparison.Ordinal) ||
                    name.Contains("total", StringComparison.Ordinal)
