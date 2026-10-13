@@ -1027,7 +1027,20 @@ public static class DataExportSvc
             throw new InvalidDataException("Only .xlsx workbooks can be imported as editable datasets.");
 
         using var archive = ZipFile.OpenRead(path);
+        const long maxUncompressedBytes = 64L * 1024 * 1024;
+        const int maxArchiveEntries = 4096;
+        if (archive.Entries.Count > maxArchiveEntries ||
+            archive.Entries.Sum(entry => entry.Length) > maxUncompressedBytes)
+            throw new InvalidDataException("The Excel workbook exceeds the supported package size limits.");
+
         var sheetEntry = ResolveFirstWorksheetEntry(archive);
+        if (sheetEntry.Length > 32L * 1024 * 1024)
+            throw new InvalidDataException("The selected worksheet is too large to import safely.");
+
+        var sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
+        if (sharedStringsEntry is not null && sharedStringsEntry.Length > 24L * 1024 * 1024)
+            throw new InvalidDataException("The workbook shared-string table is too large to import safely.");
+
         var sharedStrings = ReadSharedStrings(archive);
         var dateStyleIndexes = ReadDateStyleIndexes(archive);
         using var stream = sheetEntry.Open();
@@ -1036,6 +1049,9 @@ public static class DataExportSvc
         var rows = document.Root?.Element(ns + "sheetData")?.Elements(ns + "row").ToArray()
             ?? throw new InvalidDataException("The selected worksheet is empty.");
 
+        if (rows.Length > 100_001)
+            throw new InvalidDataException("The workbook exceeds the 100,000 data-row import limit.");
+
         var matrix = new List<IReadOnlyList<string?>>();
         var maximumColumn = -1;
         foreach (var row in rows)
@@ -1043,9 +1059,14 @@ public static class DataExportSvc
             var cells = new Dictionary<int, string?>();
             foreach (var cell in row.Elements(ns + "c"))
             {
+                if (cell.Element(ns + "f") is not null)
+                    throw new InvalidDataException("Formula cells are not supported for import. Replace formulas with their intended values first.");
+
                 var reference = (string?)cell.Attribute("r")
                     ?? throw new InvalidDataException("A workbook cell has no column reference.");
                 var index = ExcelColumnIndex(reference);
+                if (index >= 512)
+                    throw new InvalidDataException("The workbook exceeds the 512-column import limit.");
                 var type = (string?)cell.Attribute("t");
                 var rawValue = cell.Element(ns + "v")?.Value;
                 string? value = type switch
@@ -1071,7 +1092,8 @@ public static class DataExportSvc
                     }
                 }
 
-                cells[index] = value;
+                if (!cells.TryAdd(index, value))
+                    throw new InvalidDataException($"Row {((string?)row.Attribute("r") ?? "?")} contains duplicate cells for column {index + 1}.");
                 maximumColumn = Math.Max(maximumColumn, index);
             }
 
@@ -1088,6 +1110,12 @@ public static class DataExportSvc
         if (headers.Any(string.IsNullOrWhiteSpace) ||
             headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != headers.Length)
             throw new InvalidDataException("The workbook header row contains blank or duplicate column names.");
+
+        foreach (var row in matrix.Skip(1))
+        {
+            if (row.Skip(headers.Length).Any(value => !string.IsNullOrWhiteSpace(value)))
+                throw new InvalidDataException("A data row contains values beyond the last header column.");
+        }
 
         return new ExcelSheet(headers, matrix.Skip(1).ToArray());
     }
