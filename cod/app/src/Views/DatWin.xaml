@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Data Import &amp; Export"
-        Width="680"
-        Height="535"
-        MinWidth="620"
-        MinHeight="470"
+        Width="820"
+        Height="680"
+        MinWidth="720"
+        MinHeight="560"
         ResizeMode="CanResize"
         WindowStartupLocation="CenterOwner"
         FontFamily="Tahoma"
@@ -28,7 +28,7 @@
             <TextBlock x:Name="TitleText" Style="{DynamicResource VisuTitleStyle}" Text="Data Import &amp; Export"/>
         </Border>
 
-        <TabControl x:Name="ModeTabs" Grid.Row="2" Style="{DynamicResource VisuTabControlStyle}" Margin="0,8,0,10" SelectionChanged="ModeTabs_SelectionChanged">
+        <TabControl x:Name="ModeTabs" Grid.Row="1" Style="{DynamicResource VisuTabControlStyle}" Margin="0,8,0,10" SelectionChanged="ModeTabs_SelectionChanged">
             <TabItem x:Name="ImportTab" Header="Import Data">
                 <StackPanel>
                 <Grid Margin="8,10,8,6">
@@ -42,7 +42,7 @@
                 <Grid Margin="8,7,8,0">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <TextBlock x:Name="ImportDatasetLabel" Grid.Column="0" Text="Dataset type" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="ImportDatasetBox" Grid.Column="1" Style="{DynamicResource VisuComboBoxStyle}" Height="30" DisplayMemberPath="DisplayName"/>
+                    <ComboBox x:Name="ImportDatasetBox" Grid.Column="1" Style="{DynamicResource VisuComboBoxStyle}" Height="30" DisplayMemberPath="DisplayName" SelectionChanged="ImportDatasetBox_SelectionChanged"/>
                 </Grid>
                 <TextBlock x:Name="ImportHintText" Margin="8,6,8,0" TextWrapping="Wrap" Opacity="0.78" Text="Editable Excel data can be imported only with its original encrypted type marker and unchanged column headers."/>
                 <StackPanel x:Name="ImportModePanel" Margin="8,8,8,0">
@@ -85,6 +85,7 @@
                 <Grid Margin="8,10,8,6">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
@@ -92,13 +93,20 @@
                                Text="Choose a dataset and export it as Excel or PDF."
                                TextWrapping="Wrap"
                                Margin="0,0,0,8"/>
-                    <ListBox x:Name="ExportItemsList"
+                    <TextBox x:Name="ExportSearchBox"
                              Grid.Row="1"
+                             Margin="0,0,0,8"
+                             Height="30"
+                             Padding="8,5"
+                             Style="{DynamicResource VisuTextBoxStyle}"
+                             TextChanged="ExportSearchBox_TextChanged"/>
+                    <ListBox x:Name="ExportItemsList"
+                             Grid.Row="2"
                              DisplayMemberPath="DisplayName"
                              SelectionMode="Single"
                              MinHeight="150"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                    <Grid x:Name="DatasetPasswordGrid" Grid.Row="2" Margin="0,8,0,0" Visibility="Collapsed">
+                    <Grid x:Name="DatasetPasswordGrid" Grid.Row="3" Margin="0,8,0,0" Visibility="Collapsed">
                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <TextBlock x:Name="DatasetPasswordLabel" Grid.Row="0" Grid.Column="0" Text="Package password" VerticalAlignment="Center" Margin="0,0,8,6"/>
@@ -110,7 +118,7 @@
             </TabItem>
         </TabControl>
 
-        <Grid Grid.Row="1" Margin="0,8,0,0">
+        <Grid Grid.Row="2" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>

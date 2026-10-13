@@ -22,6 +22,7 @@ public partial class DatWin : Window
     private string _lastDetails = string.Empty;
     private string _structuredExportFormat = "xlsx";
     private const string LogCategory = "DataExchange";
+    private List<DataExportOption> _allExportOptions = [];
 
     public DatWin() : this(ExchangeMode.Import)
     {
@@ -105,6 +106,8 @@ public partial class DatWin : Window
         CloseButton.Content = L("Close", "Close");
         ImportBrowseButton.ToolTip = L("Browse", "Choose file");
         ExportBrowseButton.ToolTip = L("Browse", "Choose destination");
+        if (ExportSearchBox != null)
+            ExportSearchBox.ToolTip = L("SearchDatasets", "Search datasets");
         ImportPasswordLabel.Text = L("Password", "Package password");
         ExportPasswordLabel.Text = L("Password", "Package password");
         ExportPasswordConfirmLabel.Text = L("ConfirmPassword", "Confirm password");
@@ -201,7 +204,8 @@ public partial class DatWin : Window
             var selectedKey = (ExportItemsList.SelectedItem as DataExportOption)?.Key;
             var importSelectedKey = (ImportDatasetBox.SelectedItem as DataExportOption)?.Key;
             var options = await DataExportSvc.GetAvailableOptionsAsync();
-            ExportItemsList.ItemsSource = options;
+            _allExportOptions = options.ToList();
+            ApplyExportFilter();
             var importOptions = new List<DataExportOption>
             {
                 new("$FullPackage", L("FullDatabasePackage", "Full database package (.stei)"), string.Empty)
@@ -227,6 +231,37 @@ public partial class DatWin : Window
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
         }
+    }
+
+
+    private void ExportSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!IsInitialized)
+            return;
+        ApplyExportFilter();
+    }
+
+    private void ApplyExportFilter()
+    {
+        var query = ExportSearchBox?.Text?.Trim() ?? string.Empty;
+        var selected = (ExportItemsList.SelectedItem as DataExportOption)?.Key;
+        IEnumerable<DataExportOption> view = _allExportOptions;
+        if (!string.IsNullOrWhiteSpace(query))
+            view = view.Where(option =>
+                option.DisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+                option.Key.Contains(query, StringComparison.OrdinalIgnoreCase));
+        var list = view.ToList();
+        ExportItemsList.ItemsSource = list;
+        ExportItemsList.SelectedItem = list.FirstOrDefault(option => option.Key == selected) ?? (list.Count > 0 ? list[0] : null);
+    }
+
+    private void ImportDatasetBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized)
+            return;
+        var path = ImportPathBox.Text.Trim();
+        if (string.Equals(Path.GetExtension(path), ".xlsx", StringComparison.OrdinalIgnoreCase))
+            _ = PreviewImportAsync(path);
     }
 
     private void ImportBrowse_Click(object sender, RoutedEventArgs e)
