@@ -40,7 +40,23 @@ public sealed record ExcelImportResult(
     int DeletedRows,
     bool ReplaceMode,
     string DatasetKey,
-    string TableName);
+    string TableName)
+{
+    public int DataRows { get; init; }
+    public IReadOnlyList<string> MatchedColumns { get; init; } = [];
+    public IReadOnlyList<string> SkippedColumns { get; init; } = [];
+    public bool FollowedWorkbookIdentity { get; init; }
+}
+
+/// <summary>Read-only look at an .xlsx before any database write.</summary>
+public sealed record ExcelImportPreview(
+    bool HasIdentityMarker,
+    string DatasetKey,
+    string TableName,
+    int DataRows,
+    IReadOnlyList<string> MatchedColumns,
+    IReadOnlyList<string> SkippedColumns,
+    bool DatasetDiffersFromSelection);
 
 
 /// <summary>
@@ -314,6 +330,57 @@ public static class DataExportSvc
             .ToList();
     }
 
+
+    public static async Task<ExcelImportPreview> PreviewExcelAsync(
+        string path,
+        DataExportOption option,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(option);
+        var sheet = ReadExcelSheet(path);
+        var marker = sheet.Headers.FirstOrDefault(header => header.StartsWith(DatasetIdentityPrefix, StringComparison.Ordinal));
+        if (marker != null)
+        {
+            DatasetIdentity identity;
+            try
+            {
+                var bytes = Convert.FromBase64String(marker[DatasetIdentityPrefix.Length..]);
+                identity = JsonSerializer.Deserialize<DatasetIdentity>(XptCry.Decrypt(bytes, XptCry.KindDatasetIdentity))
+                    ?? throw new InvalidDataException("The workbook dataset identity is empty.");
+            }
+            catch (Exception ex) when (ex is FormatException or XptCry.XptCryException or JsonException)
+            {
+                throw new InvalidDataException("The workbook dataset identity is invalid or belongs to another installation.", ex);
+            }
+
+            var dataRows = sheet.Rows.Count(row => row.Any(cell => !string.IsNullOrWhiteSpace(cell)));
+            return new ExcelImportPreview(
+                true,
+                identity.Key,
+                identity.TableName,
+                dataRows,
+                identity.Fields,
+                [],
+                !string.Equals(identity.Key, option.Key, StringComparison.Ordinal));
+        }
+
+        var (plain, filtered, skipped) = await BuildPlainWorkbookIdentityAsync(sheet, option, ct);
+        return new ExcelImportPreview(
+            false,
+            option.Key,
+            option.TableName,
+            filtered.Rows.Count(row => row.Any(cell => !string.IsNullOrWhiteSpace(cell))),
+            plain.Fields,
+            skipped,
+            false);
+    }
+
+    private static async Task<DataExportOption?> ResolveOptionByKeyAsync(string key, CancellationToken ct)
+    {
+        var options = await GetAvailableOptionsAsync(ct);
+        return options.FirstOrDefault(option => string.Equals(option.Key, key, StringComparison.Ordinal));
+    }
+
     public static async Task<ExcelImportResult> ImportExcelAsync(
         string path,
         DataExportOption option,
@@ -328,6 +395,8 @@ public static class DataExportSvc
                     x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("The selected dataset cannot be imported.");
 
+            var selectedKey = option.Key;
+            IReadOnlyList<string> plainSkipped = [];
             var sheet = ReadExcelSheet(path);
             var markerIndexes = sheet.Headers
                 .Select((header, index) => (header, index))
@@ -353,18 +422,33 @@ public static class DataExportSvc
                     throw new InvalidDataException("The workbook dataset identity is invalid or belongs to another installation.", ex);
                 }
 
-                if (identity.Version != DatasetIdentityVersion ||
-                    !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
-                    !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("The workbook belongs to a different dataset. Select its original dataset type and do not edit its column headers.");
+                if (identity.Version != DatasetIdentityVersion)
+                    throw new InvalidDataException("This workbook was produced by a newer ShouTech export. Update the application before importing it.");
+
+                var followed = !string.Equals(identity.Key, option.Key, StringComparison.Ordinal);
+                if (followed)
+                {
+                    var resolved = await ResolveOptionByKeyAsync(identity.Key, ct);
+                    if (resolved == null)
+                        throw new InvalidDataException($"The workbook is a '{identity.Key}' export, and that dataset is not available in this database.");
+                    option = resolved;
+                }
             }
             else
             {
-                (identity, sheet) = await BuildPlainWorkbookIdentityAsync(sheet, option, ct);
+                (identity, sheet, var skipped) = await BuildPlainWorkbookIdentityAsync(sheet, option, ct);
+                plainSkipped = skipped;
             }
 
             var result = await ImportRowsAsync(
-                sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct);
+                sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct) with
+            {
+                DataRows = sheet.Rows.Count(row => row.Any(cell => !string.IsNullOrWhiteSpace(cell))),
+                MatchedColumns = identity.Fields,
+                SkippedColumns = plainSkipped,
+                FollowedWorkbookIdentity = markerIndexes.Length == 1 &&
+                    !string.Equals(identity.Key, selectedKey, StringComparison.Ordinal)
+            };
             LogOp("ImportExcel",
                 $"key={option.Key} | table={option.TableName} | mode={(replaceMode ? "Replace" : "Upsert")} | upserted={result.UpsertedRows} | deleted={result.DeletedRows} | company={companyCode} | file={path}");
             return result;
@@ -1008,10 +1092,17 @@ public static class DataExportSvc
     /// exported headers, or the same names with spaces instead of underscores.
     /// Columns that do not match the selected table are dropped.
     /// </summary>
-    private static async Task<(DatasetIdentity Identity, ExcelSheet Sheet)> BuildPlainWorkbookIdentityAsync(
+    private static async Task<(DatasetIdentity Identity, ExcelSheet Sheet, IReadOnlyList<string> Skipped)> BuildPlainWorkbookIdentityAsync(
         ExcelSheet sheet,
         DataExportOption option,
         CancellationToken ct)
+        => await BuildPlainWorkbookIdentityAsync(sheet, option, ct, allowPromoteHeader: true);
+
+    private static async Task<(DatasetIdentity Identity, ExcelSheet Sheet, IReadOnlyList<string> Skipped)> BuildPlainWorkbookIdentityAsync(
+        ExcelSheet sheet,
+        DataExportOption option,
+        CancellationToken ct,
+        bool allowPromoteHeader)
     {
         await using var connection = CreateConnection();
         await connection.OpenAsync(ct);
@@ -1039,6 +1130,19 @@ public static class DataExportSvc
                 : RptColType.Text.ToString());
         }
 
+        if (fields.Count == 0 && allowPromoteHeader && sheet.Rows.Count > 0)
+        {
+            var promoted = sheet.Rows[0].Select(cell => cell?.Trim() ?? string.Empty).ToList();
+            while (promoted.Count > 0 && string.IsNullOrWhiteSpace(promoted[^1]))
+                promoted.RemoveAt(promoted.Count - 1);
+            if (promoted.Count > 0 && promoted.All(name => !string.IsNullOrWhiteSpace(name)))
+            {
+                var rest = sheet.Rows.Skip(1).ToArray();
+                return await BuildPlainWorkbookIdentityAsync(
+                    new ExcelSheet(promoted, rest), option, ct, allowPromoteHeader: false);
+            }
+        }
+
         if (fields.Count == 0)
             throw new InvalidDataException(
                 "No columns in this Excel file match the selected dataset. Put the database column names (or a ShouTech export header row) in the first row, then import again.");
@@ -1062,7 +1166,13 @@ public static class DataExportSvc
             headers.ToArray(),
             fields.ToArray(),
             typeNames.ToArray());
-        return (identity, new ExcelSheet(headers, rows));
+        var skipped = new List<string>();
+        for (var i = 0; i < sheet.Headers.Count; i++)
+        {
+            if (!keepIndexes.Contains(i) && !string.IsNullOrWhiteSpace(sheet.Headers[i]))
+                skipped.Add(sheet.Headers[i]);
+        }
+        return (identity, new ExcelSheet(headers, rows), skipped);
     }
 
     private static string? MatchImportColumn(string header, IReadOnlyList<string> columns)

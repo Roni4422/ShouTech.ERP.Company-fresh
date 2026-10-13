@@ -111,7 +111,7 @@ public partial class DatWin : Window
         DatasetPasswordLabel.Text = L("Password", "Package password");
         DatasetPasswordConfirmLabel.Text = L("ConfirmPassword", "Confirm password");
         ImportDatasetLabel.Text = L("DatasetType", "Dataset type");
-        ImportHintText.Text = L("ImportDatasetHint", "Import a .stei package, a ShouTech Excel export, or any .xlsx whose first row uses the dataset column names. Extra columns are ignored.");
+        ImportHintText.Text = L("ImportDatasetHint", "Choose a .stei package or an Excel file. A ShouTech export is recognized automatically. Any other workbook is imported when the header row matches the selected dataset; extra columns are ignored, and a title row above the headers is skipped.");
         if (ImportModeLabel != null)
             ImportModeLabel.Text = L("ImportModeLabel", "Import mode for master data (e.g. material cards)");
         if (ImportUpsertRadio != null)
@@ -260,6 +260,56 @@ public partial class DatWin : Window
         ResultStatusText.Text = L("Ready", "Ready");
         ResultTextBox.Text = string.Empty;
         DetailsButton.IsEnabled = false;
+        if (!extensionNeedsPassword)
+            _ = PreviewImportAsync(dialog.FileName);
+    }
+
+    private async Task PreviewImportAsync(string path)
+    {
+        if (ImportDatasetBox.SelectedItem is not DataExportOption option || option.Key == "$FullPackage")
+        {
+            ResultTextBox.Text = L("SelectDatasetBeforePreview", "Select the dataset that this workbook belongs to, then the columns will be checked.");
+            return;
+        }
+
+        try
+        {
+            var preview = await DataExportSvc.PreviewExcelAsync(path, option);
+            if (preview.HasIdentityMarker && preview.DatasetDiffersFromSelection)
+            {
+                var match = (ImportDatasetBox.ItemsSource as IEnumerable<DataExportOption>)?
+                    .FirstOrDefault(item => item.Key == preview.DatasetKey);
+                if (match != null)
+                {
+                    ImportDatasetBox.SelectedItem = match;
+                    option = match;
+                }
+            }
+
+            var lines = new List<string>
+            {
+                preview.HasIdentityMarker
+                    ? L("PreviewMarked", "ShouTech Excel export recognized.")
+                    : L("PreviewPlain", "Plain Excel workbook. Columns were matched by name."),
+                $"{L("DatasetType", "Dataset type")}: {option.DisplayName}",
+                $"{L("Rows", "Rows")}: {preview.DataRows.ToString("N0", CultureInfo.CurrentCulture)}",
+                $"{L("MatchedColumns", "Matched columns")}: {preview.MatchedColumns.Count.ToString(CultureInfo.CurrentCulture)}"
+            };
+            if (preview.MatchedColumns.Count > 0)
+                lines.Add(string.Join(", ", preview.MatchedColumns.Take(12)) + (preview.MatchedColumns.Count > 12 ? ", ..." : ""));
+            if (preview.SkippedColumns.Count > 0)
+            {
+                lines.Add($"{L("SkippedColumns", "Ignored columns")}: {preview.SkippedColumns.Count.ToString(CultureInfo.CurrentCulture)}");
+                lines.Add(string.Join(", ", preview.SkippedColumns.Take(8)));
+            }
+            ResultStatusText.Text = L("PreviewReady", "File checked — ready to import");
+            ResultTextBox.Text = string.Join(Environment.NewLine, lines);
+        }
+        catch (Exception ex)
+        {
+            ResultStatusText.Text = L("PreviewFailed", "This workbook cannot be imported yet");
+            ResultTextBox.Text = ex.Message;
+        }
     }
 
     private void ExportBrowse_Click(object sender, RoutedEventArgs e)
@@ -438,8 +488,11 @@ public partial class DatWin : Window
                     ResultStatusText.Text = L("Success", "Completed successfully");
                     ResultTextBox.Text = string.Join(Environment.NewLine,
                         importOption.DisplayName,
+                        importResult.FollowedWorkbookIdentity ? L("FollowedIdentity", "Dataset was taken from the workbook, not from the dropdown.") : string.Empty,
                         $"{L("Mode", "Mode")}: {(replaceMode ? L("Replace", "Wipe to bin (missing rows soft-deleted)") : L("Upsert", "Update / insert only (missing rows kept)"))}",
                         $"{L("UpsertedRows", "Written rows")}: {importResult.UpsertedRows.ToString("N0", CultureInfo.CurrentCulture)}",
+                        $"{L("MatchedColumns", "Matched columns")}: {importResult.MatchedColumns.Count.ToString(CultureInfo.CurrentCulture)}",
+                        importResult.SkippedColumns.Count == 0 ? string.Empty : $"{L("SkippedColumns", "Ignored columns")}: {string.Join(", ", importResult.SkippedColumns.Take(8))}",
                         $"{L("DeletedRows", "Removed rows")}: {importResult.DeletedRows.ToString("N0", CultureInfo.CurrentCulture)}",
                         $"{L("User", "User")}: {actor}",
                         $"{L("Company", "Company")}: {company}",
