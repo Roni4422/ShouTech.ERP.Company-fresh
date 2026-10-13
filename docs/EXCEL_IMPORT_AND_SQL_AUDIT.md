@@ -85,9 +85,11 @@ A shared table-name list alone is not sufficient; column types, primary keys, fo
 
 The current importer now separates legacy company-code-scoped tables from tables that require an internal company ID. Legacy tables do not query the global company registry merely to obtain a value they store as a code. Tables that require an internal ID fail with a specific initialization error if the registry exists but is empty; the importer does not guess an ID.
 
+Generic master-data imports now prefer a complete primary key when present, but can use a database-enforced unique constraint when the workbook omits generated IDs. For example, the materials dataset can use the company-scoped `(company_id, code)` key instead of requiring an auto-generated `material_id`. PostgreSQL and SQLite UPSERT statements specify the chosen conflict target explicitly; PostgreSQL requires a conflict target for `DO UPDATE`. Blank generated primary-key fields are omitted rather than inserted as NULL. For materials, common `name` / Arabic name headers map to the existing `name_ar` column without weakening its database constraint.
+
 The XLSX reader also rejects formula cells (including cached formula results), duplicate cell coordinates, populated values beyond the header width, formula-error cells, packages above 64 MiB uncompressed, worksheets above 32 MiB, shared-string tables above 24 MiB, workbooks above 100,000 data rows, and rows wider than 512 columns. These limits reduce ambiguous imports and memory-exhaustion risk from malformed workbooks. Date-format detection ignores quoted literals, color/locale brackets, and escaped characters while retaining elapsed-time formats such as `[h]:mm:ss`.
 
-Regression tests cover formula rejection, extra data columns, legacy company-scope classification, custom date-format detection, and the PostgreSQL permission migration file. Database-backed tests for empty-company registries and rollback behavior are still required.
+Regression tests cover formula rejection, extra data columns, legacy company-scope classification, custom date-format detection, natural-key selection without generated IDs, material-name aliases, empty replace workbooks, and the PostgreSQL permission migration file. Database-backed tests for empty-company registries and rollback behavior are still required.
 
 ## Verification checklist
 
