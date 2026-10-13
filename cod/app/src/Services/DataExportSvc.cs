@@ -1176,10 +1176,19 @@ public static class DataExportSvc
             matrix.Add(values);
         }
 
-        if (matrix.Count == 0 || matrix[0].Count == 0 || matrix[0].Any(string.IsNullOrWhiteSpace))
-            throw new InvalidDataException("The workbook header row is missing or contains an empty column name.");
+        if (matrix.Count == 0 || matrix[0].Count == 0)
+            throw new InvalidDataException("The workbook header row is missing.");
 
-        var headers = matrix[0].Select(x => x!.Trim()).ToArray();
+        // Excel often stores formatted but empty trailing header cells. Trim only
+        // those trailing blanks; an empty header between named columns remains invalid.
+        var rawHeaders = matrix[0].Select(value => value?.Trim()).ToArray();
+        var lastHeaderIndex = rawHeaders.Length - 1;
+        while (lastHeaderIndex >= 0 && string.IsNullOrWhiteSpace(rawHeaders[lastHeaderIndex]))
+            lastHeaderIndex--;
+        if (lastHeaderIndex < 0)
+            throw new InvalidDataException("The workbook header row is missing.");
+
+        var headers = rawHeaders.Take(lastHeaderIndex + 1).Select(value => value ?? string.Empty).ToArray();
         if (headers.Any(string.IsNullOrWhiteSpace) ||
             headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != headers.Length)
             throw new InvalidDataException("The workbook header row contains blank or duplicate column names.");
