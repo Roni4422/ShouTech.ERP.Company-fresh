@@ -118,6 +118,216 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public async Task DataExportSvc_ShouldNotUpdateAnotherCompanyOnPrimaryKeyConflict()
+        {
+            var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var oldSettings = settingsField.GetValue(null);
+            try
+            {
+                settingsField.SetValue(null, new AppSetng
+                {
+                    Database = new DatabaseSettings { DefaultProvider = "Sqlite" },
+                    ConnectionStrings = new Dictionary<string, ConnectionStringSettings>
+                    {
+                        ["Default"] = new()
+                        {
+                            Provider = "Sqlite",
+                            ConnectionString = "Data Source=:memory:"
+                        }
+                    }
+                });
+
+                await using var connection = new SqliteConnection("Data Source=:memory:");
+                await connection.OpenAsync();
+                await using (var create = connection.CreateCommand())
+                {
+                    create.CommandText = """
+                        CREATE TABLE tenant_rows (record_id TEXT PRIMARY KEY, company_id TEXT NOT NULL, value TEXT);
+                        INSERT INTO tenant_rows VALUES ('shared-key', 'company-a', 'original');
+                        """;
+                    await create.ExecuteNonQueryAsync();
+                }
+
+                await using var transaction = await connection.BeginTransactionAsync();
+                var upsert = typeof(DataExportSvc).GetMethod(
+                    "UpsertExcelRowAsync",
+                    BindingFlags.NonPublic | BindingFlags.Static)!;
+                var task = (Task<int>)upsert.Invoke(null, new object[]
+                {
+                    connection,
+                    transaction,
+                    "tenant_rows",
+                    new Dictionary<string, object?>
+                    {
+                        ["record_id"] = "shared-key",
+                        ["company_id"] = "company-b",
+                        ["value"] = "overwritten"
+                    },
+                    new[] { "record_id", "company_id", "value" },
+                    new[] { "record_id" },
+                    "company_id",
+                    CancellationToken.None
+                })!;
+
+                Assert.Equal(0, await task);
+                await transaction.CommitAsync();
+
+                await using var verify = connection.CreateCommand();
+                verify.CommandText = "SELECT company_id, value FROM tenant_rows WHERE record_id = 'shared-key'";
+                await using var reader = await verify.ExecuteReaderAsync();
+                Assert.True(await reader.ReadAsync());
+                Assert.Equal("company-a", reader.GetString(0));
+                Assert.Equal("original", reader.GetString(1));
+            }
+            finally
+            {
+                settingsField.SetValue(null, oldSettings);
+            }
+        }
+
+        [Fact]
+        public async Task DataExportSvc_ShouldResolveCompanyIdUsingTextSafeComparison()
+        {
+            var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var oldSettings = settingsField.GetValue(null);
+            try
+            {
+                settingsField.SetValue(null, new AppSetng
+                {
+                    Database = new DatabaseSettings { DefaultProvider = "Sqlite" },
+                    ConnectionStrings = new Dictionary<string, ConnectionStringSettings>
+                    {
+                        ["Default"] = new()
+                        {
+                            Provider = "Sqlite",
+                            ConnectionString = "Data Source=:memory:"
+                        }
+                    }
+                });
+
+                await using var connection = new SqliteConnection("Data Source=:memory:");
+                await connection.OpenAsync();
+                var companyId = Guid.NewGuid().ToString();
+                await using (var create = connection.CreateCommand())
+                {
+                    create.CommandText = """
+                        CREATE TABLE companies (company_id TEXT PRIMARY KEY, company_code TEXT NOT NULL);
+                        INSERT INTO companies VALUES ($id, '001');
+                        """;
+                    create.Parameters.AddWithValue("$id", companyId);
+                    await create.ExecuteNonQueryAsync();
+                }
+
+                var find = typeof(DataExportSvc).GetMethod(
+                    "FindCompanyIdAsync",
+                    BindingFlags.NonPublic | BindingFlags.Static)!;
+                var task = (Task<object?>)find.Invoke(
+                    null, new object[] { connection, "001", false, CancellationToken.None })!;
+
+                Assert.Equal(companyId, await task);
+            }
+            finally
+            {
+                settingsField.SetValue(null, oldSettings);
+            }
+        }
+
+        [Fact]
+        public async Task DataExportSvc_ShouldHonorRegistryForeignKeysAndLegacyCompanyCodes()
+        {
+            var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var oldSettings = settingsField.GetValue(null);
+            try
+            {
+                settingsField.SetValue(null, new AppSetng
+                {
+                    Database = new DatabaseSettings { DefaultProvider = "Sqlite" },
+                    ConnectionStrings = new Dictionary<string, ConnectionStringSettings>
+                    {
+                        ["Default"] = new()
+                        {
+                            Provider = "Sqlite",
+                            ConnectionString = "Data Source=:memory:"
+                        }
+                    }
+                });
+
+                await using var connection = new SqliteConnection("Data Source=:memory:");
+                await connection.OpenAsync();
+                var companyId = Guid.NewGuid().ToString();
+                await using (var create = connection.CreateCommand())
+                {
+                    create.CommandText = """
+                        PRAGMA foreign_keys = ON;
+                        CREATE TABLE companies (company_id TEXT PRIMARY KEY, company_code TEXT NOT NULL);
+                        INSERT INTO companies VALUES ($id, '001');
+                        CREATE TABLE accounts (account_id INTEGER PRIMARY KEY, company_id TEXT NOT NULL REFERENCES companies(company_id));
+                        CREATE TABLE materials (material_id INTEGER PRIMARY KEY, company_id TEXT NOT NULL);
+                        """;
+                    create.Parameters.AddWithValue("$id", companyId);
+                    await create.ExecuteNonQueryAsync();
+                }
+
+                var resolve = typeof(DataExportSvc).GetMethod(
+                    "GetCompanyScopeValueAsync",
+                    BindingFlags.NonPublic | BindingFlags.Static)!;
+                var internalIdTask = (Task<object?>)resolve.Invoke(
+                    null, new object[] { connection, "accounts", "company_id", "001", CancellationToken.None })!;
+                var codeTask = (Task<object?>)resolve.Invoke(
+                    null, new object[] { connection, "materials", "company_id", "001", CancellationToken.None })!;
+
+                Assert.Equal(companyId, await internalIdTask);
+                Assert.Equal("001", await codeTask);
+
+                await using (var clearRegistry = connection.CreateCommand())
+                {
+                    clearRegistry.CommandText = "DELETE FROM companies";
+                    await clearRegistry.ExecuteNonQueryAsync();
+                }
+                var emptyRegistryTask = (Task<object?>)resolve.Invoke(
+                    null, new object[] { connection, "materials", "company_id", "002", CancellationToken.None })!;
+                Assert.Equal("002", await emptyRegistryTask);
+            }
+            finally
+            {
+                settingsField.SetValue(null, oldSettings);
+            }
+        }
+
+        [Fact]
+        public void RecycleBinSvc_ShouldBindPostgresUuidPrimaryKeysAsGuid()
+        {
+            var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var oldSettings = settingsField.GetValue(null);
+            try
+            {
+                settingsField.SetValue(null, new AppSetng
+                {
+                    Database = new DatabaseSettings { DefaultProvider = "PostgreSql" },
+                    ConnectionStrings = new Dictionary<string, ConnectionStringSettings>
+                    {
+                        ["Default"] = new()
+                        {
+                            Provider = "PostgreSql",
+                            ConnectionString = "Host=localhost;Database=test"
+                        }
+                    }
+                });
+
+                var expected = Guid.NewGuid();
+                var coerce = typeof(RecycleBinSvc).GetMethod(
+                    "CoercePrimaryKey",
+                    BindingFlags.NonPublic | BindingFlags.Static)!;
+
+                Assert.Equal(expected, coerce.Invoke(null, new object[] { expected.ToString("D") }));
+            }
+            finally
+            {
+                settingsField.SetValue(null, oldSettings);
+            }
+        }
+
+        [Fact]
         public void PwdHash_ShouldVerifyOnlyTheOriginalPassword()
         {
             var password = "test-" + Guid.NewGuid().ToString("N") + "!";

@@ -238,9 +238,35 @@ public static class DataExportSvc
 
         await using var connection = CreateConnection();
         await connection.OpenAsync(ct);
-        var sql = $"SELECT * FROM {QuoteIdentifier(option.TableName)}{BuildFilter(option)}";
+        var tableColumns = await GetColumnNamesAsync(connection, option.TableName, ct);
+        var companyColumn = tableColumns.FirstOrDefault(x =>
+            x.Equals("company_id", StringComparison.OrdinalIgnoreCase) ||
+            x.Equals("companyid", StringComparison.OrdinalIgnoreCase));
+        var companyScopeValue = companyColumn is null
+            ? null
+            : await GetCompanyScopeValueAsync(connection, option.TableName, companyColumn, companyCode, ct);
+        if (companyColumn is null && !IsCompanyIndependent(option.TableName))
+            throw new InvalidOperationException(
+                $"The dataset '{option.TableName}' has no company scope in database '{GetDatabaseLocation(connection)}' and cannot be exported safely.");
+
+        var filter = BuildFilter(option);
+        if (companyColumn is not null)
+        {
+            var companyPredicate = $"{QuoteIdentifier(companyColumn)} = @companyScope";
+            filter = string.IsNullOrWhiteSpace(filter)
+                ? $" WHERE {companyPredicate}"
+                : $" WHERE ({filter[7..]}) AND {companyPredicate}";
+        }
+        var sql = $"SELECT * FROM {QuoteIdentifier(option.TableName)}{filter}";
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
+        if (companyColumn is not null)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@companyScope";
+            parameter.Value = companyScopeValue!;
+            command.Parameters.Add(parameter);
+        }
         await using var reader = await command.ExecuteReaderAsync(ct);
 
         var fields = Enumerable.Range(0, reader.FieldCount)
@@ -533,20 +559,15 @@ public static class DataExportSvc
         if (keyColumns.Count == 0 || keyColumns.Any(key => !identity.Fields.Contains(key, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidDataException("The workbook does not contain the complete primary key required for a safe import.");
 
-        var companyId = await FindCompanyIdAsync(connection, companyCode, ct);
         var companyColumn = columns.FirstOrDefault(x =>
             x.Equals("company_id", StringComparison.OrdinalIgnoreCase) ||
             x.Equals("companyid", StringComparison.OrdinalIgnoreCase));
-        // Legacy tenant tables store the company CODE in company_id; newer tables
-        // store the internal companies.company_id. Keep this mapping explicit so an
-        // import cannot silently write an internal numeric ID into a text code column.
-        var companyScopeValue = IsCompanyCodeScopedTable(option.TableName)
-            ? companyCode.Trim()
-            : companyId;
-        if (companyColumn != null && companyScopeValue == null)
-            throw new InvalidOperationException("The active company could not be matched to the current database.");
+        var companyScopeValue = companyColumn is null
+            ? null
+            : await GetCompanyScopeValueAsync(connection, option.TableName, companyColumn, companyCode, ct);
         if (companyColumn == null && !IsCompanyIndependent(option.TableName))
-            throw new InvalidOperationException("This dataset cannot be safely restricted to the active company, so it was not imported.");
+            throw new InvalidOperationException(
+                $"The dataset '{option.TableName}' has no company scope in database '{GetDatabaseLocation(connection)}' and cannot be imported safely.");
 
         var headerToField = identity.Headers
             .Select((header, i) => new { header, field = identity.Fields[i], type = identity.Types[i] })
@@ -578,6 +599,12 @@ public static class DataExportSvc
                     values[mapping.Value.field] = ParseExcelValue(cell, mapping.Value.type);
                 }
 
+                if (keyColumns.Any(key =>
+                        !values.TryGetValue(key, out var value) ||
+                        value is null ||
+                        value is string keyValue && string.IsNullOrWhiteSpace(keyValue)))
+                    throw new InvalidDataException("Every imported row must contain a non-empty value for each primary-key column.");
+
                 if (companyColumn != null)
                     values[companyColumn] = companyScopeValue!;
 
@@ -585,14 +612,16 @@ public static class DataExportSvc
                 {
                     ValidateDatasetRow(option, values);
                     processed += await UpsertExcelRowAsync(
-                        connection, transaction, option.TableName, values, columns, keyColumns, ct);
+                        connection, transaction, option.TableName, values, columns, keyColumns, companyColumn, ct);
                     if (replaceMode)
                         importedKeys.Add(BuildCompositeKey(values, keyColumns));
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Import row failed | key={option.Key} | table={option.TableName} | sheetRow={rowIndex + 2} | {ex.Message}", ex);
-                    throw new InvalidDataException($"Import stopped at spreadsheet row {rowIndex + 2}: {ex.Message}", ex);
+                    var database = GetDatabaseLocation(connection);
+                    LogError($"Import row failed | database={database} | key={option.Key} | table={option.TableName} | sheetRow={rowIndex + 2} | {ex.Message}", ex);
+                    throw new InvalidDataException(
+                        $"Import stopped at spreadsheet row {rowIndex + 2} in database '{database}': {ex.Message}", ex);
                 }
             }
 
@@ -1047,6 +1076,7 @@ public static class DataExportSvc
         IReadOnlyDictionary<string, object?> row,
         IReadOnlyList<string> columns,
         IReadOnlyList<string> primaryKeys,
+        string? companyColumn,
         CancellationToken ct)
     {
         var selected = columns.Where(row.ContainsKey).ToArray();
@@ -1060,13 +1090,15 @@ public static class DataExportSvc
         command.Transaction = transaction;
         var placeholders = selected.Select((_, index) => $"@p{index}").ToArray();
         const string prefix = "INSERT";
+        var conflictTarget = $"({string.Join(",", primaryKeys.Select(QuoteIdentifier))})";
+        var excluded = DatabaseRuntime.IsPostgreSql() ? "EXCLUDED" : "excluded";
         var suffix = nonKeys.Length == 0
-            ? " ON CONFLICT DO NOTHING"
-            : DatabaseRuntime.IsPostgreSql()
-                ? " ON CONFLICT DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
-                    $"{QuoteIdentifier(column)}=EXCLUDED.{QuoteIdentifier(column)}"))
-                : " ON CONFLICT DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
-                    $"{QuoteIdentifier(column)}=excluded.{QuoteIdentifier(column)}"));
+            ? $" ON CONFLICT {conflictTarget} DO NOTHING"
+            : $" ON CONFLICT {conflictTarget} DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
+                $"{QuoteIdentifier(column)}={excluded}.{QuoteIdentifier(column)}")) +
+              (companyColumn is null
+                  ? string.Empty
+                  : $" WHERE {QuoteIdentifier(companyColumn)}={excluded}.{QuoteIdentifier(companyColumn)}");
         command.CommandText = $"{prefix} INTO {QuoteIdentifier(table)} ({string.Join(",", selected.Select(QuoteIdentifier))}) VALUES ({string.Join(",", placeholders)}){suffix}";
         for (var i = 0; i < selected.Length; i++)
         {
@@ -1104,59 +1136,129 @@ public static class DataExportSvc
         return names;
     }
 
-    private static bool IsCompanyCodeScopedTable(string tableName)
+    private static async Task<object?> GetCompanyScopeValueAsync(
+        DbConnection connection,
+        string tableName,
+        string companyColumn,
+        string companyCode,
+        CancellationToken ct)
     {
-        // Must stay aligned with the legacy company_id convention in RecycleBinSvc.
-        // Unknown tables default to internal-ID mapping (fail-closed when unresolved).
-        return tableName.Equals("sales_documents", StringComparison.OrdinalIgnoreCase)
+        var isLegacyCodeTable = tableName.Equals("sales_documents", StringComparison.OrdinalIgnoreCase)
             || tableName.Equals("purchase_documents", StringComparison.OrdinalIgnoreCase)
             || tableName.Equals("materials", StringComparison.OrdinalIgnoreCase)
             || tableName.Equals("material_groups", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("customers", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("suppliers", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("accounts", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("chart_of_accounts", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("branches", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("warehouses", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("brands", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("product_categories", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("units_of_measure", StringComparison.OrdinalIgnoreCase)
-            || tableName.Equals("employees", StringComparison.OrdinalIgnoreCase);
+            || tableName.Equals("accounts", StringComparison.OrdinalIgnoreCase);
+        var usesCompanyCode = false;
+        var isUuidColumn = false;
+        if (DatabaseRuntime.IsSqlite())
+        {
+            usesCompanyCode = isLegacyCodeTable &&
+                !await HasCompanyForeignKeyAsync(connection, tableName, companyColumn, ct);
+        }
+        else if (DatabaseRuntime.IsPostgreSql())
+        {
+            var dataType = await GetPostgreSqlColumnTypeAsync(connection, tableName, companyColumn, ct);
+            isUuidColumn = string.Equals(dataType, "uuid", StringComparison.OrdinalIgnoreCase);
+            usesCompanyCode = isLegacyCodeTable && !isUuidColumn;
+        }
+
+        var companyId = await FindCompanyIdAsync(connection, companyCode, usesCompanyCode, ct);
+        if (usesCompanyCode)
+            return companyCode.Trim();
+        if (DatabaseRuntime.IsPostgreSql() && !isUuidColumn && companyId is Guid id)
+            return id.ToString("D", CultureInfo.InvariantCulture);
+        return companyId;
     }
 
-    private static async Task<object?> FindCompanyIdAsync(DbConnection connection, string companyCode, CancellationToken ct)
+    private static async Task<bool> HasCompanyForeignKeyAsync(
+        DbConnection connection, string tableName, string companyColumn, CancellationToken ct)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA foreign_key_list({QuoteIdentifier(tableName)})";
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            if (string.Equals(reader.GetString(2), "companies", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(reader.GetString(3), companyColumn, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(reader.GetString(4), "company_id", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static async Task<string?> GetPostgreSqlColumnTypeAsync(
+        DbConnection connection, string tableName, string columnName, CancellationToken ct)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT data_type FROM information_schema.columns " +
+            "WHERE table_schema=current_schema() AND table_name=@table AND column_name=@column";
+        var tableParameter = command.CreateParameter();
+        tableParameter.ParameterName = "@table";
+        tableParameter.Value = tableName;
+        command.Parameters.Add(tableParameter);
+        var columnParameter = command.CreateParameter();
+        columnParameter.ParameterName = "@column";
+        columnParameter.Value = columnName;
+        command.Parameters.Add(columnParameter);
+        return Convert.ToString(await command.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture);
+    }
+
+    private static async Task<object?> FindCompanyIdAsync(
+        DbConnection connection, string companyCode, bool allowCompanyCodeFallback, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(companyCode))
-            return null;
+            throw new InvalidOperationException("No active company is selected.");
+
+        var code = companyCode.Trim();
+        var database = GetDatabaseLocation(connection);
 
         var tables = await GetTableNamesAsync(connection, ct);
         var companyTable = tables.FirstOrDefault(x => string.Equals(x, "companies", StringComparison.OrdinalIgnoreCase));
-
-        // Some development/tenant databases are already scoped to one company and
-        // intentionally do not carry the global companies registry. In that model,
-        // company_id values in tenant tables are the active company code itself.
         if (companyTable == null)
-            return companyCode.Trim();
+        {
+            if (allowCompanyCodeFallback)
+                return code;
+            throw new InvalidOperationException(
+                $"Company '{code}' cannot be resolved because the companies registry is missing from database '{database}'.");
+        }
 
         var companyColumns = await GetColumnNamesAsync(connection, companyTable, ct);
         var idColumn = companyColumns.FirstOrDefault(x => x.Equals("company_id", StringComparison.OrdinalIgnoreCase));
         var codeColumn = companyColumns.FirstOrDefault(x => x.Equals("company_code", StringComparison.OrdinalIgnoreCase));
         if (idColumn == null || codeColumn == null)
             throw new InvalidOperationException(
-                $"The '{companyTable}' table exists in the current database but does not contain the required company_id and company_code columns. Check the database schema or apply the pending migrations.");
+                $"Table '{companyTable}' in database '{database}' does not contain the required company_id and company_code columns. Check the schema or apply pending migrations.");
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"SELECT {QuoteIdentifier(idColumn)} FROM {QuoteIdentifier(companyTable)} " +
-            $"WHERE TRIM({QuoteIdentifier(codeColumn)}) = @companyCode OR TRIM({QuoteIdentifier(idColumn)}) = @companyCode LIMIT 1";
+            $"WHERE TRIM(CAST({QuoteIdentifier(codeColumn)} AS TEXT)) = @companyCode " +
+            $"OR TRIM(CAST({QuoteIdentifier(idColumn)} AS TEXT)) = @companyCode " +
+            $"ORDER BY CASE WHEN TRIM(CAST({QuoteIdentifier(codeColumn)} AS TEXT)) = @companyCode THEN 0 ELSE 1 END LIMIT 1";
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@companyCode";
-        parameter.Value = companyCode.Trim();
+        parameter.Value = code;
         command.Parameters.Add(parameter);
         var value = await command.ExecuteScalarAsync(ct);
-        if (value is null or DBNull)
-            throw new InvalidOperationException(
-                $"Company '{companyCode}' is not registered in the current database. Verify that the selected company and database belong together, or run the company/database initialization step.");
-        return value;
+        if (value is not null and not DBNull)
+            return value;
+
+        await using var countCommand = connection.CreateCommand();
+        countCommand.CommandText = $"SELECT COUNT(*) FROM {QuoteIdentifier(companyTable)}";
+        var count = Convert.ToInt64(await countCommand.ExecuteScalarAsync(ct) ?? 0L, CultureInfo.InvariantCulture);
+        if (count == 0 && allowCompanyCodeFallback)
+            return code;
+
+        throw new InvalidOperationException(
+            $"Company '{code}' is not registered in active database '{database}'. Verify that the selected company and database belong together.");
+    }
+
+    private static string GetDatabaseLocation(DbConnection connection)
+    {
+        var location = DatabaseRuntime.IsSqlite()
+            ? DatabaseRuntime.GetSqliteDataSource(connection.ConnectionString) ?? connection.DataSource
+            : connection.Database;
+        return string.IsNullOrWhiteSpace(location) ? "(unknown)" : location;
     }
 
     private static string BuildFilter(DataExportOption option)

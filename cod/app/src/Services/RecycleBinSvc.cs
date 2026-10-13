@@ -71,34 +71,34 @@ public static class RecycleBinSvc
             ["group_id"], CompanyIdIsCode: true),
         new("customers", "Customers",
             ["customer_name_ar", "customer_name", "name", "code"],
-            ["customer_id", "id"], CompanyIdIsCode: true),
+            ["customer_id", "id"]),
         new("suppliers", "Suppliers",
             ["supplier_name_ar", "supplier_name", "name", "code"],
-            ["supplier_id", "id"], CompanyIdIsCode: true),
+            ["supplier_id", "id"]),
         new("accounts", "Accounts",
             ["account_name_ar", "account_name", "name", "code", "account_code"],
             ["account_id", "id"], CompanyIdIsCode: true),
         new("chart_of_accounts", "Accounts",
             ["account_name_ar", "account_name", "name", "code"],
-            ["account_id", "id"], CompanyIdIsCode: true),
+            ["account_id", "id"]),
         new("branches", "Branches",
             ["branch_name_ar", "branch_name", "name", "code"],
-            ["branch_id", "id"], CompanyIdIsCode: true),
+            ["branch_id", "id"]),
         new("warehouses", "Warehouses",
             ["warehouse_name_ar", "name", "code"],
-            ["warehouse_id", "id"], CompanyIdIsCode: true),
+            ["warehouse_id", "id"]),
         new("brands", "Brands",
             ["brand_name_ar", "name", "code"],
-            ["brand_id", "id"], CompanyIdIsCode: true),
+            ["brand_id", "id"]),
         new("product_categories", "ProductClasses",
             ["category_name_ar", "name", "code"],
-            ["category_id", "id"], CompanyIdIsCode: true),
+            ["category_id", "id"]),
         new("units_of_measure", "Units",
             ["unit_name_ar", "name", "uom_code", "code"],
-            ["uom_id", "id"], CompanyIdIsCode: true),
+            ["uom_id", "id"]),
         new("employees", "Employees",
             ["employee_name_ar", "name", "code"],
-            ["employee_id", "id"], CompanyIdIsCode: true),
+            ["employee_id", "id"]),
     ];
 
     public static async Task<IReadOnlyList<RecycleBinItem>> ListAsync(
@@ -135,7 +135,8 @@ public static class RecycleBinSvc
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                LogWarning($"List skipped for table '{definition.TableName}': {ex.Message}");
+                LogWarning(
+                    $"List skipped for table '{definition.TableName}' in database '{GetDatabaseLocation(connection)}': {ex.Message}");
             }
         }
 
@@ -198,11 +199,12 @@ public static class RecycleBinSvc
             var statusColumn = definition.DraftOnly ? FindColumn(columns, "status") : null;
             if (definition.DraftOnly && statusColumn is null)
                 return Failed(item, "Draft status is unavailable; this document cannot be restored from the bin.");
-            var companyValue = definition.CompanyIdIsCode
-                ? item.CompanyCode
-                : await FindCompanyIdAsync(connection, item.CompanyCode, cancellationToken).ConfigureAwait(false);
+            var companyId = await FindCompanyIdAsync(connection, item.CompanyCode, cancellationToken).ConfigureAwait(false);
+            var companyValue = await GetCompanyScopeValueAsync(
+                connection, definition, columns, item.CompanyCode, companyId, cancellationToken).ConfigureAwait(false);
             if (companyColumn is null || companyValue is null)
-                return Failed(item, "Company scope could not be verified; restore was blocked.");
+                return Failed(item,
+                    $"Company scope could not be verified in database '{GetDatabaseLocation(connection)}'; restore was blocked.");
             var primaryKeyColumn = ResolveExistingColumn(columns, item.PrimaryKeyColumn);
 
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -256,8 +258,9 @@ public static class RecycleBinSvc
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogError($"Restore failed | table={item.TableName} | pk={item.PrimaryKeyValue} | {ex.Message}", ex);
-            return Failed(item, ex.Message);
+            var database = GetConfiguredDatabaseLocation();
+            LogError($"Restore failed | database={database} | table={item.TableName} | pk={item.PrimaryKeyValue} | {ex.Message}", ex);
+            return Failed(item, $"Database '{database}': {ex.Message}");
         }
     }
 
@@ -304,11 +307,12 @@ public static class RecycleBinSvc
             var statusColumn = definition.DraftOnly ? FindColumn(columns, "status") : null;
             if (definition.DraftOnly && statusColumn is null)
                 return Failed(item, "Draft status is unavailable; permanent deletion was blocked.");
-            var companyValue = definition.CompanyIdIsCode
-                ? item.CompanyCode
-                : await FindCompanyIdAsync(connection, item.CompanyCode, cancellationToken).ConfigureAwait(false);
+            var companyId = await FindCompanyIdAsync(connection, item.CompanyCode, cancellationToken).ConfigureAwait(false);
+            var companyValue = await GetCompanyScopeValueAsync(
+                connection, definition, columns, item.CompanyCode, companyId, cancellationToken).ConfigureAwait(false);
             if (companyColumn is null || companyValue is null)
-                return Failed(item, "Company scope could not be verified; permanent deletion was blocked.");
+                return Failed(item,
+                    $"Company scope could not be verified in database '{GetDatabaseLocation(connection)}'; permanent deletion was blocked.");
             var primaryKeyColumn = ResolveExistingColumn(columns, item.PrimaryKeyColumn);
 
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -317,7 +321,7 @@ public static class RecycleBinSvc
             var predicates = new List<string>
             {
                 $"{Quote(primaryKeyColumn)} = @primaryKey",
-                $"{Quote(softDeleteColumn)} = {(softDeleteIsBoolean ? "TRUE" : "1")}",
+                $"{Quote(softDeleteColumn!)} = {(softDeleteIsBoolean ? "TRUE" : "1")}",
                 $"{Quote(companyColumn)} = @companyValue"
             };
             AddParameter(command, "@companyValue", companyValue);
@@ -346,8 +350,9 @@ public static class RecycleBinSvc
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogError($"Purge failed | table={item.TableName} | pk={item.PrimaryKeyValue} | {ex.Message}", ex);
-            return Failed(item, ex.Message);
+            var database = GetConfiguredDatabaseLocation();
+            LogError($"Purge failed | database={database} | table={item.TableName} | pk={item.PrimaryKeyValue} | {ex.Message}", ex);
+            return Failed(item, $"Database '{database}': {ex.Message}");
         }
     }
 
@@ -369,7 +374,8 @@ public static class RecycleBinSvc
         var companyColumn = FindColumn(columns, "company_id") ?? FindColumn(columns, "companyid");
         if (companyColumn is null)
             return Array.Empty<RecycleBinItem>();
-        var companyValue = definition.CompanyIdIsCode ? companyCode : companyId;
+        var companyValue = await GetCompanyScopeValueAsync(
+            connection, definition, columns, companyCode, companyId, cancellationToken).ConfigureAwait(false);
         if (companyValue is null)
             return Array.Empty<RecycleBinItem>();
 
@@ -793,7 +799,7 @@ public static class RecycleBinSvc
         if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var int64))
             return int64;
         if (Guid.TryParse(value, out var guid))
-            return guid.ToString("D", CultureInfo.InvariantCulture);
+            return DatabaseRuntime.IsPostgreSql() ? guid : guid.ToString("D", CultureInfo.InvariantCulture);
         return value;
     }
 
@@ -826,6 +832,31 @@ public static class RecycleBinSvc
         if (DatabaseRuntime.IsPostgreSql())
             return new NpgsqlConnection(connectionString);
         return new SqliteConnection(connectionString);
+    }
+
+    private static string GetDatabaseLocation(DbConnection connection)
+    {
+        var location = DatabaseRuntime.IsPostgreSql()
+            ? connection.Database
+            : DatabaseRuntime.GetSqliteDataSource(connection.ConnectionString) ?? connection.DataSource;
+        return string.IsNullOrWhiteSpace(location) ? "(unknown)" : location;
+    }
+
+    private static string GetConfiguredDatabaseLocation()
+    {
+        try
+        {
+            var connectionString = DatabaseRuntime.GetConnectionString();
+            if (string.IsNullOrWhiteSpace(connectionString))
+                return "(unconfigured)";
+            if (DatabaseRuntime.IsPostgreSql())
+                return new NpgsqlConnectionStringBuilder(connectionString).Database ?? "(unknown)";
+            return DatabaseRuntime.GetSqliteDataSource(connectionString) ?? "(unknown)";
+        }
+        catch
+        {
+            return "(unknown)";
+        }
     }
 
     private static async Task<HashSet<string>> GetTableNamesAsync(
@@ -910,6 +941,80 @@ public static class RecycleBinSvc
         return columns;
     }
 
+    private static async Task<object?> GetCompanyScopeValueAsync(
+        DbConnection connection,
+        BinTableDefinition definition,
+        IReadOnlyList<string> columns,
+        string companyCode,
+        object? companyId,
+        CancellationToken cancellationToken)
+    {
+        var companyColumn = FindColumn(columns, "company_id") ?? FindColumn(columns, "companyid");
+        var usesCompanyCode = false;
+        var isUuidColumn = false;
+        if (DatabaseRuntime.IsPostgreSql() && companyColumn is not null)
+        {
+            await using var typeCommand = connection.CreateCommand();
+            typeCommand.CommandText =
+                "SELECT data_type FROM information_schema.columns " +
+                "WHERE table_schema='public' AND table_name=@table AND column_name=@column";
+            AddParameter(typeCommand, "@table", definition.TableName);
+            AddParameter(typeCommand, "@column", companyColumn);
+            var dataType = Convert.ToString(
+                await typeCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
+                CultureInfo.InvariantCulture);
+            isUuidColumn = string.Equals(dataType, "uuid", StringComparison.OrdinalIgnoreCase);
+            usesCompanyCode = definition.CompanyIdIsCode && !isUuidColumn;
+        }
+        else
+        {
+            usesCompanyCode = DatabaseRuntime.IsSqlite() && definition.CompanyIdIsCode;
+        }
+
+        if (usesCompanyCode && companyColumn is not null)
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"PRAGMA foreign_key_list({Quote(definition.TableName)})";
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (string.Equals(reader.GetString(2), "companies", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(reader.GetString(3), companyColumn, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(reader.GetString(4), "company_id", StringComparison.OrdinalIgnoreCase))
+                {
+                    usesCompanyCode = false;
+                    break;
+                }
+            }
+        }
+
+        if (usesCompanyCode)
+        {
+            if (companyId is null && await HasRegisteredCompaniesAsync(connection, cancellationToken).ConfigureAwait(false))
+                return null;
+            return companyCode.Trim();
+        }
+        if (DatabaseRuntime.IsPostgreSql() && !isUuidColumn && companyId is Guid id)
+            return id.ToString("D", CultureInfo.InvariantCulture);
+        return companyId;
+    }
+
+    private static async Task<bool> HasRegisteredCompaniesAsync(
+        DbConnection connection, CancellationToken cancellationToken)
+    {
+        var tables = await GetTableNamesAsync(connection, cancellationToken).ConfigureAwait(false);
+        var companyTable = tables.FirstOrDefault(name =>
+            string.Equals(name, "companies", StringComparison.OrdinalIgnoreCase));
+        if (companyTable is null)
+            return false;
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT COUNT(*) FROM {Quote(companyTable)}";
+        return Convert.ToInt64(
+            await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) ?? 0L,
+            CultureInfo.InvariantCulture) > 0;
+    }
+
     private static async Task<object?> FindCompanyIdAsync(
         DbConnection connection,
         string companyCode,
@@ -917,15 +1022,15 @@ public static class RecycleBinSvc
     {
         foreach (var sql in new[]
         {
-            "SELECT company_id FROM companies WHERE company_code = @code LIMIT 1",
-            "SELECT id FROM companies WHERE code = @code LIMIT 1",
+            "SELECT company_id FROM companies WHERE TRIM(CAST(company_code AS TEXT)) = @code LIMIT 1",
+            "SELECT id FROM companies WHERE TRIM(CAST(code AS TEXT)) = @code LIMIT 1",
         })
         {
             try
             {
                 await using var command = connection.CreateCommand();
                 command.CommandText = sql;
-                AddParameter(command, "@code", companyCode);
+                AddParameter(command, "@code", companyCode.Trim());
                 var scalar = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                 if (scalar is not null and not DBNull)
                     return scalar;
