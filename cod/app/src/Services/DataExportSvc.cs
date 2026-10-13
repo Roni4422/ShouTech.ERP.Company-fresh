@@ -333,29 +333,38 @@ public static class DataExportSvc
                 .Select((header, index) => (header, index))
                 .Where(x => x.header.StartsWith(DatasetIdentityPrefix, StringComparison.Ordinal))
                 .ToArray();
-            if (markerIndexes.Length != 1)
-                throw new InvalidDataException("This workbook must contain exactly one intact ShouTech dataset identity column.");
+            if (markerIndexes.Length > 1)
+                throw new InvalidDataException("This workbook contains more than one ShouTech dataset identity column.");
 
             DatasetIdentity identity;
-            try
+            var identityColumnIndex = -1;
+            if (markerIndexes.Length == 1)
             {
-                var marker = Convert.FromBase64String(markerIndexes[0].header[DatasetIdentityPrefix.Length..]);
-                var payload = XptCry.Decrypt(marker, XptCry.KindDatasetIdentity);
-                identity = JsonSerializer.Deserialize<DatasetIdentity>(payload)
-                    ?? throw new InvalidDataException("The workbook dataset identity is empty.");
-            }
-            catch (Exception ex) when (ex is FormatException or XptCry.XptCryException or JsonException)
-            {
-                throw new InvalidDataException("The workbook dataset identity is invalid or belongs to another installation.", ex);
-            }
+                identityColumnIndex = markerIndexes[0].index;
+                try
+                {
+                    var marker = Convert.FromBase64String(markerIndexes[0].header[DatasetIdentityPrefix.Length..]);
+                    var payload = XptCry.Decrypt(marker, XptCry.KindDatasetIdentity);
+                    identity = JsonSerializer.Deserialize<DatasetIdentity>(payload)
+                        ?? throw new InvalidDataException("The workbook dataset identity is empty.");
+                }
+                catch (Exception ex) when (ex is FormatException or XptCry.XptCryException or JsonException)
+                {
+                    throw new InvalidDataException("The workbook dataset identity is invalid or belongs to another installation.", ex);
+                }
 
-            if (identity.Version != DatasetIdentityVersion ||
-                !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
-                !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("The workbook belongs to a different dataset. Select its original dataset type and do not edit its column headers.");
+                if (identity.Version != DatasetIdentityVersion ||
+                    !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
+                    !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("The workbook belongs to a different dataset. Select its original dataset type and do not edit its column headers.");
+            }
+            else
+            {
+                (identity, sheet) = await BuildPlainWorkbookIdentityAsync(sheet, option, ct);
+            }
 
             var result = await ImportRowsAsync(
-                sheet, identity, option, companyCode, markerIndexes[0].index, replaceMode, ct);
+                sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct);
             LogOp("ImportExcel",
                 $"key={option.Key} | table={option.TableName} | mode={(replaceMode ? "Replace" : "Upsert")} | upserted={result.UpsertedRows} | deleted={result.DeletedRows} | company={companyCode} | file={path}");
             return result;
@@ -906,9 +915,27 @@ public static class DataExportSvc
             matrix.Add(values);
         }
 
-        if (matrix.Count == 0 || matrix[0].Count == 0 || matrix[0].Any(string.IsNullOrWhiteSpace))
-            throw new InvalidDataException("The workbook header row is missing or contains an empty column name.");
-        return new ExcelSheet(matrix[0].Select(x => x!).ToArray(), matrix.Skip(1).ToArray());
+        if (matrix.Count == 0 || matrix[0].Count == 0)
+            throw new InvalidDataException("The workbook header row is missing.");
+
+        var header = matrix[0].Select(x => x?.Trim()).ToArray();
+        var last = header.Length - 1;
+        while (last >= 0 && string.IsNullOrWhiteSpace(header[last]))
+            last--;
+        if (last < 0)
+            throw new InvalidDataException("The workbook header row is missing.");
+        header = header.Take(last + 1).Select(x => x ?? string.Empty).ToArray();
+        if (header.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("The workbook header row contains an empty column name.");
+
+        var body = matrix.Skip(1).Select(row =>
+        {
+            var values = new string?[header.Length];
+            for (var i = 0; i < header.Length && i < row.Count; i++)
+                values[i] = row[i];
+            return (IReadOnlyList<string?>)values;
+        }).ToArray();
+        return new ExcelSheet(header, body);
     }
 
     private static string[] ReadSharedStrings(ZipArchive archive)
@@ -974,6 +1001,144 @@ public static class DataExportSvc
                 : value,
             _ => value
         };
+    }
+
+
+    /// <summary>
+    /// Accepts a plain .xlsx whose first row uses database column names,
+    /// exported headers, or the same names with spaces instead of underscores.
+    /// Columns that do not match the selected table are dropped.
+    /// </summary>
+    private static async Task<(DatasetIdentity Identity, ExcelSheet Sheet)> BuildPlainWorkbookIdentityAsync(
+        ExcelSheet sheet,
+        DataExportOption option,
+        CancellationToken ct)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(ct);
+        var columns = await GetColumnNamesAsync(connection, option.TableName, ct);
+        var types = await GetColumnTypeMapAsync(connection, option.TableName, ct);
+        if (columns.Count == 0)
+            throw new InvalidOperationException("The selected dataset table has no columns.");
+
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var keepIndexes = new List<int>();
+        var headers = new List<string>();
+        var fields = new List<string>();
+        var typeNames = new List<string>();
+        for (var i = 0; i < sheet.Headers.Count; i++)
+        {
+            var header = sheet.Headers[i];
+            var match = MatchImportColumn(header, columns);
+            if (match == null || !used.Add(match))
+                continue;
+            keepIndexes.Add(i);
+            headers.Add(header);
+            fields.Add(match);
+            typeNames.Add(types.TryGetValue(match, out var columnType)
+                ? columnType
+                : RptColType.Text.ToString());
+        }
+
+        if (fields.Count == 0)
+            throw new InvalidDataException(
+                "No columns in this Excel file match the selected dataset. Put the database column names (or a ShouTech export header row) in the first row, then import again.");
+
+        var rows = new List<IReadOnlyList<string?>>(sheet.Rows.Count);
+        foreach (var source in sheet.Rows)
+        {
+            var values = new string?[keepIndexes.Count];
+            for (var i = 0; i < keepIndexes.Count; i++)
+            {
+                var index = keepIndexes[i];
+                values[i] = index < source.Count ? source[index] : null;
+            }
+            rows.Add(values);
+        }
+
+        var identity = new DatasetIdentity(
+            DatasetIdentityVersion,
+            option.Key,
+            option.TableName,
+            headers.ToArray(),
+            fields.ToArray(),
+            typeNames.ToArray());
+        return (identity, new ExcelSheet(headers, rows));
+    }
+
+    private static string? MatchImportColumn(string header, IReadOnlyList<string> columns)
+    {
+        if (string.IsNullOrWhiteSpace(header))
+            return null;
+
+        static string Compact(string value)
+            => new string(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+
+        var compactHeader = Compact(header);
+        var snakeHeader = Compact(ToSnakeCase(header.Replace(' ', '_')));
+        foreach (var column in columns)
+        {
+            if (string.Equals(column, header, StringComparison.OrdinalIgnoreCase))
+                return column;
+            var compactColumn = Compact(column);
+            if (compactColumn.Length > 0 &&
+                (compactColumn == compactHeader || compactColumn == snakeHeader || compactColumn == Compact(Humanize(column)) && compactColumn == compactHeader))
+                return column;
+            if (string.Equals(Humanize(column), header.Trim(), StringComparison.OrdinalIgnoreCase))
+                return column;
+        }
+        return null;
+    }
+
+    private static async Task<Dictionary<string, string>> GetColumnTypeMapAsync(
+        DbConnection connection,
+        string table,
+        CancellationToken ct)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (DatabaseRuntime.IsSqlite())
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"PRAGMA table_info({QuoteIdentifier(table)})";
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                map[reader.GetString(1)] = MapStorageType(reader.IsDBNull(2) ? null : reader.GetString(2));
+            return map;
+        }
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = current_schema() AND table_name = @table
+                """;
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@table";
+            parameter.Value = table;
+            command.Parameters.Add(parameter);
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                map[reader.GetString(0)] = MapStorageType(reader.GetString(1));
+        }
+        return map;
+    }
+
+    private static string MapStorageType(string? storageType)
+    {
+        var value = (storageType ?? string.Empty).ToLowerInvariant();
+        if (value.Contains("bool"))
+            return RptColType.Boolean.ToString();
+        if (value.Contains("int") || value is "serial" or "bigserial" or "smallserial")
+            return RptColType.WholeNumber.ToString();
+        if (value.Contains("real") || value.Contains("double") || value.Contains("float") ||
+            value.Contains("numeric") || value.Contains("decimal") || value.Contains("money"))
+            return RptColType.FractionalNumber.ToString();
+        if (value.Contains("timestamp") || value.Contains("datetime"))
+            return RptColType.DateTime.ToString();
+        if (value == "date")
+            return RptColType.Date.ToString();
+        return RptColType.Text.ToString();
     }
 
     private static async Task<List<string>> GetColumnNamesAsync(DbConnection connection, string table, CancellationToken ct)
