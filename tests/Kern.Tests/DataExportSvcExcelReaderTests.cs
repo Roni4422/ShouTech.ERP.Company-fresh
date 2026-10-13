@@ -78,6 +78,93 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void ReadExcelSheet_RejectsFormulaCellsEvenWhenCachedValuesExist()
+    {
+        var path = CreateWorkbook(
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+                <row r="1"><c r="A1" t="s"><v>0</v></c></row>
+                <row r="2"><c r="A2"><f>1+1</f><v>2</v></c></row>
+              </sheetData>
+            </worksheet>
+            """);
+
+        try
+        {
+            var exception = Assert.Throws<InvalidDataException>(() => ReadSheet(path));
+            Assert.Contains("formula cells are not supported", exception.Message.ToLowerInvariant());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ReadExcelSheet_RejectsDataBeyondHeaderColumns()
+    {
+        var path = CreateWorkbook(
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+                <row r="1"><c r="A1" t="s"><v>0</v></c></row>
+                <row r="2">
+                  <c r="A2" t="s"><v>1</v></c>
+                  <c r="B2" t="inlineStr"><is><t>unmapped hidden value</t></is></c>
+                </row>
+              </sheetData>
+            </worksheet>
+            """);
+
+        try
+        {
+            var exception = Assert.Throws<InvalidDataException>(() => ReadSheet(path));
+            Assert.Contains("beyond the last header column", exception.Message.ToLowerInvariant());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void CompanyScopePolicy_UsesCompanyCodesOnlyForExplicitLegacyTables()
+    {
+        var method = typeof(DataExportSvc).GetMethod(
+            "IsCompanyCodeScopedTable",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        Assert.True((bool)method!.Invoke(null, new object[] { "materials" })!);
+        Assert.True((bool)method.Invoke(null, new object[] { "customers" })!);
+        Assert.False((bool)method.Invoke(null, new object[] { "company_roles" })!);
+    }
+
+    [Fact]
+    public void PostgresPermissionMigration_ContainsPermissionUsedByApplication()
+    {
+        var root = FindRepositoryRoot();
+        var migration = Path.Combine(root, "dba", "mig", "postgresql", "007_permission_manage.sql");
+
+        Assert.True(File.Exists(migration), $"Expected migration file was not found: {migration}");
+        Assert.Contains("SYS.PERMISSIONS.MANAGE", File.ReadAllText(migration));
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, "dba", "mig", "postgresql")))
+                return directory.FullName;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate the repository root from the test output directory.");
+    }
+
+    [Fact]
     public void GenericImportTypeInference_RecognizesIntegerBackedBooleanColumns()
     {
         var method = typeof(DataExportSvc).GetMethod(
