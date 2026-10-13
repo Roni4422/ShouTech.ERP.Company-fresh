@@ -383,6 +383,42 @@ public sealed class DataExportSvcExcelReaderTests
         }
     }
 
+    [Theory]
+    [InlineData(true, 0L)]
+    [InlineData(false, 1L)]
+    public async Task ImportTransactionCompletion_PreviewRollsBackAndConfirmedImportCommits(
+        bool previewOnly,
+        long expectedRowCount)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using (var setup = connection.CreateCommand())
+        {
+            setup.CommandText = "CREATE TABLE preview_probe (id INTEGER PRIMARY KEY);";
+            await setup.ExecuteNonQueryAsync();
+        }
+
+        await using (var transaction = await connection.BeginTransactionAsync())
+        {
+            await using var insert = connection.CreateCommand();
+            insert.Transaction = (SqliteTransaction)transaction;
+            insert.CommandText = "INSERT INTO preview_probe (id) VALUES (1);";
+            await insert.ExecuteNonQueryAsync();
+
+            var method = typeof(DataExportSvc).GetMethod(
+                "CompleteImportTransactionAsync",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(method);
+            var completion = method!.Invoke(null, new object[] { transaction, previewOnly, CancellationToken.None });
+            Assert.IsAssignableFrom<Task>(completion);
+            await (Task)completion!;
+        }
+
+        await using var verify = connection.CreateCommand();
+        verify.CommandText = "SELECT COUNT(*) FROM preview_probe;";
+        Assert.Equal(expectedRowCount, (long)(await verify.ExecuteScalarAsync() ?? 0L));
+    }
+
     private static object ReadSheet(string path)
     {
         var method = typeof(DataExportSvc).GetMethod(
