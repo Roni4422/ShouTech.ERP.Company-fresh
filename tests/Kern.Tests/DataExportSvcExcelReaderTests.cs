@@ -129,6 +129,20 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void ExcelDateFormatDetection_IgnoresColorsAndLiteralsButRecognizesDatesAndElapsedTime()
+    {
+        var method = typeof(DataExportSvc).GetMethod(
+            "IsDateNumberFormat",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        Assert.True((bool)method!.Invoke(null, new object[] { "yyyy-mm-dd" })!);
+        Assert.True((bool)method.Invoke(null, new object[] { "[h]:mm:ss" })!);
+        Assert.False((bool)method.Invoke(null, new object[] { "[Red]0.00" })!);
+        Assert.False((bool)method.Invoke(null, new object[] { "0.00 \"items\"" })!);
+    }
+
+    [Fact]
     public void CompanyScopePolicy_UsesCompanyCodesOnlyForExplicitLegacyTables()
     {
         var method = typeof(DataExportSvc).GetMethod(
