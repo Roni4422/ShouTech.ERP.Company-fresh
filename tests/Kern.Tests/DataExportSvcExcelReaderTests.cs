@@ -160,6 +160,26 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void ImportKeySelection_UsesCompanyCodeUniqueKeyWhenGeneratedIdIsAbsent()
+    {
+        var method = typeof(DataExportSvc).GetMethod(
+            "SelectUsableImportKeyColumns",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        var primaryKeys = new[] { "material_id" };
+        var uniqueKeys = new List<List<string>>
+        {
+            new() { "company_id", "code" }
+        };
+        var fields = new HashSet<string>(new[] { "company_id", "code", "name_ar" }, StringComparer.OrdinalIgnoreCase);
+
+        var result = method!.Invoke(null, new object[] { primaryKeys, uniqueKeys, fields });
+
+        Assert.Equal(new[] { "company_id", "code" }, Assert.IsType<List<string>>(result));
+    }
+
+    [Fact]
     public void GenericImportFieldAliases_MapMaterialNameToNameAr()
     {
         var method = typeof(DataExportSvc).GetMethod(
