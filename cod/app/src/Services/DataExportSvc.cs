@@ -337,25 +337,41 @@ public static class DataExportSvc
                 throw new InvalidDataException("This Excel file is not a supported ShouTech dataset export. Export the selected dataset from ShouTech as .xlsx, then edit its data cells without deleting or renaming the hidden ShouTech identity column or the visible column headers. Generic Excel templates are not supported by this import path yet.");
 
             DatasetIdentity identity;
-            try
+            var identityColumnIndex = -1;
+            if (markerIndexes.Length == 1)
             {
-                var marker = Convert.FromBase64String(markerIndexes[0].header[DatasetIdentityPrefix.Length..]);
-                var payload = XptCry.Decrypt(marker, XptCry.KindDatasetIdentity);
-                identity = JsonSerializer.Deserialize<DatasetIdentity>(payload)
-                    ?? throw new InvalidDataException("The workbook dataset identity is empty.");
-            }
-            catch (Exception ex) when (ex is FormatException or XptCry.XptCryException or JsonException)
-            {
-                throw new InvalidDataException("The workbook dataset identity is invalid or belongs to another installation.", ex);
-            }
+                identityColumnIndex = markerIndexes[0].index;
+                try
+                {
+                    var marker = Convert.FromBase64String(markerIndexes[0].header[DatasetIdentityPrefix.Length..]);
+                    var payload = XptCry.Decrypt(marker, XptCry.KindDatasetIdentity);
+                    identity = JsonSerializer.Deserialize<DatasetIdentity>(payload)
+                        ?? throw new InvalidDataException("The workbook dataset identity is empty.");
+                }
+                catch (Exception ex) when (ex is FormatException or XptCry.XptCryException or JsonException)
+                {
+                    throw new InvalidDataException("The workbook dataset identity is invalid or belongs to another installation.", ex);
+                }
 
-            if (identity.Version != DatasetIdentityVersion ||
-                !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
-                !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("The selected dataset does not match this Excel file. In the import window, choose the same dataset type used to export the workbook; do not rename its column headers.");
+                if (identity.Version != DatasetIdentityVersion ||
+                    !string.Equals(identity.Key, option.Key, StringComparison.Ordinal) ||
+                    !string.Equals(identity.TableName, option.TableName, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("The selected dataset does not match this Excel file. In the import window, choose the same dataset type used to export the workbook; do not rename its column headers.");
+            }
+            else if (markerIndexes.Length == 0)
+            {
+                // Generic workbooks are accepted only when every header maps to a real
+                // column in the explicitly selected, allow-listed dataset. No SQL
+                // identifiers are ever taken directly from an unvalidated workbook.
+                identity = await CreateGenericDatasetIdentityAsync(sheet, option, ct);
+            }
+            else
+            {
+                throw new InvalidDataException("The workbook contains more than one ShouTech dataset identity column.");
+            }
 
             var result = await ImportRowsAsync(
-                sheet, identity, option, companyCode, markerIndexes[0].index, replaceMode, ct);
+                sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct);
             LogOp("ImportExcel",
                 $"key={option.Key} | table={option.TableName} | mode={(replaceMode ? "Replace" : "Upsert")} | upserted={result.UpsertedRows} | deleted={result.DeletedRows} | company={companyCode} | file={path}");
             return result;
@@ -865,21 +881,135 @@ public static class DataExportSvc
         };
     }
 
+    private static async Task<DatasetIdentity> CreateGenericDatasetIdentityAsync(
+        ExcelSheet sheet,
+        DataExportOption option,
+        CancellationToken ct)
+    {
+        if (sheet.Headers.Count == 0 ||
+            sheet.Headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != sheet.Headers.Count)
+            throw new InvalidDataException("The generic Excel file must have unique, non-empty headers.");
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(ct);
+        var columns = await GetColumnNamesAsync(connection, option.TableName, ct);
+        if (columns.Count == 0)
+            throw new InvalidOperationException("The selected dataset table is not available in the current database.");
+
+        var fields = new List<string>(sheet.Headers.Count);
+        foreach (var header in sheet.Headers)
+        {
+            var field = columns.FirstOrDefault(column =>
+                string.Equals(column, header.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (field is null)
+                throw new InvalidDataException(
+                    $"Excel column '{header}' does not match a database field in '{option.TableName}'. For a generic workbook, use database field names as the first-row headers.");
+
+            fields.Add(field);
+        }
+
+        var types = await GetColumnImportTypesAsync(connection, option.TableName, ct);
+        var mappedTypes = fields.Select(field =>
+        {
+            if (!types.TryGetValue(field, out var databaseType))
+                throw new InvalidDataException($"The database type for field '{field}' could not be determined.");
+            return databaseType;
+        }).ToArray();
+
+        return new DatasetIdentity(
+            DatasetIdentityVersion,
+            option.Key,
+            option.TableName,
+            sheet.Headers.ToArray(),
+            fields.ToArray(),
+            mappedTypes);
+    }
+
+    private static async Task<Dictionary<string, string>> GetColumnImportTypesAsync(
+        DbConnection connection,
+        string table,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        await using var command = connection.CreateCommand();
+        if (DatabaseRuntime.IsSqlite())
+        {
+            command.CommandText = $"PRAGMA table_info({QuoteIdentifier(table)})";
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(1);
+                var sqlType = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
+                result[name] = NormalizeDatabaseImportType(name, sqlType);
+            }
+            return result;
+        }
+
+        command.CommandText = """
+            SELECT column_name, data_type, udt_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = @table
+            ORDER BY ordinal_position
+            """;
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@table";
+        parameter.Value = table;
+        command.Parameters.Add(parameter);
+        await using (var reader = await command.ExecuteReaderAsync(ct))
+        {
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(0);
+                var sqlType = reader.GetString(1);
+                var underlyingType = reader.GetString(2);
+                result[name] = NormalizeDatabaseImportType(name, sqlType + " " + underlyingType);
+            }
+        }
+        return result;
+    }
+
+    private static string NormalizeDatabaseImportType(string columnName, string databaseType)
+    {
+        var type = databaseType.ToLowerInvariant();
+        if (type.Contains("bool", StringComparison.Ordinal))
+            return RptColType.Boolean.ToString();
+        if (type.Contains("timestamp", StringComparison.Ordinal) || type.Contains("datetime", StringComparison.Ordinal))
+            return RptColType.DateTime.ToString();
+        if (type.Contains("date", StringComparison.Ordinal) || type.Contains("time", StringComparison.Ordinal))
+            return RptColType.Date.ToString();
+        if (type.Contains("int", StringComparison.Ordinal) || type.Contains("serial", StringComparison.Ordinal))
+            return RptColType.WholeNumber.ToString();
+        if (type.Contains("numeric", StringComparison.Ordinal) || type.Contains("decimal", StringComparison.Ordinal) ||
+            type.Contains("real", StringComparison.Ordinal) || type.Contains("double", StringComparison.Ordinal) ||
+            type.Contains("float", StringComparison.Ordinal))
+        {
+            var name = columnName.ToLowerInvariant();
+            return name.Contains("amount", StringComparison.Ordinal) || name.Contains("price", StringComparison.Ordinal) ||
+                   name.Contains("cost", StringComparison.Ordinal) || name.Contains("balance", StringComparison.Ordinal) ||
+                   name.Contains("total", StringComparison.Ordinal)
+                ? RptColType.Money.ToString()
+                : RptColType.FractionalNumber.ToString();
+        }
+        return RptColType.Text.ToString();
+    }
+
     private static ExcelSheet ReadExcelSheet(string path)
     {
         if (!string.Equals(Path.GetExtension(path), ".xlsx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Only .xlsx workbooks can be imported as editable datasets.");
 
         using var archive = ZipFile.OpenRead(path);
-        var sheetEntry = archive.GetEntry("xl/worksheets/sheet1.xml")
-            ?? throw new InvalidDataException("The workbook does not contain a first worksheet.");
+        var sheetEntry = ResolveFirstWorksheetEntry(archive);
         var sharedStrings = ReadSharedStrings(archive);
+        var dateStyleIndexes = ReadDateStyleIndexes(archive);
         using var stream = sheetEntry.Open();
         var document = XDocument.Load(stream);
         XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         var rows = document.Root?.Element(ns + "sheetData")?.Elements(ns + "row").ToArray()
-            ?? throw new InvalidDataException("The workbook worksheet is empty.");
+            ?? throw new InvalidDataException("The selected worksheet is empty.");
+
         var matrix = new List<IReadOnlyList<string?>>();
+        var maximumColumn = -1;
         foreach (var row in rows)
         {
             var cells = new Dictionary<int, string?>();
@@ -889,18 +1019,35 @@ public static class DataExportSvc
                     ?? throw new InvalidDataException("A workbook cell has no column reference.");
                 var index = ExcelColumnIndex(reference);
                 var type = (string?)cell.Attribute("t");
-                var value = type switch
+                var rawValue = cell.Element(ns + "v")?.Value;
+                string? value = type switch
                 {
                     "inlineStr" => string.Concat(cell.Element(ns + "is")?.Descendants(ns + "t").Select(x => x.Value) ?? []),
-                    "s" => SharedStringValue(cell.Element(ns + "v")?.Value, sharedStrings),
-                    "b" => cell.Element(ns + "v")?.Value == "1" ? "true" : "false",
-                    _ => cell.Element(ns + "v")?.Value
+                    "s" => SharedStringValue(rawValue, sharedStrings),
+                    "b" => rawValue == "1" ? "true" : "false",
+                    "str" => rawValue,
+                    "e" => throw new InvalidDataException($"Cell {reference} contains an Excel formula error."),
+                    _ => rawValue
                 };
+
+                if (type is null or "n")
+                {
+                    var styleText = (string?)cell.Attribute("s");
+                    if (value is not null &&
+                        int.TryParse(styleText, NumberStyles.None, CultureInfo.InvariantCulture, out var styleIndex) &&
+                        dateStyleIndexes.Contains(styleIndex) &&
+                        double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var serial))
+                    {
+                        try { value = DateTime.FromOADate(serial).ToString("O", CultureInfo.InvariantCulture); }
+                        catch (ArgumentException) { throw new InvalidDataException($"Cell {reference} contains an invalid Excel date."); }
+                    }
+                }
+
                 cells[index] = value;
+                maximumColumn = Math.Max(maximumColumn, index);
             }
 
-            var width = cells.Count == 0 ? 0 : cells.Keys.Max() + 1;
-            var values = new string?[width];
+            var values = new string?[maximumColumn + 1];
             foreach (var pair in cells)
                 values[pair.Key] = pair.Value;
             matrix.Add(values);
@@ -908,7 +1055,92 @@ public static class DataExportSvc
 
         if (matrix.Count == 0 || matrix[0].Count == 0 || matrix[0].Any(string.IsNullOrWhiteSpace))
             throw new InvalidDataException("The workbook header row is missing or contains an empty column name.");
-        return new ExcelSheet(matrix[0].Select(x => x!).ToArray(), matrix.Skip(1).ToArray());
+
+        var headers = matrix[0].Select(x => x!.Trim()).ToArray();
+        if (headers.Any(string.IsNullOrWhiteSpace) ||
+            headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != headers.Length)
+            throw new InvalidDataException("The workbook header row contains blank or duplicate column names.");
+
+        return new ExcelSheet(headers, matrix.Skip(1).ToArray());
+    }
+
+    private static ZipArchiveEntry ResolveFirstWorksheetEntry(ZipArchive archive)
+    {
+        XNamespace main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        XNamespace rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XNamespace packageRel = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+        var workbookEntry = archive.GetEntry("xl/workbook.xml")
+            ?? throw new InvalidDataException("The XLSX package does not contain xl/workbook.xml.");
+        XDocument workbook;
+        using (var stream = workbookEntry.Open()) workbook = XDocument.Load(stream);
+        var relationshipId = (string?)workbook.Root?
+            .Element(main + "sheets")?
+            .Elements(main + "sheet")
+            .FirstOrDefault()?
+            .Attribute(rel + "id");
+        if (string.IsNullOrWhiteSpace(relationshipId))
+            throw new InvalidDataException("The workbook does not declare a worksheet.");
+
+        var relationshipsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels")
+            ?? throw new InvalidDataException("The XLSX package is missing workbook relationships.");
+        XDocument relationships;
+        using (var stream = relationshipsEntry.Open()) relationships = XDocument.Load(stream);
+        var target = (string?)relationships.Root?
+            .Elements(packageRel + "Relationship")
+            .FirstOrDefault(x => string.Equals((string?)x.Attribute("Id"), relationshipId, StringComparison.Ordinal))?
+            .Attribute("Target");
+        if (string.IsNullOrWhiteSpace(target))
+            throw new InvalidDataException("The first worksheet relationship is missing or invalid.");
+
+        var segments = (target.StartsWith("/", StringComparison.Ordinal) ? target.TrimStart('/') : "xl/" + target)
+            .Replace('\\', '/')
+            .Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var normalized = new List<string>();
+        foreach (var segment in segments)
+        {
+            if (segment == ".") continue;
+            if (segment == "..")
+            {
+                if (normalized.Count == 0) throw new InvalidDataException("The worksheet path escapes the XLSX package.");
+                normalized.RemoveAt(normalized.Count - 1);
+            }
+            else normalized.Add(segment);
+        }
+
+        var entry = archive.GetEntry(string.Join("/", normalized));
+        return entry ?? throw new InvalidDataException("The worksheet referenced by the workbook could not be found.");
+    }
+
+    private static HashSet<int> ReadDateStyleIndexes(ZipArchive archive)
+    {
+        var result = new HashSet<int>();
+        var entry = archive.GetEntry("xl/styles.xml");
+        if (entry is null) return result;
+
+        using var stream = entry.Open();
+        var document = XDocument.Load(stream);
+        XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        var customFormats = document.Root?.Element(ns + "numFmts")?
+            .Elements(ns + "numFmt")
+            .ToDictionary(
+                x => (uint?)x.Attribute("numFmtId") ?? 0,
+                x => (string?)x.Attribute("formatCode") ?? string.Empty) ?? new Dictionary<uint, string>();
+        var cellFormats = document.Root?.Element(ns + "cellXfs")?.Elements(ns + "xf").ToArray() ?? [];
+        for (var index = 0; index < cellFormats.Length; index++)
+        {
+            var formatId = (uint?)cellFormats[index].Attribute("numFmtId") ?? 0;
+            if ((formatId >= 14 && formatId <= 22) || (formatId >= 45 && formatId <= 47) ||
+                (customFormats.TryGetValue(formatId, out var format) && IsDateNumberFormat(format)))
+                result.Add(index);
+        }
+        return result;
+    }
+
+    private static bool IsDateNumberFormat(string format)
+    {
+        var cleaned = Regex.Replace(format, "\"[^\"]*\"|\\.|_.|\*.", string.Empty);
+        return Regex.IsMatch(cleaned, "[ymdhis]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static string[] ReadSharedStrings(ZipArchive archive)
