@@ -81,6 +81,12 @@ Internal-ID-scoped imports now fail closed when the `companies` registry is abse
 
 The importer no longer requires generated surrogate IDs when a complete unique key is available in the workbook. For example, `materials` has a company-scoped unique key on `(company_id, code)`, allowing a file with `code` and `name` to insert/update a material without an exported `material_id`. The UPSERT names the conflict target explicitly for PostgreSQL compatibility. Blank generated IDs are omitted from INSERT statements and primary keys are never included in the UPDATE set.
 
+### 5.2. Runtime-created material schema
+
+The `materials` table and its related material-card tables are created by the runtime schema in `cod/app/src/Services/Inventory.cs`, not by the active `dba/mig/sqlite/` migration chain. The active migrations define `products`, while the data-exchange catalog prefers `materials` when it exists and falls back to `products` otherwise. Therefore, the selected “Products” dataset can point to different physical schemas depending on whether inventory initialization has run. This is a real source of header/primary-key mismatches and must be covered by fresh-database initialization tests; the SQLite migration-chain test alone does not exercise runtime-created material tables.
+
+For `materials`, the database column is `name_ar` and it is `NOT NULL`. The importer accepts common spreadsheet headers such as `name`, `الاسم`, `اسم المادة`, and `اسم الصنف` as aliases for that existing column. It does not rename the database schema or weaken the constraint. If blank material names should be allowed, that requires a deliberate schema and UI validation change across both providers, not only an Excel header alias.
+
 ### 6. Cross-provider drift
 
 SQLite and PostgreSQL do not have identical migration decomposition: SQLite core defines 14 tables, while PostgreSQL splits the equivalent core/security set across `001_core.sql` and `002_security.sql`. PostgreSQL additionally defines 19 module tables in `003_modules.sql`; there is no matching SQLite module migration in the active SQLite migration directory. This is a confirmed capability/schema parity gap if those modules are expected to work on SQLite.
