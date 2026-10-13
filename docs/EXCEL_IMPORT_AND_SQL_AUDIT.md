@@ -75,6 +75,12 @@ A static comparison of the permission seed entries found 228 distinct permission
 
 A forward-only migration, `dba/mig/postgresql/007_permission_manage.sql`, now upserts this permission and grants it only to active administrator roles. It deliberately does not grant it to User or Viewer roles. This is a targeted correction; the full catalogs and role grants still need an automated cross-provider parity test.
 
+### 5.1. Company ID resolution and natural keys
+
+Internal-ID-scoped imports now fail closed when the `companies` registry is absent or empty, instead of substituting the company code for a UUID/integer ID. Explicitly classified legacy tables whose `company_id` column stores the company code bypass this lookup; global tables do not need a company lookup.
+
+The importer no longer requires generated surrogate IDs when a complete unique key is available in the workbook. For example, `materials` has a company-scoped unique key on `(company_id, code)`, allowing a file with `code` and `name` to insert/update a material without an exported `material_id`. The UPSERT names the conflict target explicitly for PostgreSQL compatibility. Blank generated IDs are omitted from INSERT statements and primary keys are never included in the UPDATE set.
+
 ### 6. Cross-provider drift
 
 SQLite and PostgreSQL do not have identical migration decomposition: SQLite core defines 14 tables, while PostgreSQL splits the equivalent core/security set across `001_core.sql` and `002_security.sql`. PostgreSQL additionally defines 19 module tables in `003_modules.sql`; there is no matching SQLite module migration in the active SQLite migration directory. This is a confirmed capability/schema parity gap if those modules are expected to work on SQLite.
@@ -96,7 +102,7 @@ Regression tests cover formula rejection, extra data columns, legacy company-sco
 - [ ] Build `tests/Kern.Tests/Kern.Tests.csproj` on Windows/.NET 8 (including the latest company-scope and XLSX hardening changes).
 - [ ] Run the existing test suite and add import-specific XLSX tests.
 - [ ] Run `SqlMigrator --dry-run` for SQLite and PostgreSQL and record the exact ordered IDs.
-- [ ] Apply migrations to disposable empty SQLite and PostgreSQL databases.
+- [ ] Apply migrations to disposable empty SQLite and PostgreSQL databases. A new automated test now executes the entire active SQLite migration chain in an empty in-memory database; the PostgreSQL chain still needs a disposable server-backed test.
 - [ ] Compare expected tables, columns, primary keys, foreign keys, unique constraints, and permission codes across both providers.
 - [ ] Test baseline behavior against a disposable existing database and inspect `schema_migrations`.
 - [ ] Verify posted invoices, vouchers, journal entries, and inventory movements cannot be imported, overwritten, or removed by spreadsheet or encrypted dataset-package operations.
