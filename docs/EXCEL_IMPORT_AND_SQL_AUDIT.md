@@ -28,7 +28,8 @@ The work is being developed on `feature/excel-import-rewrite-sql-audit`, based o
 
 ### Remaining Excel work before calling this complete
 
-- Add automated tests with real generated XLSX workbooks covering relationship-based worksheet selection, shared strings, inline strings, blank/sparse cells, date serials, invalid dates, duplicate headers, generic header mapping, primary-key omission, company scoping, rollback on row failure, and replace-mode restrictions.
+- Added regression tests with generated XLSX workbooks for relationship-based worksheet selection, shared strings, inline strings, Boolean cells, date serials, formula-error rejection, integer-backed Boolean inference, and blocking transactional datasets.
+- Still add database-backed tests for blank/sparse cells, duplicate headers, generic header mapping, primary-key omission, company scoping, rollback on row failure, and replace-mode restrictions.
 - Add a preview/dry-run stage with row-level errors before committing data.
 - Consider an explicit mapping UI for translated/custom header names. The current generic path intentionally requires actual database field names so it does not guess a mapping.
 - Run the Windows/.NET 8 build and test workflow. A code edit is not considered verified until CI completes successfully.
