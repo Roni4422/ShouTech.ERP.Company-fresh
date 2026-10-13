@@ -558,16 +558,18 @@ public static class DataExportSvc
         if (keyColumns.Count == 0 || keyColumns.Any(key => !identity.Fields.Contains(key, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidDataException("The workbook does not contain the complete primary key required for a safe import.");
 
-        var companyId = await FindCompanyIdAsync(connection, companyCode, ct);
         var companyColumn = columns.FirstOrDefault(x =>
             x.Equals("company_id", StringComparison.OrdinalIgnoreCase) ||
             x.Equals("companyid", StringComparison.OrdinalIgnoreCase));
         // Legacy tenant tables store the company CODE in company_id; newer tables
-        // store the internal companies.company_id. Keep this mapping explicit so an
-        // import cannot silently write an internal numeric ID into a text code column.
-        var companyScopeValue = IsCompanyCodeScopedTable(option.TableName)
-            ? companyCode.Trim()
-            : companyId;
+        // store the internal companies.company_id. Do not consult the global registry
+        // for legacy code-scoped tables or truly global datasets: a valid company-
+        // scoped database may intentionally have an empty companies registry.
+        var companyCodeScoped = IsCompanyCodeScopedTable(option.TableName);
+        var companyId = companyColumn is not null && !companyCodeScoped
+            ? await FindCompanyIdAsync(connection, companyCode, ct)
+            : null;
+        var companyScopeValue = companyCodeScoped ? companyCode.Trim() : companyId;
         if (companyColumn != null && companyScopeValue == null)
             throw new InvalidOperationException("The active company could not be matched to the current database.");
         if (companyColumn == null && !IsCompanyIndependent(option.TableName))
@@ -1412,8 +1414,21 @@ public static class DataExportSvc
         command.Parameters.Add(parameter);
         var value = await command.ExecuteScalarAsync(ct);
         if (value is null or DBNull)
+        {
+            await using var countCommand = connection.CreateCommand();
+            countCommand.CommandText = $"SELECT COUNT(*) FROM {QuoteIdentifier(companyTable)}";
+            var countValue = await countCommand.ExecuteScalarAsync(ct);
+            var registeredCompanies = countValue is null or DBNull
+                ? 0L
+                : Convert.ToInt64(countValue, CultureInfo.InvariantCulture);
+
+            if (registeredCompanies == 0)
+                throw new InvalidOperationException(
+                    $"The '{companyTable}' registry is empty. Initialize/register company '{companyCode}' before importing datasets that use internal company IDs. Legacy company-code datasets can still be imported without this registry.");
+
             throw new InvalidOperationException(
                 $"Company '{companyCode}' is not registered in the current database. Verify that the selected company and database belong together, or run the company/database initialization step.");
+        }
         return value;
     }
 
