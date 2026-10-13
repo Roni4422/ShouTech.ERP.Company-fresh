@@ -129,6 +129,21 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void GenericImportFieldAliases_MapMaterialNameToNameAr()
+    {
+        var method = typeof(DataExportSvc).GetMethod(
+            "ResolveImportFieldAlias",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        var columns = new[] { "material_id", "company_id", "code", "name_ar", "name_en" };
+
+        Assert.Equal("name_ar", method!.Invoke(null, new object[] { "materials", "name", columns }));
+        Assert.Equal("name_ar", method.Invoke(null, new object[] { "materials", "الاسم", columns }));
+        Assert.Null(method.Invoke(null, new object[] { "materials", "unmapped", columns }));
+    }
+
+    [Fact]
     public void ExcelDateFormatDetection_IgnoresColorsAndLiteralsButRecognizesDatesAndElapsedTime()
     {
         var method = typeof(DataExportSvc).GetMethod(
