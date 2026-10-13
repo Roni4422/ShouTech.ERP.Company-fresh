@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using ShouTech.App.Services;
 using Xunit;
