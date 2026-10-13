@@ -70,11 +70,11 @@ public sealed class PriceListWin : RptBase
             materials = materials.Where(m =>
                 m.Code.Contains(search, StringComparison.OrdinalIgnoreCase)
              || m.NameAr.Contains(search, StringComparison.OrdinalIgnoreCase)
-             || (m.NameEn ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase));
+             || (m.NameEn ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
         if (group.Length > 0)
-            materials = materials.Where(m => string.Equals(m.GroupCode, group, StringComparison.Ordinal));
+            materials = materials.Where(m => string.Equals(m.GroupCode, group, StringComparison.Ordinal)).ToList();
 
         var rows = materials
             .OrderBy(m => m.Code)
