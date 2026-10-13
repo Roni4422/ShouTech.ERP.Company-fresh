@@ -5,7 +5,9 @@ ShouTech supports only SQLite and PostgreSQL. SQL Server, Oracle, and MySQL are 
 - SQLite migrations: `dba/mig/sqlite/`
 - PostgreSQL migrations: `dba/mig/postgresql/`
 - Nested migration folders are discovered recursively.
+- PostgreSQL migrations use unique, zero-padded numeric prefixes and are applied in filename order. The module schema is `003_modules.sql`, followed by the RBAC seed as `004_rbac.sql`; later migrations continue at `005_roles.sql`.
 - Applied migrations are recorded in `schema_migrations` with SHA-256 checksums. Applied migration files are immutable; add a new migration instead of editing an applied file.
+- Migration IDs are relative filenames. Renaming a migration does not rewrite IDs already recorded in an existing database; review migration history before upgrading databases that used earlier filenames.
 - Each migration runs in its own transaction.
 - Existing databases without migration history are not modified automatically. Verify their schema and use `--baseline-existing` only after taking a backup and reviewing the migration list.
 

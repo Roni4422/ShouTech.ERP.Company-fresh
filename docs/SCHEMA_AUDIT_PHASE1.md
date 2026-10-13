@@ -9,9 +9,9 @@
 
 - **account_types**: dba/lite.sql:182, dba/pg.sql:182
 - **accounts**: dba/02_GL_COA.sql:13, cod/app/src/Services/Accounting.cs:244, cod/app/src/Services/Accounting.cs:276
-- **ai.models**: dba/mig/postgresql/003_modules.sql:97, dba/mig/postgresql/004_modules.sql:97
-- **ai.predictions**: dba/mig/postgresql/003_modules.sql:102, dba/mig/postgresql/004_modules.sql:102
-- **audit.events**: dba/mig/postgresql/003_modules.sql:107, dba/mig/postgresql/004_modules.sql:107
+- **ai.models**: dba/mig/postgresql/003_modules.sql:97
+- **ai.predictions**: dba/mig/postgresql/003_modules.sql:102
+- **audit.events**: dba/mig/postgresql/003_modules.sql:107
 - **audit_log**: dba/lite.sql:1376, dba/pg.sql:1329
 - **bank_accounts**: dba/lite.sql:1276, dba/pg.sql:1201
 - **banks**: dba/lite.sql:1256, dba/03_CASH.sql:7, dba/pg.sql:1184
@@ -21,9 +21,9 @@
 - **chart_of_accounts**: dba/lite.sql:191, dba/pg.sql:191
 - **companies**: dba/lite.sql:17, dba/01_SEC.sql:5, dba/pg.sql:17, dba/mig/sqlite/001_sqlite_core.sql:3, dba/mig/postgresql/001_core.sql:4, cod/app/src/Services/Data.cs:790
 - **cost_layers**: dba/lite.sql:819, dba/pg.sql:787
-- **crm.business_partners**: dba/mig/postgresql/003_modules.sql:10, dba/mig/postgresql/004_modules.sql:10
-- **crm.sales_order_lines**: dba/mig/postgresql/003_modules.sql:24, dba/mig/postgresql/004_modules.sql:24
-- **crm.sales_orders**: dba/mig/postgresql/003_modules.sql:17, dba/mig/postgresql/004_modules.sql:17
+- **crm.business_partners**: dba/mig/postgresql/003_modules.sql:10
+- **crm.sales_order_lines**: dba/mig/postgresql/003_modules.sql:24
+- **crm.sales_orders**: dba/mig/postgresql/003_modules.sql:17
 - **currencies**: dba/lite.sql:143, dba/02_GL_COA.sql:5, dba/pg.sql:143
 - **currency_rates**: dba/lite.sql:152, dba/pg.sql:152
 - **customer_addresses**: dba/lite.sql:1076, dba/pg.sql:1030
@@ -49,10 +49,10 @@
 - **departments**: dba/lite.sql:1193, dba/pg.sql:1132
 - **employees**: dba/lite.sql:1218, dba/pg.sql:1156
 - **fiscal_years**: dba/lite.sql:208, dba/pg.sql:208, dba/mig/sqlite/001_sqlite_core.sql:38, dba/mig/postgresql/002_security.sql:1, cod/app/src/Services/Data.cs:832
-- **hr.departments**: dba/mig/postgresql/003_modules.sql:30, dba/mig/postgresql/004_modules.sql:30
-- **hr.employees**: dba/mig/postgresql/003_modules.sql:36, dba/mig/postgresql/004_modules.sql:36
-- **hr.leave_requests**: dba/mig/postgresql/003_modules.sql:42, dba/mig/postgresql/004_modules.sql:42
-- **hr.payroll_runs**: dba/mig/postgresql/003_modules.sql:48, dba/mig/postgresql/004_modules.sql:48
+- **hr.departments**: dba/mig/postgresql/003_modules.sql:30
+- **hr.employees**: dba/mig/postgresql/003_modules.sql:36
+- **hr.leave_requests**: dba/mig/postgresql/003_modules.sql:42
+- **hr.payroll_runs**: dba/mig/postgresql/003_modules.sql:48
 - **job_titles**: dba/lite.sql:1206, dba/pg.sql:1144
 - **journal_audit_events**: dba/mig/sqlite/001_sqlite_core.sql:147, dba/mig/postgresql/001_core.sql:82, cod/app/src/Services/Data.cs:1161
 - **journal_entries**: dba/mig/sqlite/001_sqlite_core.sql:119, dba/mig/postgresql/001_core.sql:55, cod/app/src/Services/Data.cs:1127
@@ -66,19 +66,19 @@
 - **material_stock_movements**: dba/lite.sql:688, dba/pg.sql:685, cod/app/src/Services/Inventory.cs:1004, cod/app/src/Services/Inventory.cs:1213
 - **material_suppliers**: cod/app/src/Services/Inventory.cs:989, cod/app/src/Services/Inventory.cs:1198
 - **materials**: cod/app/src/Services/Inventory.cs:806, cod/app/src/Services/Inventory.cs:1015
-- **mfg.bom_lines**: dba/mig/postgresql/003_modules.sql:81, dba/mig/postgresql/004_modules.sql:81
-- **mfg.boms**: dba/mig/postgresql/003_modules.sql:76, dba/mig/postgresql/004_modules.sql:76
-- **mfg.quality_results**: dba/mig/postgresql/003_modules.sql:91, dba/mig/postgresql/004_modules.sql:91
-- **mfg.work_orders**: dba/mig/postgresql/003_modules.sql:85, dba/mig/postgresql/004_modules.sql:85
-- **mst.licenses**: dba/mig/postgresql/003_modules.sql:112, dba/mig/postgresql/004_modules.sql:112
+- **mfg.bom_lines**: dba/mig/postgresql/003_modules.sql:81
+- **mfg.boms**: dba/mig/postgresql/003_modules.sql:76
+- **mfg.quality_results**: dba/mig/postgresql/003_modules.sql:91
+- **mfg.work_orders**: dba/mig/postgresql/003_modules.sql:85
+- **mst.licenses**: dba/mig/postgresql/003_modules.sql:112
 - **number_sequences**: dba/lite.sql:1349, dba/pg.sql:1301
 - **party_ledger**: cod/app/src/Services/DocSchema.cs:147, cod/app/src/Services/DocSchema.cs:272
 - **permission_groups**: dba/mig/sqlite/004_permissions.sql:3, dba/mig/postgresql/006_permissions.sql:2, cod/app/src/Services/Data.cs:1235
 - **permissions**: dba/lite.sql:103, dba/pg.sql:103, dba/mig/sqlite/001_sqlite_core.sql:62, dba/mig/postgresql/002_security.sql:22, cod/app/src/Services/Data.cs:862
-- **pos.payments**: dba/mig/postgresql/003_modules.sql:70, dba/mig/postgresql/004_modules.sql:70
-- **pos.sale_lines**: dba/mig/postgresql/003_modules.sql:65, dba/mig/postgresql/004_modules.sql:65
-- **pos.sales**: dba/mig/postgresql/003_modules.sql:59, dba/mig/postgresql/004_modules.sql:59
-- **pos.shifts**: dba/mig/postgresql/003_modules.sql:54, dba/mig/postgresql/004_modules.sql:54
+- **pos.payments**: dba/mig/postgresql/003_modules.sql:70
+- **pos.sale_lines**: dba/mig/postgresql/003_modules.sql:65
+- **pos.sales**: dba/mig/postgresql/003_modules.sql:59
+- **pos.shifts**: dba/mig/postgresql/003_modules.sql:54
 - **pos_sessions**: dba/lite.sql:952, dba/pg.sql:914
 - **pos_terminals**: dba/lite.sql:934, dba/pg.sql:898
 - **pos_transaction_items**: dba/lite.sql:996, dba/pg.sql:959
