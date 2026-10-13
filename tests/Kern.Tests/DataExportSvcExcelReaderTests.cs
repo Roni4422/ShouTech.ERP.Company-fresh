@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
+using Microsoft.Data.Sqlite;
 using ShouTech.App.Services;
 using Xunit;
 
@@ -270,6 +271,55 @@ public sealed class DataExportSvcExcelReaderTests
 
         Assert.True((bool)method!.Invoke(null, new object[] { masterData })!);
         Assert.False((bool)method.Invoke(null, new object[] { sales })!);
+    }
+
+    [Fact]
+    public async Task SqliteMigrationChain_AppliesToAnEmptyDatabaseInOrder()
+    {
+        var root = FindRepositoryRoot();
+        var migrationDirectory = Path.Combine(root, "dba", "mig", "sqlite");
+        var migrationFiles = Directory.GetFiles(migrationDirectory, "*.sql", SearchOption.AllDirectories)
+            .OrderBy(path => Path.GetRelativePath(migrationDirectory, path).Replace('\\', '/'),
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.NotEmpty(migrationFiles);
+
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using (var pragma = connection.CreateCommand())
+        {
+            pragma.CommandText = "PRAGMA foreign_keys = ON;";
+            await pragma.ExecuteNonQueryAsync();
+        }
+
+        foreach (var path in migrationFiles)
+        {
+            await using var transaction = connection.BeginTransaction();
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandTimeout = 120;
+                command.CommandText = await File.ReadAllTextAsync(path);
+                await command.ExecuteNonQueryAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"SQLite migration '{Path.GetRelativePath(migrationDirectory, path)}' failed on an empty database: {ex.Message}",
+                    ex);
+            }
+        }
+
+        foreach (var table in new[] { "companies", "permissions", "role_permissions", "journal_entries", "chart_of_accounts", "outbound_messages" })
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@name;";
+            command.Parameters.AddWithValue("@name", table);
+            Assert.Equal(1L, (long)(await command.ExecuteScalarAsync() ?? 0L));
+        }
     }
 
     private static object ReadSheet(string path)
