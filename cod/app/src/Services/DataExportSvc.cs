@@ -1395,18 +1395,22 @@ public static class DataExportSvc
         CancellationToken ct)
     {
         var primaryKeys = await GetPrimaryKeyColumnsAsync(connection, table, ct);
-        if (primaryKeys.Count > 0 &&
-            primaryKeys.All(key => availableFields.Contains(key)))
-            return primaryKeys;
-
         var uniqueKeys = await GetUniqueConstraintColumnsAsync(connection, table, ct);
-        var usableKey = uniqueKeys.FirstOrDefault(key =>
-            key.Count > 0 && key.All(column => availableFields.Contains(column)));
-        if (usableKey is not null)
-            return usableKey;
-
-        throw new InvalidDataException(
+        var usableKey = SelectUsableImportKeyColumns(primaryKeys, uniqueKeys, availableFields);
+        return usableKey ?? throw new InvalidDataException(
             "The workbook must include either the complete primary key or a complete database-enforced unique key. Generated IDs may be omitted only when the selected dataset has another unique key, such as company plus code.");
+    }
+
+    private static List<string>? SelectUsableImportKeyColumns(
+        IReadOnlyList<string> primaryKeys,
+        IReadOnlyList<List<string>> uniqueKeys,
+        IReadOnlySet<string> availableFields)
+    {
+        if (primaryKeys.Count > 0 && primaryKeys.All(availableFields.Contains))
+            return primaryKeys.ToList();
+
+        return uniqueKeys.FirstOrDefault(key =>
+            key.Count > 0 && key.All(availableFields.Contains));
     }
 
     private static async Task<List<List<string>>> GetUniqueConstraintColumnsAsync(
