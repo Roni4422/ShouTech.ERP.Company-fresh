@@ -58,8 +58,17 @@ internal static class Program
         Console.WriteLine($"Discovered migrations: {migrations.Count}");
         if (options.DryRun)
         {
+            var dryRunHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var migration in migrations)
-                Console.WriteLine(migration.Id);
+            {
+                if (dryRunHashes.TryGetValue(migration.Hash, out var duplicateOf))
+                    Console.WriteLine($"{migration.Id} [duplicate SQL of {duplicateOf}; execution will be skipped]");
+                else
+                {
+                    Console.WriteLine(migration.Id);
+                    dryRunHashes.Add(migration.Hash, migration.Id);
+                }
+            }
             return 0;
         }
 
@@ -90,6 +99,7 @@ internal static class Program
                 return 4;
             }
 
+            var seenHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var migration in migrations)
             {
                 if (applied.TryGetValue(migration.Id, out var existingHash))
@@ -100,6 +110,18 @@ internal static class Program
                         return 3;
                     }
                     Console.WriteLine($"SKIP {migration.Id}");
+                    seenHashes.TryAdd(migration.Hash, migration.Id);
+                    continue;
+                }
+
+                if (seenHashes.TryGetValue(migration.Hash, out var duplicateOf))
+                {
+                    // Preserve both historical IDs in schema_migrations but execute identical
+                    // SQL only once per run. This is important for duplicated legacy files such
+                    // as PostgreSQL 003_modules.sql and 004_modules.sql.
+                    Console.WriteLine($"SKIP DUPLICATE {migration.Id} (identical SQL to {duplicateOf}); recording migration ID.");
+                    await RecordMigrationAsync(connection, migration, provider, transaction: null);
+                    applied[migration.Id] = migration.Hash;
                     continue;
                 }
 
@@ -116,6 +138,8 @@ internal static class Program
                     }
                     await RecordMigrationAsync(connection, migration, provider, transaction);
                     await transaction.CommitAsync();
+                    seenHashes.TryAdd(migration.Hash, migration.Id);
+                    applied[migration.Id] = migration.Hash;
                     Console.WriteLine($"OK   {migration.Id}");
                 }
                 catch
