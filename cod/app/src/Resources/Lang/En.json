@@ -319,7 +319,10 @@
       "code": "Item No",
       "name_ar": "Name",
       "name_en": "English Name"
-    }
+    },
+    "ImportPreviewRollback": "Preview only: all test writes were rolled back. No data has been changed.",
+    "ImportPreviewConfirm": "Continue and apply these changes?",
+    "ImportFileChanged": "The workbook changed after preview. Preview it again before importing."
   },
   "Exit": {
     "Exit": "Exit",
