@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ShouTech.App.Common;
 
 namespace ShouTech.App.Views;
 
@@ -11,12 +12,15 @@ namespace ShouTech.App.Views;
 /// Phase 7B - "Design barcode" (Inventory > Barcode).
 /// A mini label-design page: a style toolbar at the top controls label size,
 /// fonts, colors, and visible elements, with a live preview of the barcode
-/// label. The design persists to a local config file and can be reloaded.
+/// label rendered with the real Code-128 encoder. The design persists to a
+/// local config file and the designed label can be printed directly.
 /// </summary>
 public sealed class BcdDesWin : BaseWin
 {
     private readonly TextBox _txtWidth = new() { Width = 60, Text = "240" };
     private readonly TextBox _txtHeight = new() { Width = 60, Text = "150" };
+    private readonly TextBox _txtModuleWidth = new() { Width = 45, Text = "2" };
+    private readonly TextBox _txtBarHeight = new() { Width = 45, Text = "44" };
     private readonly ComboBox _cbFont = new() { Width = 120 };
     private readonly ComboBox _cbFontSize = new() { Width = 55 };
     private readonly CheckBox _chkBold = new() { Content = "B", FontWeight = FontWeights.Bold, IsChecked = true };
@@ -51,10 +55,10 @@ public sealed class BcdDesWin : BaseWin
 
     public BcdDesWin()
     {
-        Width = 860;
-        Height = 600;
-        MinWidth = 700;
-        MinHeight = 480;
+        Width = 880;
+        Height = 620;
+        MinWidth = 720;
+        MinHeight = 500;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         BuildUi();
@@ -81,6 +85,10 @@ public sealed class BcdDesWin : BaseWin
             return fallback;
         }
     }
+
+    // ------------------------------------------------------------------
+    // UI
+    // ------------------------------------------------------------------
 
     private void BuildUi()
     {
@@ -133,30 +141,22 @@ public sealed class BcdDesWin : BaseWin
     {
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
 
-        StyleButton(_btnSave, "Save design");
+        StyleButton(_btnSave, L("BarcodeDesign.SaveDesign", "Save design"));
         _btnSave.Click += (_, _) => SaveDesign();
         toolbar.Children.Add(_btnSave);
 
-        StyleButton(_btnLoad, "Load design");
+        StyleButton(_btnLoad, L("BarcodeDesign.LoadDesign", "Load design"));
         _btnLoad.Click += (_, _) => { LoadDesign(); UpdatePreview(); };
         toolbar.Children.Add(_btnLoad);
 
-        StyleButton(_btnReset, "Reset");
+        StyleButton(_btnReset, T("Common.Refresh"));
         _btnReset.Click += (_, _) => { ResetDesign(); UpdatePreview(); };
         toolbar.Children.Add(_btnReset);
 
-        StyleButton(_btnPrint, "Print");
-        _btnPrint.Click += (_, _) => MessageBox.Show(
-            this,
-            "The current design is ready for printing.",
-            Title,
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        StyleButton(_btnPrint, T("Common.Print"));
+        _btnPrint.Click += (_, _) => PrintDesignedLabel();
         toolbar.Children.Add(_btnPrint);
 
-        var dock = new DockPanel();
-        DockPanel.SetDock(toolbar, Dock.Top);
-        dock.Children.Add(toolbar);
         return toolbar;
     }
 
@@ -166,7 +166,7 @@ public sealed class BcdDesWin : BaseWin
 
         // Label size.
         var sizeRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        sizeRow.Children.Add(MakeLabel("Label size:"));
+        sizeRow.Children.Add(MakeLabel(L("BarcodeDesign.LabelSize", "Label size:")));
         _txtWidth.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
         sizeRow.Children.Add(_txtWidth);
         sizeRow.Children.Add(MakeLabel("x"));
@@ -174,9 +174,22 @@ public sealed class BcdDesWin : BaseWin
         sizeRow.Children.Add(_txtHeight);
         panel.Children.Add(sizeRow);
 
+        // Barcode size (module width + bar height).
+        var barcodeSizeRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+        barcodeSizeRow.Children.Add(MakeLabel(L("BarcodeDesign.BarSize", "Barcode size:")));
+        _txtModuleWidth.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
+        _txtModuleWidth.TextChanged += (_, _) => UpdatePreview();
+        barcodeSizeRow.Children.Add(MakeLabel(L("BarcodeDesign.BarWidth", "width")));
+        barcodeSizeRow.Children.Add(_txtModuleWidth);
+        _txtBarHeight.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
+        _txtBarHeight.TextChanged += (_, _) => UpdatePreview();
+        barcodeSizeRow.Children.Add(MakeLabel(L("BarcodeDesign.BarHeight", "height")));
+        barcodeSizeRow.Children.Add(_txtBarHeight);
+        panel.Children.Add(barcodeSizeRow);
+
         // Font family + size + bold.
         var fontRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        fontRow.Children.Add(MakeLabel("Font:"));
+        fontRow.Children.Add(MakeLabel(L("BarcodeDesign.Font", "Font:")));
         foreach (var family in new[] { "Segoe UI", "Tahoma", "Arial", "Consolas", "Times New Roman" })
             _cbFont.Items.Add(family);
         _cbFont.SelectedIndex = 0;
@@ -185,7 +198,7 @@ public sealed class BcdDesWin : BaseWin
         foreach (var size in new[] { "10", "12", "13", "14", "16", "18", "22" })
             _cbFontSize.Items.Add(size);
         _cbFontSize.SelectedItem = "13";
-        fontRow.Children.Add(MakeLabel("Size:"));
+        fontRow.Children.Add(MakeLabel(L("BarcodeDesign.FontSize", "Size:")));
         fontRow.Children.Add(_cbFontSize);
         _chkBold.Margin = new Thickness(8, 0, 0, 0);
         fontRow.Children.Add(_chkBold);
@@ -193,12 +206,12 @@ public sealed class BcdDesWin : BaseWin
 
         // Colors.
         var colorRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        colorRow.Children.Add(MakeLabel("Text:"));
+        colorRow.Children.Add(MakeLabel(L("BarcodeDesign.TextColor", "Text:")));
         foreach (var name in new[] { "Black", "Dark Blue", "Dark Red", "Forest Green", "Dim Gray" })
             _cbTextColor.Items.Add(name);
         _cbTextColor.SelectedIndex = 0;
         colorRow.Children.Add(_cbTextColor);
-        colorRow.Children.Add(MakeLabel("Bars:"));
+        colorRow.Children.Add(MakeLabel(L("BarcodeDesign.BarColor", "Bars:")));
         foreach (var name in new[] { "Black", "Dark Blue", "Dark Red", "Brown" })
             _cbBarColor.Items.Add(name);
         _cbBarColor.SelectedIndex = 0;
@@ -206,7 +219,7 @@ public sealed class BcdDesWin : BaseWin
         panel.Children.Add(colorRow);
 
         var bgRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        bgRow.Children.Add(MakeLabel("Background:"));
+        bgRow.Children.Add(MakeLabel(L("BarcodeDesign.Background", "Background:")));
         foreach (var name in new[] { "White", "Ivory", "Light Yellow", "White Smoke" })
             _cbBackground.Items.Add(name);
         _cbBackground.SelectedIndex = 0;
@@ -215,7 +228,7 @@ public sealed class BcdDesWin : BaseWin
 
         // Elements.
         var elementRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        elementRow.Children.Add(MakeLabel("Elements:"));
+        elementRow.Children.Add(MakeLabel(L("BarcodeDesign.Elements", "Elements:")));
         elementRow.Children.Add(_chkShowName);
         _chkShowPrice.Margin = new Thickness(10, 0, 0, 0);
         elementRow.Children.Add(_chkShowPrice);
@@ -232,25 +245,25 @@ public sealed class BcdDesWin : BaseWin
         sep.SetResourceReference(Border.BackgroundProperty, "BorderBrush");
         panel.Children.Add(sep);
 
-        panel.Children.Add(MakeLabel("Sample content:"));
+        panel.Children.Add(MakeLabel(L("BarcodeDesign.Sample", "Sample content:")));
         var nameRow = new WrapPanel { Margin = new Thickness(0, 4, 0, 4) };
         _txtName.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
         _txtName.TextChanged += (_, _) => UpdatePreview();
-        nameRow.Children.Add(MakeLabel("Name:"));
+        nameRow.Children.Add(MakeLabel(T("MatCard.Name") + ":"));
         nameRow.Children.Add(_txtName);
         panel.Children.Add(nameRow);
 
         var priceRow = new WrapPanel { Margin = new Thickness(0, 4, 0, 4) };
         _txtPrice.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
         _txtPrice.TextChanged += (_, _) => UpdatePreview();
-        priceRow.Children.Add(MakeLabel("Price:"));
+        priceRow.Children.Add(MakeLabel(T("Invoice.Col.SalePrice") + ":"));
         priceRow.Children.Add(_txtPrice);
         panel.Children.Add(priceRow);
 
         var codeRow = new WrapPanel { Margin = new Thickness(0, 4, 0, 4) };
         _txtCode.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
         _txtCode.TextChanged += (_, _) => UpdatePreview();
-        codeRow.Children.Add(MakeLabel("Code:"));
+        codeRow.Children.Add(MakeLabel(T("BarcodeTool.Value") + ":"));
         codeRow.Children.Add(_txtCode);
         panel.Children.Add(codeRow);
 
@@ -284,7 +297,7 @@ public sealed class BcdDesWin : BaseWin
 
         var caption = new TextBlock
         {
-            Text = "Live preview",
+            Text = T("BarcodeTool.Preview"),
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 0, 0, 12),
             HorizontalAlignment = HorizontalAlignment.Center
@@ -312,7 +325,6 @@ public sealed class BcdDesWin : BaseWin
 
         _prevBars.Orientation = Orientation.Horizontal;
         _prevBars.HorizontalAlignment = HorizontalAlignment.Center;
-        _prevBars.Height = 44;
         _prevBars.Margin = new Thickness(0, 0, 0, 4);
         content.Children.Add(_prevBars);
 
@@ -324,6 +336,10 @@ public sealed class BcdDesWin : BaseWin
         host.Children.Add(_label);
         return host;
     }
+
+    // ------------------------------------------------------------------
+    // Live preview (real Code-128 rendering)
+    // ------------------------------------------------------------------
 
     private void UpdatePreview()
     {
@@ -359,24 +375,146 @@ public sealed class BcdDesWin : BaseWin
         _prevCode.FontSize = Math.Max(9, size - 2);
         _prevCode.Foreground = textColor;
 
-        // Barcode bars (deterministic pseudo-render, same approach as BarWin).
+        // Real Code-128 bars with the chosen bar/background colors.
         _prevBars.Children.Clear();
         var code = _txtCode.Text;
         if (string.IsNullOrWhiteSpace(code)) code = "12345678";
 
-        for (var i = 0; i < code.Length * 3; i++)
+        _ = double.TryParse(_txtModuleWidth.Text, out var moduleWidth);
+        if (moduleWidth <= 0) moduleWidth = 2;
+        moduleWidth = Math.Min(moduleWidth, 4);
+
+        _ = double.TryParse(_txtBarHeight.Text, out var barHeight);
+        if (barHeight <= 0) barHeight = 44;
+
+        _prevBars.Children.Add(Code128.BuildVisual(
+            code,
+            moduleWidth,
+            barHeight,
+            quietZone: 4,
+            barBrush: barColor,
+            backgroundBrush: Brushes.Transparent));
+    }
+
+    // ------------------------------------------------------------------
+    // Printing the designed label
+    // ------------------------------------------------------------------
+
+    private void PrintDesignedLabel()
+    {
+        var dialog = new PrintDialog();
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
         {
-            var isBar = (i * 7 + (code[i % code.Length])) % 2 == 0;
-            var width = (i % 5 == 0) ? 2.5 : 1.2;
-            _prevBars.Children.Add(new Rectangle
-            {
-                Width = width,
-                Height = 44,
-                Fill = isBar ? barColor : Brushes.White,
-                Margin = new Thickness(0.5, 0, 0.5, 0)
-            });
+            var page = BuildStyledLabel(includeMargins: true);
+            dialog.PrintVisual(page, Title);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    /// <summary>Builds a printable visual of the label using the current design.</summary>
+    private System.Windows.Controls.StackPanel BuildStyledLabel(bool includeMargins)
+    {
+        var page = new StackPanel
+        {
+            Background = Brushes.White,
+            Margin = includeMargins ? new Thickness(16) : default
+        };
+
+        var label = new Border
+        {
+            Background = ResolveBrush(_cbBackground.SelectedItem as string, Brushes.White),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(180, 185, 190)),
+            BorderThickness = new Thickness(1.5),
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(10),
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+
+        _ = double.TryParse(_txtWidth.Text, out var w);
+        _ = double.TryParse(_txtHeight.Text, out var h);
+        if (w > 40) label.Width = w;
+        if (h > 30) label.MinHeight = h;
+
+        var content = new StackPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var family = new FontFamily((_cbFont.SelectedItem as string) ?? "Segoe UI");
+        _ = double.TryParse(_cbFontSize.SelectedItem as string, out var size);
+        if (size <= 0) size = 13;
+        var textColor = ResolveBrush(_cbTextColor.SelectedItem as string, Brushes.Black);
+        var barColor = ResolveBrush(_cbBarColor.SelectedItem as string, Brushes.Black);
+
+        if (_chkShowName.IsChecked == true && !string.IsNullOrWhiteSpace(_txtName.Text))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = _txtName.Text,
+                FontFamily = family,
+                FontSize = size,
+                FontWeight = _chkBold.IsChecked == true ? FontWeights.Bold : FontWeights.Normal,
+                Foreground = textColor,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 4)
+            });
+        }
+
+        if (_chkShowPrice.IsChecked == true && !string.IsNullOrWhiteSpace(_txtPrice.Text))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = _txtPrice.Text,
+                FontFamily = family,
+                FontSize = size + 1,
+                FontWeight = FontWeights.Bold,
+                Foreground = textColor,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 6)
+            });
+        }
+
+        _ = double.TryParse(_txtModuleWidth.Text, out var moduleWidth);
+        if (moduleWidth <= 0) moduleWidth = 2;
+        _ = double.TryParse(_txtBarHeight.Text, out var barHeight);
+        if (barHeight <= 0) barHeight = 56;
+
+        content.Children.Add(Code128.BuildVisual(
+            _txtCode.Text,
+            Math.Min(moduleWidth, 4),
+            barHeight,
+            quietZone: 8,
+            barBrush: barColor));
+
+        if (_chkShowCode.IsChecked == true && !string.IsNullOrWhiteSpace(_txtCode.Text))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = _txtCode.Text,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = Math.Max(9, size - 2),
+                Foreground = textColor,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
+        }
+
+        label.Child = content;
+        page.Children.Add(label);
+
+        return page;
+    }
+
+    // ------------------------------------------------------------------
+    // Design persistence
+    // ------------------------------------------------------------------
 
     private static Brush ResolveBrush(string? name, Brush fallback) => name switch
     {
@@ -402,6 +540,8 @@ public sealed class BcdDesWin : BaseWin
             {
                 "width=" + _txtWidth.Text,
                 "height=" + _txtHeight.Text,
+                "moduleWidth=" + _txtModuleWidth.Text,
+                "barHeight=" + _txtBarHeight.Text,
                 "font=" + (_cbFont.SelectedItem ?? string.Empty),
                 "fontSize=" + (_cbFontSize.SelectedItem ?? string.Empty),
                 "bold=" + (_chkBold.IsChecked == true),
@@ -418,7 +558,7 @@ public sealed class BcdDesWin : BaseWin
 
             MessageBox.Show(
                 this,
-                "Design saved.",
+                T("Messages.SaveSuccess"),
                 Title,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -449,6 +589,8 @@ public sealed class BcdDesWin : BaseWin
                 {
                     case "width": _txtWidth.Text = value; break;
                     case "height": _txtHeight.Text = value; break;
+                    case "moduleWidth": _txtModuleWidth.Text = value; break;
+                    case "barHeight": _txtBarHeight.Text = value; break;
                     case "font": SelectItem(_cbFont, value); break;
                     case "fontSize": SelectItem(_cbFontSize, value); break;
                     case "bold": _chkBold.IsChecked = value == "True"; break;
@@ -481,6 +623,8 @@ public sealed class BcdDesWin : BaseWin
     {
         _txtWidth.Text = "240";
         _txtHeight.Text = "150";
+        _txtModuleWidth.Text = "2";
+        _txtBarHeight.Text = "44";
         _cbFont.SelectedIndex = 0;
         _cbFontSize.SelectedItem = "13";
         _chkBold.IsChecked = true;

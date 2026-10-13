@@ -1,25 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using ShouTech.App.Common;
+using ShouTech.App.Services;
 
 namespace ShouTech.App.Views;
 
 /// <summary>
 /// Phase 7B - "Generate barcode" (Inventory > Barcode).
-/// Automatically assigns a unique barcode to ALL materials that do not
-/// have one yet. Materials that already carry a barcode are skipped and
-/// reported, so re-running is always safe.
+/// Automatically assigns a unique EAN-13 barcode to ALL materials loaded
+/// from the live materials repository. Materials that already carry a
+/// barcode are skipped by default (regenerate mode can overwrite them),
+/// and generated barcodes are written back to the material cards.
 /// </summary>
 public sealed class BcdGenWin : BaseWin
 {
     private readonly TextBox _txtPrefix = new() { Width = 90, Text = "628" };
-    private readonly ComboBox _cbDigits = new() { Width = 90 };
+    private readonly Button _btnGenerateMissing = new();
     private readonly Button _btnGenerateAll = new();
-    private readonly Button _btnGenerateChecked = new();
+    private readonly Button _btnSave = new();
     private readonly Button _btnPrint = new();
     private readonly TextBox _txtSearch = new();
     private readonly TextBlock _status = new();
@@ -28,37 +33,30 @@ public sealed class BcdGenWin : BaseWin
         AutoGenerateColumns = false,
         CanUserAddRows = false,
         CanUserDeleteRows = false,
+        IsReadOnly = false,
         GridLinesVisibility = DataGridGridLinesVisibility.Horizontal,
         HeadersVisibility = DataGridHeadersVisibility.Column,
         SelectionMode = DataGridSelectionMode.Single
     };
 
-    // Demo data consistent with the current phase of the codebase
-    // (BarWin also works on sample rows). Swap for the materials
-    // repository once the data layer is wired.
-    private readonly List<MatRow> _rows = new()
-    {
-        new MatRow { Code = "M-1001", Name = "Olive oil 1L", Barcode = "" },
-        new MatRow { Code = "M-1002", Name = "Sunflower oil 1L", Barcode = "6281000000027" },
-        new MatRow { Code = "M-1003", Name = "Sea salt 500g", Barcode = "" },
-        new MatRow { Code = "M-1004", Name = "Brown sugar 1kg", Barcode = "" },
-        new MatRow { Code = "M-1005", Name = "Green tea 100g", Barcode = "6281000000058" },
-        new MatRow { Code = "M-1006", Name = "Cardamom 50g", Barcode = "" },
-        new MatRow { Code = "M-1007", Name = "Laundry detergent 2L", Barcode = "" },
-        new MatRow { Code = "M-1008", Name = "Dish soap 750ml", Barcode = "" }
-    };
+    private readonly List<MatRow> _rows = new();
 
     public BcdGenWin()
     {
-        Width = 820;
-        Height = 540;
-        MinWidth = 640;
-        MinHeight = 420;
+        Width = 860;
+        Height = 560;
+        MinWidth = 660;
+        MinHeight = 430;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         BuildUi();
+        LoadMaterials();
         ApplyFilter();
     }
+
+    // ------------------------------------------------------------------
+    // UI
+    // ------------------------------------------------------------------
 
     private void BuildUi()
     {
@@ -67,32 +65,24 @@ public sealed class BcdGenWin : BaseWin
         // Top toolbar.
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
 
-        toolbar.Children.Add(MakeLabel("Prefix:"));
+        toolbar.Children.Add(MakeLabel(L("BarcodeGen.Prefix", "Prefix:")));
         _txtPrefix.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
         toolbar.Children.Add(_txtPrefix);
 
-        toolbar.Children.Add(MakeLabel("Digits:"));
-        _cbDigits.Items.Add("9");
-        _cbDigits.Items.Add("11");
-        _cbDigits.Items.Add("13");
-        _cbDigits.SelectedIndex = 0;
-        toolbar.Children.Add(_cbDigits);
+        StyleButton(_btnGenerateMissing, L("BarcodeGen.GenerateMissing", "Generate for materials without barcode"));
+        _btnGenerateMissing.Click += (_, _) => Generate(overwrite: false);
+        toolbar.Children.Add(_btnGenerateMissing);
 
-        StyleButton(_btnGenerateAll, "Generate for all materials");
-        _btnGenerateAll.Click += (_, _) => Generate(checkedOnly: false);
+        StyleButton(_btnGenerateAll, L("BarcodeGen.RegenerateAll", "Regenerate all"));
+        _btnGenerateAll.Click += (_, _) => Generate(overwrite: true);
         toolbar.Children.Add(_btnGenerateAll);
 
-        StyleButton(_btnGenerateChecked, "Generate for checked only");
-        _btnGenerateChecked.Click += (_, _) => Generate(checkedOnly: true);
-        toolbar.Children.Add(_btnGenerateChecked);
+        StyleButton(_btnSave, T("Common.Save"));
+        _btnSave.Click += (_, _) => SaveGenerated();
+        toolbar.Children.Add(_btnSave);
 
-        StyleButton(_btnPrint, "Print");
-        _btnPrint.Click += (_, _) => MessageBox.Show(
-            this,
-            "Generated barcodes are ready for printing.",
-            Title,
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        StyleButton(_btnPrint, T("Common.Print"));
+        _btnPrint.Click += (_, _) => PrintGenerated();
         toolbar.Children.Add(_btnPrint);
 
         DockPanel.SetDock(toolbar, Dock.Top);
@@ -104,7 +94,7 @@ public sealed class BcdGenWin : BaseWin
         _txtSearch.TextChanged += (_, _) => ApplyFilter();
         var searchLabel = new TextBlock
         {
-            Text = "Search:",
+            Text = T("Buttons.Search") + ":",
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 6, 0)
         };
@@ -135,17 +125,17 @@ public sealed class BcdGenWin : BaseWin
     {
         _grid.Columns.Add(new DataGridCheckBoxColumn
         {
-            Header = "Include",
+            Header = T("Common.SelectAll"),
             Binding = new Binding(nameof(MatRow.Include))
             {
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
             }
         });
-        _grid.Columns.Add(MakeCol("Code", nameof(MatRow.Code), 90));
-        _grid.Columns.Add(MakeCol("Material", nameof(MatRow.Name), 230));
-        _grid.Columns.Add(MakeCol("Barcode", nameof(MatRow.Barcode), 150));
-        _grid.Columns.Add(MakeCol("Status", nameof(MatRow.Status), 140));
+        _grid.Columns.Add(MakeCol(T("MatCard.Code"), nameof(MatRow.Code), 90));
+        _grid.Columns.Add(MakeCol(T("MatCard.Name"), nameof(MatRow.Name), 230));
+        _grid.Columns.Add(MakeCol(T("MatCard.Barcode"), nameof(MatRow.Barcode), 150));
+        _grid.Columns.Add(MakeCol(T("Reports.Col.Status"), nameof(MatRow.Status), 140));
     }
 
     private static DataGridTextColumn MakeCol(string header, string prop, int width)
@@ -153,52 +143,48 @@ public sealed class BcdGenWin : BaseWin
         var col = new DataGridTextColumn
         {
             Header = header,
-            Binding = new Binding(prop),
-            IsReadOnly = true
+            Binding = new Binding(prop) { Mode = BindingMode.OneWay }
         };
+        col.IsReadOnly = true;
         if (width > 0)
             col.Width = new DataGridLength(width);
         return col;
     }
 
-    private void Generate(bool checkedOnly)
+    // ------------------------------------------------------------------
+    // Data
+    // ------------------------------------------------------------------
+
+    private void LoadMaterials()
     {
-        var prefix = (_txtPrefix.Text ?? string.Empty).Trim();
-        if (prefix.Length == 0)
-            prefix = "628";
+        _rows.Clear();
 
-        var digits = _cbDigits.SelectedItem as string ?? "9";
-        _ = int.TryParse(digits, out var digitCount);
-        if (digitCount < 6)
-            digitCount = 9;
-
-        var seq = 1;
-        var generated = 0;
-        var skipped = 0;
-
-        foreach (var row in _rows)
+        try
         {
-            if (checkedOnly && !row.Include)
-                continue;
-
-            if (!string.IsNullOrWhiteSpace(row.Barcode))
+            foreach (var material in MatRepo.LoadAll())
             {
-                skipped++;
-                continue;
+                _rows.Add(new MatRow
+                {
+                    Id = material.Id,
+                    Code = material.Code,
+                    Name = DisplayName(material),
+                    Barcode = material.Unit1Barcode ?? string.Empty
+                });
             }
-
-            row.Barcode = prefix + seq.ToString()
-                .PadLeft(Math.Max(1, digitCount - prefix.Length), '0');
-            seq++;
-            generated++;
-            row.Status = "Generated";
         }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
-        _status.Text = string.Format(
-            "Barcodes generated: {0}. Skipped (already coded): {1}. Total materials: {2}.",
-            generated, skipped, _rows.Count);
-
-        _grid.Items.Refresh();
+    private static string DisplayName(Services.MatRepo.MatRec material)
+    {
+        var isArabic = string.Equals(
+            App.CurrentLanguageCode, "ar", StringComparison.OrdinalIgnoreCase);
+        return isArabic || string.IsNullOrWhiteSpace(material.NameEn)
+            ? material.NameAr
+            : material.NameEn;
     }
 
     private void ApplyFilter()
@@ -214,14 +200,172 @@ public sealed class BcdGenWin : BaseWin
 
         _grid.ItemsSource = source;
 
+        var missing = source.Count(r => string.IsNullOrWhiteSpace(r.Barcode));
         _status.Text = string.Format(
-            "{0} of {1} material(s) shown.",
-            source.Count, _rows.Count);
+            CultureInfo.CurrentCulture,
+            L("BarcodeGen.Summary", "{0} of {1} material(s) shown. Missing barcode: {2}."),
+            source.Count, _rows.Count, missing);
     }
+
+    // ------------------------------------------------------------------
+    // Generation
+    // ------------------------------------------------------------------
+
+    private void Generate(bool overwrite)
+    {
+        var prefix = (_txtPrefix.Text ?? string.Empty).Trim();
+        if (prefix.Length == 0)
+            prefix = "628";
+
+        var used = new HashSet<string>(
+            _rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.Barcode))
+                .Select(r => r.Barcode),
+            StringComparer.Ordinal);
+
+        var seq = _rows.Count > 0 ? _rows.Max(r => r.Id) : 0;
+        var generated = 0;
+        var skipped = 0;
+
+        foreach (var row in _rows)
+        {
+            if (!string.IsNullOrWhiteSpace(row.Barcode) && !overwrite)
+            {
+                skipped++;
+                continue;
+            }
+
+            string candidate;
+            do
+            {
+                seq++;
+                candidate = Code128.BuildEan13(prefix, seq);
+            }
+            while (!used.Add(candidate));
+
+            row.Barcode = candidate;
+            row.Status = L("BarcodeGen.Generated", "Generated");
+            generated++;
+        }
+
+        _status.Text = string.Format(
+            CultureInfo.CurrentCulture,
+            L("BarcodeGen.Result", "Barcodes generated: {0}. Skipped (already coded): {1}. Total materials: {2}. Use Save to write them to the material cards."),
+            generated, skipped, _rows.Count);
+
+        _grid.Items.Refresh();
+    }
+
+    // ------------------------------------------------------------------
+    // Persistence
+    // ------------------------------------------------------------------
+
+    private void SaveGenerated()
+    {
+        var changed = _rows.Where(r => r.Include && !string.IsNullOrWhiteSpace(r.Barcode)).ToList();
+        if (changed.Count == 0)
+        {
+            MessageBox.Show(this, T("Messages.NoData"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var saved = 0;
+        var failed = 0;
+
+        foreach (var row in changed)
+        {
+            try
+            {
+                // Load the full record (children included) so saving the
+                // barcode never wipes prices, units or extra barcodes.
+                var full = MatRepo.LoadById(row.Id, includeChildren: true);
+                if (full == null)
+                {
+                    failed++;
+                    continue;
+                }
+
+                full.Unit1Barcode = row.Barcode;
+                MatRepo.Save(full, isNew: false);
+                saved++;
+            }
+            catch
+            {
+                failed++;
+            }
+        }
+
+        _status.Text = string.Format(
+            CultureInfo.CurrentCulture,
+            L("BarcodeGen.SavedSummary", "Saved to material cards: {0}. Failed: {1}."),
+            saved, failed);
+
+        MessageBox.Show(
+            this,
+            string.Format(CultureInfo.CurrentCulture, "{0} ({1})", T("Messages.SaveSuccess"), saved),
+            Title,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    // ------------------------------------------------------------------
+    // Printing
+    // ------------------------------------------------------------------
+
+    private void PrintGenerated()
+    {
+        var printable = _rows
+            .Where(r => r.Include && !string.IsNullOrWhiteSpace(r.Barcode))
+            .ToList();
+
+        if (printable.Count == 0)
+        {
+            MessageBox.Show(this, T("Messages.NoData"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new PrintDialog();
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            // One page per material, one label per page keeps sizing simple
+            // and predictable for bulk label stock.
+            foreach (var row in printable)
+            {
+                var label = BarcodeLabelPrinter.BuildLabel(row.Name, row.Barcode);
+                dialog.PrintVisual(label, Title + " — " + row.Code);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Localization helpers
+    // ------------------------------------------------------------------
 
     protected override void ApplyLocalizedText()
     {
         Title = L("Inventory.GenerateBarcode", "Generate barcode");
+    }
+
+    private static string L(string key, string fallback)
+    {
+        try
+        {
+            var s = T(key);
+            return string.IsNullOrWhiteSpace(s) || string.Equals(s, key, StringComparison.Ordinal)
+                ? fallback
+                : s;
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     private static TextBlock MakeLabel(string text)
@@ -245,25 +389,11 @@ public sealed class BcdGenWin : BaseWin
         btn.SetResourceReference(StyleProperty, "VisuButtonStyle");
     }
 
-    private static string L(string key, string fallback)
-    {
-        try
-        {
-            var s = T(key);
-            return string.IsNullOrWhiteSpace(s) || string.Equals(s, key, StringComparison.Ordinal)
-                ? fallback
-                : s;
-        }
-        catch
-        {
-            return fallback;
-        }
-    }
-
     /// <summary>Row model. Barcode and status are mutated by the generator.</summary>
     public sealed class MatRow
     {
         public bool Include { get; set; } = true;
+        public long Id { get; set; }
         public string Code { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Barcode { get; set; } = string.Empty;

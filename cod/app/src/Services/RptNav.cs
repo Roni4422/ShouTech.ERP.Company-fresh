@@ -158,6 +158,13 @@ public static class RptNav
                 OpenBarcodeGenerator(owner); return true;
             case "Inventory.DesignBarcode":
                 OpenBarcodeDesigner(owner); return true;
+            case "Inventory.MaterialList":
+            case "Inventory.SearchMaterial":
+                OpenMaterialList(owner); return true;
+            case "Inventory.PriceList":
+                OpenPriceList(owner); return true;
+            case "Inventory.ShortageList":
+                OpenShortageList(owner); return true;
             case "Reports.Statistics":
                 OpenTrialBalance(owner); return true;
             default:
@@ -205,6 +212,9 @@ public static class RptNav
     public static void OpenBarcodeTool(Window? owner = null) => Show(new BarWin(), owner);
     public static void OpenBarcodeGenerator(Window? owner = null) => Show(new BcdGenWin(), owner);
     public static void OpenBarcodeDesigner(Window? owner = null) => Show(new BcdDesWin(), owner);
+    public static void OpenMaterialList(Window? owner = null) => Show(new MatListWin(), owner);
+    public static void OpenPriceList(Window? owner = null) => Show(new PriceListWin(), owner);
+    public static void OpenShortageList(Window? owner = null) => Show(new ShortListWin(), owner);
     public static void OpenCustomerAging(Window? owner = null) => Show(new CustAgingWin(), owner);
     public static void OpenSupplierAging(Window? owner = null) => Show(new SupAgingWin(), owner);
     public static void OpenItemProfitability(Window? owner = null) => Show(new ItemProfitWin(), owner);

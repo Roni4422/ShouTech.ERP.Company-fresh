@@ -142,14 +142,17 @@ namespace ShouTech.App.Common
         }
 
         /// <summary>
-        /// Renders the barcode as a WPF canvas of black bars on a white
-        /// quiet zone. Suitable for on-screen preview and PrintVisual.
+        /// Renders the barcode as a WPF canvas of bars on a quiet-zone
+        /// background. Suitable for on-screen preview and PrintVisual.
+        /// Optional brushes let the barcode designer restyle the symbol.
         /// </summary>
         public static FrameworkElement BuildVisual(
             string data,
             double moduleWidth = 2,
             double barHeight = 56,
-            double quietZone = 12)
+            double quietZone = 12,
+            Brush? barBrush = null,
+            Brush? backgroundBrush = null)
         {
             var symbols = EncodeToSymbols(data);
 
@@ -161,8 +164,11 @@ namespace ShouTech.App.Common
             {
                 Width = quietZone * 2 + totalModules * moduleWidth,
                 Height = barHeight,
-                Background = Brushes.White
+                Background = backgroundBrush ?? Brushes.White
             };
+
+            var bars = barBrush ?? Brushes.Black;
+            bars.Freeze();
 
             var x = quietZone;
 
@@ -177,15 +183,14 @@ namespace ShouTech.App.Common
 
                     if (bar)
                     {
-                        canvas.Children.Add(new Rectangle
+                        var rect = new Rectangle
                         {
                             Width = width,
                             Height = barHeight,
-                            Fill = Brushes.Black,
+                            Fill = bars,
                             SnapsToDevicePixels = true
-                        });
-
-                        var rect = (Rectangle)canvas.Children[^1];
+                        };
+                        canvas.Children.Add(rect);
                         Canvas.SetLeft(rect, x);
                         Canvas.SetTop(rect, 0);
                     }
@@ -196,6 +201,38 @@ namespace ShouTech.App.Common
             }
 
             return canvas;
+        }
+
+        /// <summary>
+        /// Builds a valid EAN-13 value from a numeric prefix and a sequence
+        /// number: prefix + zero-padded sequence, completed with the standard
+        /// EAN-13 checksum digit. Used by the bulk barcode generator.
+        /// </summary>
+        public static string BuildEan13(string prefix, long sequence)
+        {
+            prefix = new string((prefix ?? string.Empty)
+                .Where(char.IsDigit)
+                .ToArray());
+
+            if (prefix.Length > 12)
+                prefix = prefix[..12];
+
+            var body = prefix + sequence.ToString(
+                CultureInfo.InvariantCulture)
+                .PadLeft(Math.Max(1, 12 - prefix.Length), '0');
+            if (body.Length > 12)
+                body = body[..12];
+            body = body.PadRight(12, '0');
+
+            var sum = 0;
+            for (var i = 0; i < 12; i++)
+            {
+                var digit = body[i] - '0';
+                sum += (i % 2 == 0) ? digit : digit * 3;
+            }
+
+            var check = (10 - (sum % 10)) % 10;
+            return body + check.ToString(CultureInfo.InvariantCulture);
         }
     }
 
@@ -268,6 +305,38 @@ namespace ShouTech.App.Common
         }
 
         /// <summary>
+        /// Builds one printable page visual containing several copies of the
+        /// same label laid out in fixed columns. Used by "Create barcode"
+        /// (print N copies of one material) and by the bulk generator.
+        /// </summary>
+        public static FrameworkElement BuildCopiesPage(
+            string materialName,
+            string code,
+            string? priceText,
+            int copies,
+            int columns = 3)
+        {
+            if (copies < 1) copies = 1;
+            if (columns < 1) columns = 1;
+
+            var page = new WrapPanel
+            {
+                Background = Brushes.White,
+                Margin = new Thickness(16)
+            };
+
+            for (var i = 0; i < copies; i++)
+            {
+                page.Children.Add(BuildLabel(materialName, code, priceText));
+            }
+
+            page.Measure(new Size(760, double.PositiveInfinity));
+            page.Arrange(new Rect(new Point(0, 0), page.DesiredSize));
+
+            return page;
+        }
+
+        /// <summary>
         /// Shows the system print dialog and prints the label when the user
         /// confirms. Returns true when the label was sent to the printer.
         /// </summary>
@@ -303,6 +372,62 @@ namespace ShouTech.App.Common
             try
             {
                 dialog.PrintVisual(label, jobTitle);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    owner,
+                    ex.Message,
+                    jobTitle,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Shows the system print dialog and prints <paramref name="copies"/>
+        /// copies of the same label on one page when the user confirms.
+        /// Returns true when the page was sent to the printer.
+        /// </summary>
+        public static bool PrintCopies(
+            Window? owner,
+            string jobTitle,
+            string materialName,
+            string code,
+            string? priceText,
+            int copies,
+            int columns = 3)
+        {
+            if (copies <= 1)
+                return Print(owner, jobTitle, materialName, code, priceText);
+
+            var dialog = new PrintDialog();
+
+            bool? result;
+            try
+            {
+                result = dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    owner,
+                    ex.Message,
+                    jobTitle,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return false;
+            }
+
+            if (result != true) return false;
+
+            var page = BuildCopiesPage(materialName, code, priceText, copies, columns);
+
+            try
+            {
+                dialog.PrintVisual(page, jobTitle);
                 return true;
             }
             catch (Exception ex)
