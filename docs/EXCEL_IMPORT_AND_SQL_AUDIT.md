@@ -4,7 +4,7 @@
 
 This audit covers the active Excel import/export service, the import window, the SQL migration runner, and active SQLite/PostgreSQL migration files. Legacy snapshots and archived SQL Server scripts are not treated as executable migrations.
 
-The work is being developed on `feature/excel-import-rewrite-sql-audit`, based on the maintenance branch. No production database was accessed or modified.
+The work is being developed on `feature/excel-import-sql-audit-clean`, based on the latest `main`. No production database was accessed or modified.
 
 ## Excel import findings
 
@@ -87,7 +87,7 @@ SQLite and PostgreSQL do not have identical migration decomposition: SQLite core
 
 A shared table-name list alone is not sufficient; column types, primary keys, foreign keys, unique constraints, and tenant scope must also be compared. The legacy monolithic snapshots are not a safe substitute for missing active migrations.
 
-The migration runner now detects byte-identical SQL files and records later duplicate IDs without executing the same body again. This avoids re-running the duplicated PostgreSQL module schema on fresh installs while retaining both historical IDs and checksums for compatibility. The redundant file remains present intentionally until a future migration-baseline policy can retire it safely.
+The migration runner now recognizes only the known PostgreSQL `003_modules.sql` / `004_modules.sql` duplicate pair and records the second ID without re-running the identical module DDL. It does not suppress other identical SQL files automatically. Both historical IDs and checksums remain intact; the redundant file stays present until a future migration-baseline policy can retire it safely.
 
 ### 7. Additional importer hardening
 
