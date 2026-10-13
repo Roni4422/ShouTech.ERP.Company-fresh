@@ -1159,7 +1159,7 @@ public static class DataExportSvc
 
     private static bool IsDateNumberFormat(string format)
     {
-        var cleaned = Regex.Replace(format, "\"[^\"]*\"|\\.|_.|\*.", string.Empty);
+        var cleaned = Regex.Replace(format, "\"[^\"]*\"|\\.|_.|\\*.", string.Empty);
         return Regex.IsMatch(cleaned, "[ymdhis]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
