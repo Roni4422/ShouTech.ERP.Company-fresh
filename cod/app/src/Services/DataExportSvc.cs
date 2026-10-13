@@ -933,11 +933,10 @@ public static class DataExportSvc
         var fields = new List<string>(sheet.Headers.Count);
         foreach (var header in sheet.Headers)
         {
-            var field = columns.FirstOrDefault(column =>
-                string.Equals(column, header.Trim(), StringComparison.OrdinalIgnoreCase));
+            var field = ResolveImportFieldAlias(option.TableName, header, columns);
             if (field is null)
                 throw new InvalidDataException(
-                    $"Excel column '{header}' does not match a database field in '{option.TableName}'. For a generic workbook, use database field names as the first-row headers.");
+                    $"Excel column '{header}' does not match a database field in '{option.TableName}'. For a generic workbook, use database field names or supported field aliases as the first-row headers.");
 
             fields.Add(field);
         }
@@ -957,6 +956,33 @@ public static class DataExportSvc
             sheet.Headers.ToArray(),
             fields.ToArray(),
             mappedTypes);
+    }
+
+    private static string? ResolveImportFieldAlias(
+        string tableName,
+        string header,
+        IReadOnlyList<string> columns)
+    {
+        var normalizedHeader = header.Trim();
+        var exact = columns.FirstOrDefault(column =>
+            string.Equals(column, normalizedHeader, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+            return exact;
+
+        // Common material spreadsheets call the display name simply "name".
+        // Map it to the existing Arabic-name storage column; do not create a
+        // second competing name column or weaken the database NOT NULL constraint.
+        if (tableName.Equals("materials", StringComparison.OrdinalIgnoreCase) &&
+            (normalizedHeader.Equals("name", StringComparison.OrdinalIgnoreCase) ||
+             normalizedHeader.Equals("الاسم", StringComparison.Ordinal) ||
+             normalizedHeader.Equals("اسم المادة", StringComparison.Ordinal) ||
+             normalizedHeader.Equals("اسم الصنف", StringComparison.Ordinal)))
+        {
+            return columns.FirstOrDefault(column =>
+                column.Equals("name_ar", StringComparison.OrdinalIgnoreCase));
+        }
+
+        return null;
     }
 
     private static async Task<Dictionary<string, string>> GetColumnImportTypesAsync(
