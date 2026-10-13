@@ -67,7 +67,7 @@ public sealed class MatListWin : RptBase
                 g => g.Code,
                 g => isArabic || string.IsNullOrWhiteSpace(g.NameEn) ? g.Name : g.NameEn), ct);
 
-        var materials = await Task.Run(() => MatRepo.LoadAll(), ct);
+        IEnumerable<MatRepo.MatRec> materials = await Task.Run(() => MatRepo.LoadAll(), ct);
 
         if (search.Length > 0)
         {
