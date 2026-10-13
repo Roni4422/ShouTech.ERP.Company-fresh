@@ -60,7 +60,14 @@ public sealed class MatListWin : RptBase
         var isArabic = string.Equals(
             App.CurrentLanguageCode, "ar", StringComparison.OrdinalIgnoreCase);
 
-        IEnumerable<MatRepo.MatRec> materials = MatRepo.LoadAll();
+        // Both lookups run off the UI thread.
+        var groupNames = await Task.Run(() => MatRepo.LoadGroups()
+            .Where(g => !g.IsDeleted)
+            .ToDictionary(
+                g => g.Code,
+                g => isArabic || string.IsNullOrWhiteSpace(g.NameEn) ? g.Name : g.NameEn), ct);
+
+        var materials = await Task.Run(() => MatRepo.LoadAll(), ct);
 
         if (search.Length > 0)
         {
@@ -80,14 +87,14 @@ public sealed class MatListWin : RptBase
             {
                 ["Code"] = m.Code,
                 ["Name"] = isArabic || string.IsNullOrWhiteSpace(m.NameEn) ? m.NameAr : m.NameEn,
-                ["Group"] = m.GroupCode ?? string.Empty,
+                ["Group"] = string.IsNullOrEmpty(m.GroupCode)
+                    ? string.Empty
+                    : groupNames.GetValueOrDefault(m.GroupCode, m.GroupCode),
                 ["Unit"] = m.DefaultUnit ?? m.Unit1 ?? string.Empty,
                 ["Barcode"] = m.Unit1Barcode ?? string.Empty,
                 ["Price"] = m.PriceRetail,
             })
             .ToList();
-
-        await Task.CompletedTask;
 
         return new RptData
         {

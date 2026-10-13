@@ -61,9 +61,11 @@ public sealed class BarWin : BaseWin
         _btnPrint.Click += (_, _) => PrintCopies();
         _btnGen.Click += (_, _) =>
         {
-            var rnd = new Random();
-            _txtBarcode.Text = "628" + rnd.Next(100000000, 999999999)
-                .ToString(CultureInfo.InvariantCulture);
+            // A random but VALID EAN-13 — the checksum digit is computed,
+            // so the generated value is genuinely scannable.
+            _txtBarcode.Text = Code128.BuildEan13(
+                "628",
+                new Random().Next(100000, 999999));
             UpdatePreview();
         };
 
@@ -220,7 +222,7 @@ public sealed class BarWin : BaseWin
     private void UpdatePreview()
     {
         _prevName.Text = _chkIncludeName.IsChecked == true ? _txtItemName.Text : string.Empty;
-        _prevPrice.Text = _chkIncludePrice.IsChecked == true ? $"{_txtPrice.Text} SAR" : string.Empty;
+        _prevPrice.Text = _chkIncludePrice.IsChecked == true ? _txtPrice.Text : string.Empty;
         _prevCode.Text = _txtBarcode.Text;
 
         _prevBarcodeBars.Children.Clear();
@@ -285,10 +287,10 @@ public sealed class BarWin : BaseWin
         _chkIncludeName.Content = T("BarcodeTool.IncludeName");
         _chkIncludePrice.Content = T("BarcodeTool.IncludePrice");
 
+        // Only symbologies the engine actually renders are offered —
+        // never show an option that prints something else.
         _cbType.Items.Clear();
         _cbType.Items.Add("Code 128");
-        _cbType.Items.Add("EAN-13");
-        _cbType.Items.Add("QR Code");
         _cbType.SelectedIndex = 0;
 
         RefreshLocalizedContent(Content as DependencyObject);

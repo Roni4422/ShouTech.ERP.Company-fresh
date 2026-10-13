@@ -63,7 +63,7 @@ public sealed class PriceListWin : RptBase
         var isArabic = string.Equals(
             App.CurrentLanguageCode, "ar", StringComparison.OrdinalIgnoreCase);
 
-        IEnumerable<MatRepo.MatRec> materials = MatRepo.LoadAll();
+        var materials = await Task.Run(() => MatRepo.LoadAll(), ct);
 
         if (search.Length > 0)
         {
@@ -90,8 +90,6 @@ public sealed class PriceListWin : RptBase
                 ["Currency"] = m.PriceCurrency ?? string.Empty,
             })
             .ToList();
-
-        await Task.CompletedTask;
 
         return new RptData
         {

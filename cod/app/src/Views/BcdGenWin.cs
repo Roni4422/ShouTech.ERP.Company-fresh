@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using ShouTech.App.Common;
 using ShouTech.App.Services;
@@ -28,6 +29,8 @@ public sealed class BcdGenWin : BaseWin
     private readonly Button _btnPrint = new();
     private readonly TextBox _txtSearch = new();
     private readonly TextBlock _status = new();
+    private readonly Button _btnSelectAll = new();
+    private readonly Button _btnSelectNone = new();
     private readonly DataGrid _grid = new()
     {
         AutoGenerateColumns = false,
@@ -84,6 +87,14 @@ public sealed class BcdGenWin : BaseWin
         StyleButton(_btnPrint, T("Common.Print"));
         _btnPrint.Click += (_, _) => PrintGenerated();
         toolbar.Children.Add(_btnPrint);
+
+        StyleButton(_btnSelectAll, T("Common.SelectAll"));
+        _btnSelectAll.Click += (_, _) => SetInclude(true);
+        toolbar.Children.Add(_btnSelectAll);
+
+        StyleButton(_btnSelectNone, T("Common.ClearAll"));
+        _btnSelectNone.Click += (_, _) => SetInclude(false);
+        toolbar.Children.Add(_btnSelectNone);
 
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
@@ -155,13 +166,17 @@ public sealed class BcdGenWin : BaseWin
     // Data
     // ------------------------------------------------------------------
 
-    private void LoadMaterials()
+    private async void LoadMaterials()
     {
-        _rows.Clear();
-
+        SetBusy(true);
         try
         {
-            foreach (var material in MatRepo.LoadAll())
+            // Load off the UI thread — material tables can hold tens of
+            // thousands of rows in production databases.
+            var materials = await Task.Run(() => MatRepo.LoadAll());
+
+            _rows.Clear();
+            foreach (var material in materials)
             {
                 _rows.Add(new MatRow
                 {
@@ -176,6 +191,28 @@ public sealed class BcdGenWin : BaseWin
         {
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        finally
+        {
+            SetBusy(false);
+            ApplyFilter();
+        }
+    }
+
+    private void SetInclude(bool include)
+    {
+        foreach (var row in _rows)
+            row.Include = include;
+        _grid.Items.Refresh();
+    }
+
+    private void SetBusy(bool busy)
+    {
+        Mouse.OverrideCursor = busy ? Cursors.Wait : null;
+        _btnGenerateMissing.IsEnabled = !busy;
+        _btnGenerateAll.IsEnabled = !busy;
+        _btnSave.IsEnabled = !busy;
+        _btnPrint.IsEnabled = !busy;
+        _grid.IsEnabled = !busy;
     }
 
     private static string DisplayName(Services.MatRepo.MatRec material)
@@ -216,6 +253,14 @@ public sealed class BcdGenWin : BaseWin
         var prefix = (_txtPrefix.Text ?? string.Empty).Trim();
         if (prefix.Length == 0)
             prefix = "628";
+
+        // A GS1 company prefix must be numeric with room for the item
+        // sequence and the EAN-13 checksum digit.
+        if (prefix.Length < 2 || prefix.Length > 11 || !prefix.All(char.IsDigit))
+        {
+            _status.Text = T("Messages.InvalidInput") + ": " + prefix;
+            return;
+        }
 
         var used = new HashSet<string>(
             _rows
@@ -260,7 +305,7 @@ public sealed class BcdGenWin : BaseWin
     // Persistence
     // ------------------------------------------------------------------
 
-    private void SaveGenerated()
+    private async void SaveGenerated()
     {
         var changed = _rows.Where(r => r.Include && !string.IsNullOrWhiteSpace(r.Barcode)).ToList();
         if (changed.Count == 0)
@@ -269,30 +314,49 @@ public sealed class BcdGenWin : BaseWin
             return;
         }
 
-        var saved = 0;
-        var failed = 0;
-
-        foreach (var row in changed)
+        SetBusy(true);
+        int saved;
+        int failed;
+        try
         {
-            try
+            var pending = changed
+                .Select(r => (r.Id, Barcode: r.Barcode))
+                .ToList();
+
+            // Persist off the UI thread. Each record is loaded fresh with
+            // children included so saving the barcode never wipes prices,
+            // units or extra barcodes.
+            (saved, failed) = await Task.Run(() =>
             {
-                // Load the full record (children included) so saving the
-                // barcode never wipes prices, units or extra barcodes.
-                var full = MatRepo.LoadById(row.Id, includeChildren: true);
-                if (full == null)
+                var s = 0;
+                var f = 0;
+                foreach (var (id, barcode) in pending)
                 {
-                    failed++;
-                    continue;
+                    try
+                    {
+                        var full = MatRepo.LoadById(id, includeChildren: true);
+                        if (full == null)
+                        {
+                            f++;
+                            continue;
+                        }
+
+                        full.Unit1Barcode = barcode;
+                        MatRepo.Save(full, isNew: false);
+                        s++;
+                    }
+                    catch
+                    {
+                        f++;
+                    }
                 }
 
-                full.Unit1Barcode = row.Barcode;
-                MatRepo.Save(full, isNew: false);
-                saved++;
-            }
-            catch
-            {
-                failed++;
-            }
+                return (s, f);
+            });
+        }
+        finally
+        {
+            SetBusy(false);
         }
 
         _status.Text = string.Format(
@@ -330,12 +394,41 @@ public sealed class BcdGenWin : BaseWin
 
         try
         {
-            // One page per material, one label per page keeps sizing simple
-            // and predictable for bulk label stock.
-            foreach (var row in printable)
+            // Print a proper label sheet: three columns per page, every
+            // label scaled uniformly into its cell, pages filled in order.
+            const double margin = 12;
+            const int columns = 3;
+            const double cellHeight = 116;
+
+            var cellWidth = (dialog.PrintableAreaWidth - margin * 2) / columns;
+            var rowsPerPage = Math.Max(1,
+                (int)((dialog.PrintableAreaHeight - margin * 2) / cellHeight));
+            var perPage = columns * rowsPerPage;
+
+            for (var first = 0; first < printable.Count; first += perPage)
             {
-                var label = BarcodeLabelPrinter.BuildLabel(row.Name, row.Barcode);
-                dialog.PrintVisual(label, Title + " — " + row.Code);
+                var page = new Grid { Margin = new Thickness(margin) };
+                for (var c = 0; c < columns; c++)
+                    page.ColumnDefinitions.Add(new ColumnDefinition());
+                for (var r = 0; r < rowsPerPage; r++)
+                    page.RowDefinitions.Add(new RowDefinition());
+
+                var slice = printable.Skip(first).Take(perPage).ToList();
+                for (var i = 0; i < slice.Count; i++)
+                {
+                    var cell = new Viewbox
+                    {
+                        Width = cellWidth,
+                        Height = cellHeight - 4,
+                        Stretch = Stretch.Uniform,
+                        Child = BarcodeLabelPrinter.BuildLabel(slice[i].Name, slice[i].Barcode)
+                    };
+                    Grid.SetColumn(cell, i % columns);
+                    Grid.SetRow(cell, i / columns);
+                    page.Children.Add(cell);
+                }
+
+                dialog.PrintVisual(page, Title);
             }
         }
         catch (Exception ex)
@@ -355,6 +448,8 @@ public sealed class BcdGenWin : BaseWin
         _btnGenerateAll.Content = L("BarcodeGen.RegenerateAll", "Regenerate all");
         _btnSave.Content = T("Common.Save");
         _btnPrint.Content = T("Common.Print");
+        _btnSelectAll.Content = T("Common.SelectAll");
+        _btnSelectNone.Content = T("Common.ClearAll");
     }
 
     private static string L(string key, string fallback)
