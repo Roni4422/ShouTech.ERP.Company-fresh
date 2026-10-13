@@ -15,20 +15,13 @@ The current `SqlMigrator` identifies a migration by its relative path under the 
 
 Treat an applied migration as immutable. If schema or seed data needs to change, add a new migration. Never edit an applied file to fix an old migration. Before renaming or deleting a migration, review migration history from supported deployed databases and define a compatibility plan. The current runner verifies checksums for discovered applied migrations; it does not report every historical migration file that is now missing from disk, so a deleted file can otherwise go unnoticed.
 
-## PostgreSQL duplicate-file cleanup
+## PostgreSQL migration review
 
-The previous `003_modules.sql` and `004_modules.sql` contained identical SQL (the same Git blob). The duplicate has been removed from the proposed cleanup branch so fresh databases do not execute the same schema declarations twice.
+`003_modules.sql` and `004_modules.sql` currently contain identical SQL, while `003_rbac.sql` is a separate RBAC seed migration. The migrator identifies migrations by their full relative file path, not by the numeric prefix alone, so `003_modules.sql` and `003_rbac.sql` are distinct migration IDs. Equal numeric prefixes are confusing but are not themselves a primary-key collision.
 
-The RBAC seed migration was moved from `003_rbac.sql` to `005_rbac.sql` to give it a distinct, later path prefix after the module schema migration. Its permission inserts use `ON CONFLICT DO NOTHING`, and the role-permission insert also ignores conflicts, making a rerun idempotent for those seed records.
+Do not delete, rename, or rewrite these historical files as a cleanup-only change. A deployed database may have recorded any of them in `schema_migrations`, and the migrator verifies checksums for applied migrations that are still present on disk. Keep historical files intact until there is an explicit compatibility plan for every supported deployment. For fresh installations, a future cleanup can be handled by a reviewed baseline/squash strategy or a documented migration policy; do not simply replace the old chain in place.
 
-Compatibility considerations:
-
-- A database that already recorded `003_rbac.sql` will see `005_rbac.sql` as a new migration and may execute the RBAC seed statements again. Those statements are designed to be idempotent, but test this against a disposable copy before deployment.
-- A database that previously recorded `004_modules.sql` will retain that history row. Removing the duplicate file does not erase database history.
-- The module migration uses `CREATE SCHEMA IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`; still, validate foreign-key prerequisites and the complete migration chain on an empty PostgreSQL database before merging.
-- Do not manually edit `schema_migrations` to hide checksum or history discrepancies.
-
-This cleanup should be merged only after the repository's migration checks pass against both an empty PostgreSQL database and a representative existing database. Do not run this branch against production before that validation.
+The current branch preserves the original migration files. The duplicate module SQL is still a technical debt item, not considered fixed. Before changing this chain, test a fresh PostgreSQL database and a disposable copy of an existing database, and compare their `schema_migrations` records. Do not manually edit migration history to hide checksum or history discrepancies.
 
 ## Examples
 
