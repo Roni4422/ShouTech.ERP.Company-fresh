@@ -320,7 +320,8 @@ public static class DataExportSvc
         string companyCode,
         bool replaceMode = false,
         CancellationToken ct = default,
-        bool previewOnly = false)
+        bool previewOnly = false,
+        string? expectedFileSha256 = null)
     {
         ArgumentNullException.ThrowIfNull(option);
         try
@@ -331,6 +332,14 @@ public static class DataExportSvc
             if (!IsMasterDataImportAllowed(option))
                 throw new InvalidOperationException(
                     "Spreadsheet import is limited to approved master-data datasets. Sales, purchases, vouchers, journals, stock movements, and other transactional records must be created or corrected through their business workflows, not imported or overwritten from Excel.");
+
+            if (!string.IsNullOrWhiteSpace(expectedFileSha256))
+            {
+                var actualFileSha256 = Convert.ToHexString(
+                    System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+                if (!string.Equals(expectedFileSha256, actualFileSha256, StringComparison.Ordinal))
+                    throw new InvalidDataException("The workbook changed after preview. Preview it again before importing.");
+            }
 
             var sheet = ReadExcelSheet(path);
             ValidateReplaceImportHasData(sheet, replaceMode);
