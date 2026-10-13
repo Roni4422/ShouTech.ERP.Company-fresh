@@ -58,8 +58,17 @@ internal static class Program
         Console.WriteLine($"Discovered migrations: {migrations.Count}");
         if (options.DryRun)
         {
+            var dryRunHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var migration in migrations)
-                Console.WriteLine(migration.Id);
+            {
+                if (dryRunHashes.TryGetValue(migration.Hash, out var duplicateOf))
+                    Console.WriteLine($"{migration.Id} [duplicate SQL of {duplicateOf}; execution will be skipped]");
+                else
+                {
+                    Console.WriteLine(migration.Id);
+                    dryRunHashes.Add(migration.Hash, migration.Id);
+                }
+            }
             return 0;
         }
 
