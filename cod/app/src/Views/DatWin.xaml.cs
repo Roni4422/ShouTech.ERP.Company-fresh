@@ -111,7 +111,7 @@ public partial class DatWin : Window
         DatasetPasswordLabel.Text = L("Password", "Package password");
         DatasetPasswordConfirmLabel.Text = L("ConfirmPassword", "Confirm password");
         ImportDatasetLabel.Text = L("DatasetType", "Dataset type");
-        ImportHintText.Text = L("ImportDatasetHint", "Editable Excel data can be imported only with its original encrypted type marker and unchanged column headers.");
+        ImportHintText.Text = L("ImportDatasetHint", "Import a ShouTech export with its original hidden identity column, or a generic .xlsx whose first-row headers exactly match database field names. Choose the matching dataset. Primary keys and company scope are required.");
         if (ImportModeLabel != null)
             ImportModeLabel.Text = L("ImportModeLabel", "Import mode for master data (e.g. material cards)");
         if (ImportUpsertRadio != null)
@@ -120,7 +120,7 @@ public partial class DatWin : Window
             ImportReplaceRadio.Content = L("ImportReplaceMode", "Wipe missing rows to recycle bin (soft-delete) — can restore from Bin on main window");
         if (ImportReplaceHintText != null)
             ImportReplaceHintText.Text = L("ImportReplaceHint", "Example: export materials, delete some cards in Excel, then import. Upsert keeps them in DB; wipe-to-bin moves missing cards to the recycle bin so you can restore them later.");
-        StructuredExportHintText.Text = L("ChooseDataset", "Select a data type to export as Excel, PDF or an encrypted STEI package. Excel files include a hidden encrypted type marker; edit data cells, not column headers.");
+        StructuredExportHintText.Text = L("ChooseDataset", "Select a data type to export as Excel, PDF or an encrypted STEI package. For generic Excel imports, use database field names as headers; ShouTech exports retain their hidden identity column.");
     }
 
     private void ApplyMode()
