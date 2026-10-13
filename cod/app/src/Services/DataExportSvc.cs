@@ -577,6 +577,17 @@ public static class DataExportSvc
         var availableKeyFields = new HashSet<string>(identity.Fields, StringComparer.OrdinalIgnoreCase);
         if (companyColumn is not null)
             availableKeyFields.Add(companyColumn);
+
+        var databasePrimaryKeys = await GetPrimaryKeyColumnsAsync(connection, option.TableName, ct);
+        foreach (var primaryKey in databasePrimaryKeys)
+        {
+            if (companyColumn is not null &&
+                primaryKey.Equals(companyColumn, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (!HasNonBlankWorkbookValuesForField(sheet, identity, primaryKey))
+                availableKeyFields.Remove(primaryKey);
+        }
+
         var keyColumns = await GetImportKeyColumnsAsync(connection, option.TableName, availableKeyFields, ct);
 
         var headerToField = identity.Headers
@@ -624,7 +635,7 @@ public static class DataExportSvc
                 {
                     ValidateDatasetRow(option, values);
                     processed += await UpsertExcelRowAsync(
-                        connection, transaction, option.TableName, values, columns, keyColumns, ct);
+                        connection, transaction, option.TableName, values, columns, keyColumns, databasePrimaryKeys, ct);
                     if (replaceMode)
                         importedKeys.Add(BuildCompositeKey(values, keyColumns));
                 }
@@ -1336,6 +1347,39 @@ public static class DataExportSvc
         return columns;
     }
 
+    private static bool HasNonBlankWorkbookValuesForField(
+        ExcelSheet sheet,
+        DatasetIdentity identity,
+        string field)
+    {
+        var identityIndex = Array.FindIndex(identity.Fields, value =>
+            value.Equals(field, StringComparison.OrdinalIgnoreCase));
+        if (identityIndex < 0)
+            return false;
+
+        var header = identity.Headers[identityIndex];
+        var sheetIndex = -1;
+        for (var index = 0; index < sheet.Headers.Count; index++)
+        {
+            if (sheet.Headers[index].Equals(header, StringComparison.Ordinal))
+            {
+                sheetIndex = index;
+                break;
+            }
+        }
+        if (sheetIndex < 0)
+            return false;
+
+        foreach (var row in sheet.Rows)
+        {
+            if (row.All(string.IsNullOrWhiteSpace))
+                continue;
+            if (sheetIndex >= row.Count || string.IsNullOrWhiteSpace(row[sheetIndex]))
+                return false;
+        }
+        return sheet.Rows.Any(row => !row.All(string.IsNullOrWhiteSpace));
+    }
+
     private static async Task<List<string>> GetImportKeyColumnsAsync(
         DbConnection connection,
         string table,
@@ -1478,13 +1522,16 @@ public static class DataExportSvc
         string table,
         IReadOnlyDictionary<string, object?> row,
         IReadOnlyList<string> columns,
-        IReadOnlyList<string> primaryKeys,
+        IReadOnlyList<string> conflictKeys,
+        IReadOnlyList<string> databasePrimaryKeys,
         CancellationToken ct)
     {
         var selected = columns.Where(row.ContainsKey).ToArray();
         selected = selected.Where(column =>
-            !primaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase) || row[column] != null).ToArray();
-        var nonKeys = selected.Where(column => !primaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase)).ToArray();
+            !databasePrimaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase) || row[column] != null).ToArray();
+        var nonKeys = selected.Where(column =>
+            !conflictKeys.Contains(column, StringComparer.OrdinalIgnoreCase) &&
+            !databasePrimaryKeys.Contains(column, StringComparer.OrdinalIgnoreCase)).ToArray();
         if (selected.Length == 0)
             throw new InvalidDataException("A row contains no importable fields.");
 
@@ -1492,10 +1539,10 @@ public static class DataExportSvc
         command.Transaction = transaction;
         var placeholders = selected.Select((_, index) => $"@p{index}").ToArray();
         const string prefix = "INSERT";
-        if (primaryKeys.Count == 0 || primaryKeys.Any(key => !selected.Contains(key, StringComparer.OrdinalIgnoreCase)))
+        if (conflictKeys.Count == 0 || conflictKeys.Any(key => !selected.Contains(key, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidDataException("The row does not contain all fields required by its selected conflict key.");
 
-        var conflictTarget = $" ({string.Join(",", primaryKeys.Select(QuoteIdentifier))})";
+        var conflictTarget = $" ({string.Join(",", conflictKeys.Select(QuoteIdentifier))})";
         var excluded = DatabaseRuntime.IsPostgreSql() ? "EXCLUDED" : "excluded";
         var suffix = nonKeys.Length == 0
             ? $" ON CONFLICT{conflictTarget} DO NOTHING"
