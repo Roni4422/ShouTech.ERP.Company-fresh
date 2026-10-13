@@ -460,7 +460,8 @@ public partial class DatWin : Window
                         importOption,
                         AppState.CurrentCompanyCode ?? string.Empty,
                         replaceMode: replaceMode,
-                        ct: CancellationToken.None);
+                        ct: CancellationToken.None,
+                        expectedFileSha256: previewHash);
 
                     var finishedAt = DateTime.Now;
                     ResultStatusText.Text = L("Success", "Completed successfully");
