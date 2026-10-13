@@ -69,7 +69,7 @@ public sealed class DataExportSvcExcelReaderTests
         try
         {
             var exception = Assert.Throws<InvalidDataException>(() => ReadSheet(path));
-            Assert.Contains("formula error", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("formula error", exception.Message.ToLowerInvariant());
         }
         finally
         {
