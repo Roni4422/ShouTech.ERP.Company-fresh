@@ -1,0 +1,2 @@
+Temporary GitHub connection write test.
+This file is on test/github-connection-check and is not part of main.
