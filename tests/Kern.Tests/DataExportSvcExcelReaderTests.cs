@@ -86,6 +86,36 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void ReadExcelSheet_RejectsMalformedBooleanCells()
+    {
+        var path = CreateWorkbook(
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+                <row r="1">
+                  <c r="A1" t="s"><v>0</v></c>
+                  <c r="B1" t="s"><v>2</v></c>
+                </row>
+                <row r="2">
+                  <c r="A2" t="s"><v>1</v></c>
+                  <c r="B2" t="b"><v>2</v></c>
+                </row>
+              </sheetData>
+            </worksheet>
+            """);
+
+        try
+        {
+            var exception = Assert.Throws<InvalidDataException>(() => ReadSheet(path));
+            Assert.Contains("invalid boolean value", exception.Message.ToLowerInvariant());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ReadExcelSheet_RejectsExcelFormulaErrorCells()
     {
         var path = CreateWorkbook(
