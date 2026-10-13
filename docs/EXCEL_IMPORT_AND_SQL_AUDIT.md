@@ -68,9 +68,17 @@ The migrator sorts relative migration paths lexicographically, case-insensitivel
 
 **Safe handling:** only baseline after a schema comparison and backup. Add integration tests for an empty database, an already migrated database, a checksum mismatch, a partially initialized database, and a pre-existing database being baselined. The runner should eventually report historical migration IDs that exist in `schema_migrations` but no longer exist on disk.
 
-### 5. Cross-provider drift
+### 5. Permission catalog drift
 
-SQLite and PostgreSQL do not have identical migration decomposition: SQLite core includes tables that are split into the PostgreSQL security migration, and permission changes use provider-specific DDL. This can be legitimate, but it needs tests proving equivalent application capabilities and constraints after migration. A shared table-name list alone is not sufficient; column types, primary keys, foreign keys, unique constraints, and tenant scope must also be compared.
+A static comparison of the permission seed entries found 228 distinct permission codes in SQLite `004_permissions.sql` and 227 in PostgreSQL `006_permissions.sql`. The missing PostgreSQL entry was `SYS.PERMISSIONS.MANAGE`, which is referenced by `PrmWin.xaml.cs` and the permission constants in `Permissions.cs`. SQLite seeds it and grants it to active administrator roles; PostgreSQL did not seed it in the active permission migration.
+
+A forward-only migration, `dba/mig/postgresql/007_permission_manage.sql`, now upserts this permission and grants it only to active administrator roles. It deliberately does not grant it to User or Viewer roles. This is a targeted correction; the full catalogs and role grants still need an automated cross-provider parity test.
+
+### 6. Cross-provider drift
+
+SQLite and PostgreSQL do not have identical migration decomposition: SQLite core defines 14 tables, while PostgreSQL splits the equivalent core/security set across `001_core.sql` and `002_security.sql`. PostgreSQL additionally defines 19 module tables in `003_modules.sql`; there is no matching SQLite module migration in the active SQLite migration directory. This is a confirmed capability/schema parity gap if those modules are expected to work on SQLite.
+
+A shared table-name list alone is not sufficient; column types, primary keys, foreign keys, unique constraints, and tenant scope must also be compared. The legacy monolithic snapshots are not a safe substitute for missing active migrations.
 
 ## Verification checklist
 
@@ -78,7 +86,7 @@ SQLite and PostgreSQL do not have identical migration decomposition: SQLite core
 - [ ] Run the existing test suite and add import-specific XLSX tests.
 - [ ] Run `SqlMigrator --dry-run` for SQLite and PostgreSQL and record the exact ordered IDs.
 - [ ] Apply migrations to disposable empty SQLite and PostgreSQL databases.
-- [ ] Compare expected tables, columns, primary keys, foreign keys, and unique constraints.
+- [ ] Compare expected tables, columns, primary keys, foreign keys, unique constraints, and permission codes across both providers.
 - [ ] Test baseline behavior against a disposable existing database and inspect `schema_migrations`.
 - [ ] Verify posted invoices, vouchers, journal entries, and inventory movements cannot be removed by replace-mode spreadsheet imports.
 
