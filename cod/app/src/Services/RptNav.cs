@@ -165,6 +165,41 @@ public static class RptNav
                 OpenPriceList(owner); return true;
             case "Inventory.ShortageList":
                 OpenShortageList(owner); return true;
+            // Phase 7B - Inventory tab report windows.
+            case "Inventory.PriceList":
+                Show(new PrListWin(), owner); return true;
+            case "Inventory.EndOfPeriod":
+                Show(new EndPrdWin(), owner); return true;
+            case "Inventory.ShortageList":
+                Show(new ShortListWin(), owner); return true;
+            case "Inventory.ExpiredMaterials":
+                Show(new ExpMatWin(), owner); return true;
+            case "Inventory.StagnantMaterials":
+                Show(new StagMatWin(), owner); return true;
+            case "Inventory.MostActiveMaterials":
+                Show(new ActMatWin(), owner); return true;
+            case "Inventory.MaterialList":
+                Show(new MatListWin(), owner); return true;
+            case "Inventory.MaterialProfits":
+                OpenItemProfitability(owner); return true;
+            case "Inventory.SearchMaterial":
+                Show(new MatDirWin(), owner); return true;
+            case "Inventory.MaterialMovementChart":
+            case "Inventory.InvoiceAge":
+            case "Inventory.MaterialPriceHistory":
+            case "Inventory.ServiceMaterials":
+            case "Inventory.MaterialStatistics":
+            case "Inventory.MaterialComparison":
+            case "Inventory.MaterialGroupMovementReport":
+            case "Inventory.NegativeOutput":
+            case "Inventory.Customers":
+            case "Inventory.EditSerialNumber":
+            case "Inventory.SerialNumbersReport":
+            case "Inventory.BranchMaterials":
+            case "Inventory.SalesReport":
+            case "Inventory.EditMaterialSpecs":
+            case "Inventory.MaterialDiscounts":
+                Show(new GenInvRptWin(actionKey.Trim()), owner); return true;
             case "Reports.Statistics":
                 OpenTrialBalance(owner); return true;
             default:

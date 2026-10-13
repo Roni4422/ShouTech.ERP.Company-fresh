@@ -401,7 +401,12 @@
       "Aging0_30": "0-30 يوم",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "أكثر من 90"
+      "Aging90Plus": "أكثر من 90",
+      "Shortage": "النقص",
+      "LastMove": "آخر حركة",
+      "DaysNoMove": "أيام بدون حركة",
+      "MoveCount": "عدد الحركات",
+      "AlertDays": "تنبيه قبل (أيام)"
     },
     "Filter": {
       "All": "الكل",

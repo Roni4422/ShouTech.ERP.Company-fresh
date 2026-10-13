@@ -398,7 +398,12 @@
       "Aging0_30": "0-30 gün",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "90+"
+      "Aging90Plus": "90+",
+      "Shortage": "Eksik",
+      "LastMove": "Son hareket",
+      "DaysNoMove": "Hareketsiz gün",
+      "MoveCount": "Hareket sayısı",
+      "AlertDays": "Uyarı öncesi (gün)"
     },
     "Filter": {
       "All": "Tümü",

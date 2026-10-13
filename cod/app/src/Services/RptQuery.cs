@@ -535,6 +535,285 @@ public static class RptQuery
         return await QueryAsync(sql, ct, args.ToArray());
     }
 
+
+    // ------------------------------------------------------------------
+    // Phase 7B - inventory tab report queries
+    // ------------------------------------------------------------------
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> MaterialListAsync(
+        string? materialSearch, string? groupCode, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT m.code AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.name_en, '') AS MaterialNameEn,
+                   COALESCE(m.group_code, '') AS GroupCode,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   COALESCE(m.unit1_barcode, '') AS Barcode,
+                   COALESCE(m.gtin, '') AS Gtin,
+                   COALESCE(m.status, 'Active') AS Status
+            FROM materials m
+            WHERE m.company_id = $company AND m.is_deleted = 0
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+              AND ($group = '' OR COALESCE(m.group_code, '') = $group)
+            ORDER BY m.code;
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("m.is_deleted = 0", "m.is_deleted = FALSE", StringComparison.Ordinal);
+        return await QueryAsync(sql, ct,
+            ("$company", Company),
+            ("$mat", materialSearch ?? string.Empty),
+            ("$group", groupCode ?? string.Empty));
+    }
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> MaterialPriceListAsync(
+        string? materialSearch, string? groupCode, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT m.code AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   COALESCE(m.group_code, '') AS GroupCode,
+                   COALESCE(m.cost, 0) AS Cost,
+                   COALESCE(m.price_retail, 0) AS RetailPrice,
+                   COALESCE(m.price_wholesale, 0) AS WholesalePrice,
+                   COALESCE(m.price_currency, '') AS Currency
+            FROM materials m
+            WHERE m.company_id = $company AND m.is_deleted = 0
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+              AND ($group = '' OR COALESCE(m.group_code, '') = $group)
+            ORDER BY m.code;
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("m.is_deleted = 0", "m.is_deleted = FALSE", StringComparison.Ordinal);
+        return await QueryAsync(sql, ct,
+            ("$company", Company),
+            ("$mat", materialSearch ?? string.Empty),
+            ("$group", groupCode ?? string.Empty));
+    }
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> ShortageListAsync(
+        string? materialSearch, string? groupCode, string? warehouseId, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT COALESCE(w.warehouse_code, CAST(s.warehouse_id AS TEXT)) AS Warehouse,
+                   COALESCE(m.code, CAST(s.material_id AS TEXT)) AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   COALESCE(s.available_qty, 0) AS Qty,
+                   COALESCE(m.min_qty, 0) AS MinQty,
+                   COALESCE(m.reorder_qty, 0) AS ReorderQty,
+                   CASE WHEN COALESCE(m.min_qty, 0) > COALESCE(s.available_qty, 0)
+                        THEN COALESCE(m.min_qty, 0) - COALESCE(s.available_qty, 0)
+                        ELSE 0 END AS Shortage,
+                   COALESCE(s.average_cost, 0) AS AvgCost
+            FROM material_stock_balances s
+            LEFT JOIN warehouses w
+              ON w.company_id = s.company_id AND w.warehouse_id = s.warehouse_id
+            LEFT JOIN materials m
+              ON m.company_id = s.company_id AND m.material_id = s.material_id
+            WHERE s.company_id = $company AND s.is_deleted = 0
+              AND COALESCE(m.min_qty, 0) + COALESCE(m.reorder_qty, 0) > 0
+              AND COALESCE(s.available_qty, 0) <= CASE
+                    WHEN COALESCE(m.min_qty, 0) > 0 THEN COALESCE(m.min_qty, 0)
+                    ELSE COALESCE(m.reorder_qty, 0) END
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+              AND ($group = '' OR COALESCE(m.group_code, '') = $group)
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("s.is_deleted = 0", "s.is_deleted = FALSE", StringComparison.Ordinal);
+        if (!string.IsNullOrWhiteSpace(warehouseId))
+            sql += " AND CAST(s.warehouse_id AS TEXT) = $wh";
+        sql += " ORDER BY Warehouse, MaterialCode;";
+        var args = new List<(string Name, object? Value)>
+        {
+            ("$company", Company),
+            ("$mat", materialSearch ?? string.Empty),
+            ("$group", groupCode ?? string.Empty)
+        };
+        if (!string.IsNullOrWhiteSpace(warehouseId))
+            args.Add(("$wh", warehouseId));
+        return await QueryAsync(sql, ct, args.ToArray());
+    }
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> EndOfPeriodAsync(
+        string? warehouseId, string? materialSearch, string? groupCode, DateTime asOf, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT COALESCE(w.warehouse_code, CAST(sm.warehouse_id AS TEXT)) AS Warehouse,
+                   COALESCE(m.code, CAST(sm.material_id AS TEXT)) AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   SUM(COALESCE(sm.qty_in, 0) - COALESCE(sm.qty_out, 0)) AS Qty,
+                   COALESCE(s.average_cost, 0) AS AvgCost,
+                   SUM(COALESCE(sm.qty_in, 0) - COALESCE(sm.qty_out, 0)) * COALESCE(s.average_cost, 0) AS Value
+            FROM material_stock_movements sm
+            LEFT JOIN warehouses w
+              ON w.company_id = sm.company_id AND w.warehouse_id = sm.warehouse_id
+            LEFT JOIN materials m
+              ON m.company_id = sm.company_id AND m.material_id = sm.material_id
+            LEFT JOIN material_stock_balances s
+              ON s.company_id = sm.company_id AND s.warehouse_id = sm.warehouse_id AND s.material_id = sm.material_id
+            WHERE sm.company_id = $company AND sm.is_deleted = 0
+              AND sm.movement_date < $to
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+              AND ($group = '' OR COALESCE(m.group_code, '') = $group)
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("sm.is_deleted = 0", "sm.is_deleted = FALSE", StringComparison.Ordinal);
+        if (!string.IsNullOrWhiteSpace(warehouseId))
+            sql += " AND CAST(sm.warehouse_id AS TEXT) = $wh";
+        sql += """
+            GROUP BY Warehouse, MaterialCode, MaterialName, Unit, AvgCost
+            HAVING ABS(SUM(COALESCE(sm.qty_in, 0) - COALESCE(sm.qty_out, 0))) > 0.0001
+            ORDER BY Warehouse, MaterialCode;
+            """;
+        var args = new List<(string Name, object? Value)>
+        {
+            ("$company", Company),
+            ("$to", DateEndExclusive(asOf)),
+            ("$mat", materialSearch ?? string.Empty),
+            ("$group", groupCode ?? string.Empty)
+        };
+        if (!string.IsNullOrWhiteSpace(warehouseId))
+            args.Add(("$wh", warehouseId));
+        return await QueryAsync(sql, ct, args.ToArray());
+    }
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> StagnantMaterialsAsync(
+        string? materialSearch, string? groupCode, DateTime from, DateTime to, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT m.code AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   COALESCE(m.group_code, '') AS GroupCode,
+                   COALESCE(m.qty_on_hand, 0) AS QtyOnHand,
+                   last_move.LastMove AS LastMove
+            FROM materials m
+            LEFT JOIN (
+                SELECT sm.material_id AS material_id, MAX(sm.movement_date) AS LastMove
+                FROM material_stock_movements sm
+                WHERE sm.company_id = $company AND sm.is_deleted = 0
+                GROUP BY sm.material_id
+            ) last_move ON last_move.material_id = m.material_id
+            WHERE m.company_id = $company AND m.is_deleted = 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM material_stock_movements sm2
+                  WHERE sm2.company_id = m.company_id
+                    AND sm2.material_id = m.material_id
+                    AND sm2.is_deleted = 0
+                    AND sm2.movement_date >= $from
+                    AND sm2.movement_date < $to)
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+              AND ($group = '' OR COALESCE(m.group_code, '') = $group)
+            ORDER BY m.code;
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("m.is_deleted = 0", "m.is_deleted = FALSE", StringComparison.Ordinal)
+                .Replace("sm.is_deleted = 0", "sm.is_deleted = FALSE", StringComparison.Ordinal)
+                .Replace("sm2.is_deleted = 0", "sm2.is_deleted = FALSE", StringComparison.Ordinal);
+        return await QueryAsync(sql, ct,
+            ("$company", Company),
+            ("$from", DateStart(from)),
+            ("$to", DateEndExclusive(to)),
+            ("$mat", materialSearch ?? string.Empty),
+            ("$group", groupCode ?? string.Empty));
+    }
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> MostActiveMaterialsAsync(
+        string? materialSearch, string? warehouseId, DateTime from, DateTime to, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT COALESCE(m.code, CAST(sm.material_id AS TEXT)) AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   COUNT(sm.stock_movement_id) AS MoveCount,
+                   SUM(COALESCE(sm.qty_in, 0)) AS QtyIn,
+                   SUM(COALESCE(sm.qty_out, 0)) AS QtyOut,
+                   SUM((COALESCE(sm.qty_in, 0) - COALESCE(sm.qty_out, 0)) * COALESCE(sm.unit_cost, 0)) AS MoveValue
+            FROM material_stock_movements sm
+            LEFT JOIN materials m
+              ON m.company_id = sm.company_id AND m.material_id = sm.material_id
+            WHERE sm.company_id = $company AND sm.is_deleted = 0
+              AND sm.movement_date >= $from AND sm.movement_date < $to
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("sm.is_deleted = 0", "sm.is_deleted = FALSE", StringComparison.Ordinal);
+        if (!string.IsNullOrWhiteSpace(warehouseId))
+            sql += " AND CAST(sm.warehouse_id AS TEXT) = $wh";
+        sql += """
+            GROUP BY MaterialCode, MaterialName, Unit
+            ORDER BY MoveCount DESC, MaterialCode;
+            """;
+        var args = new List<(string Name, object? Value)>
+        {
+            ("$company", Company),
+            ("$from", DateStart(from)),
+            ("$to", DateEndExclusive(to)),
+            ("$mat", materialSearch ?? string.Empty)
+        };
+        if (!string.IsNullOrWhiteSpace(warehouseId))
+            args.Add(("$wh", warehouseId));
+        return await QueryAsync(sql, ct, args.ToArray());
+    }
+
+    public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> ExpiringMaterialsAsync(
+        string? materialSearch, string? groupCode, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        MatRepo.EnsureSchema();
+        var sql = """
+            SELECT m.code AS MaterialCode,
+                   COALESCE(m.name_ar, '') AS MaterialName,
+                   COALESCE(m.default_unit, '') AS Unit,
+                   COALESCE(m.group_code, '') AS GroupCode,
+                   COALESCE(m.qty_on_hand, 0) AS QtyOnHand,
+                   COALESCE(m.shelf_life_days, 0) AS ShelfLifeDays,
+                   COALESCE(m.alert_before_expiry_days, 0) AS AlertDays
+            FROM materials m
+            WHERE m.company_id = $company AND m.is_deleted = 0
+              AND COALESCE(m.has_expiry, 0) = 1
+              AND ($mat = '' OR LOWER(COALESCE(m.code, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_ar, '')) LIKE '%' || LOWER($mat) || '%'
+                   OR LOWER(COALESCE(m.name_en, '')) LIKE '%' || LOWER($mat) || '%')
+              AND ($group = '' OR COALESCE(m.group_code, '') = $group)
+            ORDER BY m.code;
+            """;
+        if (DatabaseRuntime.IsPostgreSql())
+            sql = sql.Replace("m.is_deleted = 0", "m.is_deleted = FALSE", StringComparison.Ordinal);
+        return await QueryAsync(sql, ct,
+            ("$company", Company),
+            ("$mat", materialSearch ?? string.Empty),
+            ("$group", groupCode ?? string.Empty));
+    }
+
     public static IReadOnlyList<KeyValuePair<string, string>> WarehouseChoices()
     {
         DocSchema.Ensure();

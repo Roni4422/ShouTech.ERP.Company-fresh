@@ -398,7 +398,12 @@
       "Aging0_30": "0-30 j",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "90+"
+      "Aging90Plus": "90+",
+      "Shortage": "Manque",
+      "LastMove": "Dernier mouvement",
+      "DaysNoMove": "Jours sans mouvement",
+      "MoveCount": "Mouvements",
+      "AlertDays": "Alerte avant (jours)"
     },
     "Filter": {
       "All": "Tous",
