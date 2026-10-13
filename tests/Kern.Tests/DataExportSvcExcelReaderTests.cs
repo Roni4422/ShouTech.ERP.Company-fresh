@@ -78,6 +78,37 @@ public sealed class DataExportSvcExcelReaderTests
     }
 
     [Fact]
+    public void ReplaceImport_RejectsWorkbookWithHeadersButNoDataRows()
+    {
+        var path = CreateWorkbook(
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+                <row r="1"><c r="A1" t="s"><v>0</v></c></row>
+              </sheetData>
+            </worksheet>
+            """);
+
+        try
+        {
+            var sheet = ReadSheet(path);
+            var method = typeof(DataExportSvc).GetMethod(
+                "ValidateReplaceImportHasData",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.NotNull(method);
+            var exception = Assert.Throws<TargetInvocationException>(
+                () => method!.Invoke(null, new[] { sheet, (object)true }));
+            Assert.IsType<InvalidDataException>(exception.InnerException);
+            Assert.Contains("empty workbook", exception.InnerException!.Message.ToLowerInvariant());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ReadExcelSheet_RejectsFormulaCellsEvenWhenCachedValuesExist()
     {
         var path = CreateWorkbook(
