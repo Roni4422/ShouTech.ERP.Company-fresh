@@ -1146,7 +1146,12 @@ public static class DataExportSvc
                 {
                     "inlineStr" => string.Concat(cell.Element(ns + "is")?.Descendants(ns + "t").Select(x => x.Value) ?? []),
                     "s" => SharedStringValue(rawValue, sharedStrings),
-                    "b" => rawValue == "1" ? "true" : "false",
+                    "b" => rawValue switch
+                    {
+                        "1" => "true",
+                        "0" => "false",
+                        _ => throw new InvalidDataException($"Cell {reference} contains an invalid Boolean value.")
+                    },
                     "str" => rawValue,
                     "e" => throw new InvalidDataException($"Cell {reference} contains an Excel formula error."),
                     _ => rawValue
