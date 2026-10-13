@@ -1,7 +1,7 @@
 # Schema Audit
 
-- SQL table definitions found: 540
-- Table names defined more than once: 120
+- SQL table definitions found: 531
+- Table names defined more than once: 104
 - Runtime C# CREATE TABLE statements: 55
 - Files/lines containing Arabic outside language resources: 2067
 
