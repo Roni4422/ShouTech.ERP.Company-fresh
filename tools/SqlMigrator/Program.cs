@@ -61,12 +61,13 @@ internal static class Program
             var dryRunHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var migration in migrations)
             {
-                if (dryRunHashes.TryGetValue(migration.Hash, out var duplicateOf))
+                if (dryRunHashes.TryGetValue(migration.Hash, out var duplicateOf) &&
+                    IsKnownDuplicateMigration(provider, migration.Id, duplicateOf))
                     Console.WriteLine($"{migration.Id} [duplicate SQL of {duplicateOf}; execution will be skipped]");
                 else
                 {
                     Console.WriteLine(migration.Id);
-                    dryRunHashes.Add(migration.Hash, migration.Id);
+                    dryRunHashes.TryAdd(migration.Hash, migration.Id);
                 }
             }
             return 0;
@@ -114,11 +115,12 @@ internal static class Program
                     continue;
                 }
 
-                if (seenHashes.TryGetValue(migration.Hash, out var duplicateOf))
+                if (seenHashes.TryGetValue(migration.Hash, out var duplicateOf) &&
+                    IsKnownDuplicateMigration(provider, migration.Id, duplicateOf))
                 {
-                    // Preserve both historical IDs in schema_migrations but execute identical
-                    // SQL only once per run. This is important for duplicated legacy files such
-                    // as PostgreSQL 003_modules.sql and 004_modules.sql.
+                    // Preserve both historical IDs but execute this known duplicate module
+                    // migration only once. Do not suppress unrelated identical SQL bodies:
+                    // a later migration may intentionally repeat a seed operation.
                     Console.WriteLine($"SKIP DUPLICATE {migration.Id} (identical SQL to {duplicateOf}); recording migration ID.");
                     await RecordMigrationAsync(connection, migration, provider, transaction: null);
                     applied[migration.Id] = migration.Hash;
@@ -242,6 +244,11 @@ internal static class Program
                 return directory.FullName;
         return null;
     }
+
+    private static bool IsKnownDuplicateMigration(string provider, string migrationId, string duplicateOf)
+        => provider.Equals("postgresql", StringComparison.OrdinalIgnoreCase)
+            && migrationId.Equals("004_modules.sql", StringComparison.OrdinalIgnoreCase)
+            && duplicateOf.Equals("003_modules.sql", StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizeProvider(string provider) => provider.Trim().ToLowerInvariant() switch
     {
