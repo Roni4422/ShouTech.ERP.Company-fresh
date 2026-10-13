@@ -103,11 +103,11 @@ Generic master-data imports now prefer a complete primary key when present, but 
 
 The XLSX reader also rejects formula cells (including cached formula results), duplicate cell coordinates, populated values beyond the header width, formula-error cells, packages above 64 MiB uncompressed, worksheets above 32 MiB, shared-string tables above 24 MiB, workbooks above 100,000 data rows, and rows wider than 512 columns. These limits reduce ambiguous imports and memory-exhaustion risk from malformed workbooks. Date-format detection ignores quoted literals, color/locale brackets, and escaped characters while retaining elapsed-time formats such as `[h]:mm:ss`.
 
-Regression tests cover formula rejection, extra data columns, legacy company-scope classification, custom date-format detection, natural-key selection without generated IDs, material-name aliases, empty replace workbooks, and the PostgreSQL permission migration file. Database-backed tests for empty-company registries and rollback behavior are still required.
+Regression tests cover formula rejection, extra data columns, legacy company-scope classification, custom date-format detection, natural-key selection without generated IDs, material-name aliases, empty replace workbooks, the PostgreSQL permission migration file, and transaction completion semantics. The transaction regression test uses an in-memory SQLite database to prove preview writes are rolled back and confirmed writes are committed. Full end-to-end import tests for empty-company registries and tenant isolation still require application-level database fixtures.
 
 ## Verification checklist
 
-- [ ] Build `tests/Kern.Tests/Kern.Tests.csproj` on Windows/.NET 8 (including the latest transaction-backed preview changes).
+- [ ] Build `tests/Kern.Tests/Kern.Tests.csproj` on Windows/.NET 8 and execute the latest transaction-completion regression test; GitHub currently exposes no CI run/status for the latest head.
 - [ ] Run the existing test suite and add import-specific XLSX tests.
 - [ ] Run `SqlMigrator --dry-run` for SQLite and PostgreSQL and record the exact ordered IDs.
 - [ ] Apply migrations to disposable empty SQLite and PostgreSQL databases. A new automated test now executes the entire active SQLite migration chain in an empty in-memory database; the PostgreSQL chain still needs a disposable server-backed test.
