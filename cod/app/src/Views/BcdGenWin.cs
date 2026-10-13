@@ -98,7 +98,7 @@ public sealed class BcdGenWin : BaseWin
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 6, 0)
         };
-        searchLabel.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+        searchLabel.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
         DockPanel.SetDock(searchLabel, Dock.Left);
         searchPanel.Children.Add(searchLabel);
         searchPanel.Children.Add(_txtSearch);
@@ -108,13 +108,13 @@ public sealed class BcdGenWin : BaseWin
         // Grid.
         BuildColumns();
         _grid.SetResourceReference(BackgroundProperty, "SurfaceSecondaryBrush");
-        _grid.SetResourceReference(ForegroundProperty, "TextBrush");
+        _grid.SetResourceReference(ForegroundProperty, "TextPrimary");
         root.Children.Add(_grid);
 
         // Status.
         _status.Margin = new Thickness(0, 8, 0, 0);
         _status.FontWeight = FontWeights.SemiBold;
-        _status.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+        _status.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
         DockPanel.SetDock(_status, Dock.Bottom);
         root.Children.Add(_status);
 
@@ -376,7 +376,7 @@ public sealed class BcdGenWin : BaseWin
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(10, 0, 6, 0)
         };
-        block.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+        block.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
         return block;
     }
 

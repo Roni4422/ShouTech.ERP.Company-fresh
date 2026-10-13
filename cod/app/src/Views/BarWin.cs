@@ -137,7 +137,7 @@ public sealed class BarWin : BaseWin
         _previewCard.Width = 240;
         _previewCard.Height = 150;
         _previewCard.Background = Brushes.White;
-        _previewCard.BorderBrush = new SolidColorBrush(Color.FromRgb(180, 185, 190));
+        _previewCard.SetResourceReference(Border.BorderBrushProperty, "BorderStrongBrush");
         _previewCard.BorderThickness = new Thickness(1.5);
         _previewCard.CornerRadius = new CornerRadius(5);
         _previewCard.Padding = new Thickness(10);
@@ -153,7 +153,7 @@ public sealed class BarWin : BaseWin
 
         _prevPrice.FontSize = 14;
         _prevPrice.FontWeight = FontWeights.Bold;
-        _prevPrice.Foreground = new SolidColorBrush(Color.FromRgb(25, 118, 210));
+        _prevPrice.SetResourceReference(TextBlock.ForegroundProperty, "InfoBrush");
         _prevPrice.HorizontalAlignment = HorizontalAlignment.Center;
         _prevPrice.Margin = new Thickness(0, 0, 0, 6);
         cardContent.Children.Add(_prevPrice);
@@ -327,6 +327,8 @@ public sealed class BarWin : BaseWin
         sp.Children.Add(new TextBlock { Text = T(key), Tag = key, Margin = new Thickness(0, 0, 0, 2), Opacity = 0.85 });
         if (control is TextBox textBox)
             textBox.SetResourceReference(StyleProperty, "VisuTextBoxStyle");
+        else if (control is ComboBox comboBox)
+            comboBox.SetResourceReference(StyleProperty, "VisuComboBoxStyle");
         sp.Children.Add(control);
         return sp;
     }
