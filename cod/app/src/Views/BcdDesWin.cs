@@ -69,6 +69,14 @@ public sealed class BcdDesWin : BaseWin
     protected override void ApplyLocalizedText()
     {
         Title = L("Inventory.DesignBarcode", "Design and print barcode");
+        _btnSave.Content = L("BarcodeDesign.SaveDesign", "Save design");
+        _btnLoad.Content = L("BarcodeDesign.LoadDesign", "Load design");
+        _btnReset.Content = T("Common.Refresh");
+        _btnPrint.Content = T("Common.Print");
+        _chkBold.Content = T("BarcodeDesign.Bold");
+        _chkShowName.Content = T("BarcodeDesign.ShowName");
+        _chkShowPrice.Content = T("BarcodeDesign.ShowPrice");
+        _chkShowCode.Content = T("BarcodeDesign.ShowCode");
     }
 
     private static string L(string key, string fallback)
