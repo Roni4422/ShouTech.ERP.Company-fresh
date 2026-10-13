@@ -554,10 +554,6 @@ public static class DataExportSvc
                 throw new InvalidDataException("The workbook fields do not match the selected dataset.");
         }
 
-        var keyColumns = await GetPrimaryKeyColumnsAsync(connection, option.TableName, ct);
-        if (keyColumns.Count == 0 || keyColumns.Any(key => !identity.Fields.Contains(key, StringComparer.OrdinalIgnoreCase)))
-            throw new InvalidDataException("The workbook does not contain the complete primary key required for a safe import.");
-
         var companyColumn = columns.FirstOrDefault(x =>
             x.Equals("company_id", StringComparison.OrdinalIgnoreCase) ||
             x.Equals("companyid", StringComparison.OrdinalIgnoreCase));
@@ -574,6 +570,14 @@ public static class DataExportSvc
             throw new InvalidOperationException("The active company could not be matched to the current database.");
         if (companyColumn == null && !IsCompanyIndependent(option.TableName))
             throw new InvalidOperationException("This dataset cannot be safely restricted to the active company, so it was not imported.");
+
+        // Prefer the declared primary key when the workbook supplies it. Otherwise
+        // allow a database-enforced UNIQUE key (for example company_id + code) so
+        // ordinary master-data spreadsheets need not contain generated surrogate IDs.
+        var availableKeyFields = new HashSet<string>(identity.Fields, StringComparer.OrdinalIgnoreCase);
+        if (companyColumn is not null)
+            availableKeyFields.Add(companyColumn);
+        var keyColumns = await GetImportKeyColumnsAsync(connection, option.TableName, availableKeyFields, ct);
 
         var headerToField = identity.Headers
             .Select((header, i) => new { header, field = identity.Fields[i], type = identity.Types[i] })
@@ -607,6 +611,14 @@ public static class DataExportSvc
 
                 if (companyColumn != null)
                     values[companyColumn] = companyScopeValue!;
+
+                foreach (var keyColumn in keyColumns)
+                {
+                    if (!values.TryGetValue(keyColumn, out var keyValue) ||
+                        keyValue is null ||
+                        keyValue is string keyText && string.IsNullOrWhiteSpace(keyText))
+                        throw new InvalidDataException($"Required import key field '{keyColumn}' is blank.");
+                }
 
                 try
                 {
@@ -1355,13 +1367,15 @@ public static class DataExportSvc
         command.Transaction = transaction;
         var placeholders = selected.Select((_, index) => $"@p{index}").ToArray();
         const string prefix = "INSERT";
+        if (primaryKeys.Count == 0 || primaryKeys.Any(key => !selected.Contains(key, StringComparer.OrdinalIgnoreCase)))
+            throw new InvalidDataException("The row does not contain all fields required by its selected conflict key.");
+
+        var conflictTarget = $" ({string.Join(",", primaryKeys.Select(QuoteIdentifier))})";
+        var excluded = DatabaseRuntime.IsPostgreSql() ? "EXCLUDED" : "excluded";
         var suffix = nonKeys.Length == 0
-            ? " ON CONFLICT DO NOTHING"
-            : DatabaseRuntime.IsPostgreSql()
-                ? " ON CONFLICT DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
-                    $"{QuoteIdentifier(column)}=EXCLUDED.{QuoteIdentifier(column)}"))
-                : " ON CONFLICT DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
-                    $"{QuoteIdentifier(column)}=excluded.{QuoteIdentifier(column)}"));
+            ? $" ON CONFLICT{conflictTarget} DO NOTHING"
+            : $" ON CONFLICT{conflictTarget} DO UPDATE SET " + string.Join(",", nonKeys.Select(column =>
+                $"{QuoteIdentifier(column)}={excluded}.{QuoteIdentifier(column)}"));
         command.CommandText = $"{prefix} INTO {QuoteIdentifier(table)} ({string.Join(",", selected.Select(QuoteIdentifier))}) VALUES ({string.Join(",", placeholders)}){suffix}";
         for (var i = 0; i < selected.Length; i++)
         {
