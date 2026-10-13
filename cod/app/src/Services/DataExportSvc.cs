@@ -1625,11 +1625,12 @@ public static class DataExportSvc
         var tables = await GetTableNamesAsync(connection, ct);
         var companyTable = tables.FirstOrDefault(x => string.Equals(x, "companies", StringComparison.OrdinalIgnoreCase));
 
-        // Some development/tenant databases are already scoped to one company and
-        // intentionally do not carry the global companies registry. In that model,
-        // company_id values in tenant tables are the active company code itself.
+        // Only explicitly classified legacy tables may use the company code directly.
+        // If a table requires an internal company ID, the registry is the source of truth;
+        // guessing the code here can write the wrong tenant identifier or fail unpredictably.
         if (companyTable == null)
-            return companyCode.Trim();
+            throw new InvalidOperationException(
+                $"The companies registry is missing, so the internal ID for company '{companyCode}' cannot be resolved. Initialize the company database first. Legacy company-code datasets do not require this lookup.");
 
         var companyColumns = await GetColumnNamesAsync(connection, companyTable, ct);
         var idColumn = companyColumns.FirstOrDefault(x => x.Equals("company_id", StringComparison.OrdinalIgnoreCase));
