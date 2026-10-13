@@ -319,7 +319,8 @@ public static class DataExportSvc
         DataExportOption option,
         string companyCode,
         bool replaceMode = false,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool previewOnly = false)
     {
         ArgumentNullException.ThrowIfNull(option);
         try
@@ -375,9 +376,9 @@ public static class DataExportSvc
             }
 
             var result = await ImportRowsAsync(
-                sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct);
-            LogOp("ImportExcel",
-                $"key={option.Key} | table={option.TableName} | mode={(replaceMode ? "Replace" : "Upsert")} | upserted={result.UpsertedRows} | deleted={result.DeletedRows} | company={companyCode} | file={path}");
+                sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct, previewOnly);
+            LogOp(previewOnly ? "ImportExcel.Preview" : "ImportExcel",
+                $"key={option.Key} | table={option.TableName} | mode={(replaceMode ? "Replace" : "Upsert")} | preview={previewOnly} | upserted={result.UpsertedRows} | deleted={result.DeletedRows} | company={companyCode} | file={path}");
             return result;
         }
         catch (Exception ex)
@@ -524,7 +525,8 @@ public static class DataExportSvc
         string companyCode,
         int identityColumnIndex,
         bool replaceMode,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool previewOnly = false)
     {
         if (identity.Headers.Length == 0 ||
             identity.Headers.Length != identity.Fields.Length ||
@@ -658,7 +660,10 @@ public static class DataExportSvc
                 LogInfo($"Replace cleanup | key={option.Key} | table={option.TableName} | upserted={processed} | removed={deleted} | company={companyCode}");
             }
 
-            await transaction.CommitAsync(ct);
+            if (previewOnly)
+                await transaction.RollbackAsync(CancellationToken.None);
+            else
+                await transaction.CommitAsync(ct);
             return new ExcelImportResult(processed, deleted, replaceMode, option.Key, option.TableName);
         }
         catch
