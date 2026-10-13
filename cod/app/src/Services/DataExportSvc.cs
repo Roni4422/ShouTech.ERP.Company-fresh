@@ -332,6 +332,7 @@ public static class DataExportSvc
                     "Spreadsheet import is limited to approved master-data datasets. Sales, purchases, vouchers, journals, stock movements, and other transactional records must be created or corrected through their business workflows, not imported or overwritten from Excel.");
 
             var sheet = ReadExcelSheet(path);
+            ValidateReplaceImportHasData(sheet, replaceMode);
             var markerIndexes = sheet.Headers
                 .Select((header, index) => (header, index))
                 .Where(x => x.header.StartsWith(DatasetIdentityPrefix, StringComparison.Ordinal))
@@ -1068,6 +1069,13 @@ public static class DataExportSvc
                 : RptColType.FractionalNumber.ToString();
         }
         return RptColType.Text.ToString();
+    }
+
+    private static void ValidateReplaceImportHasData(ExcelSheet sheet, bool replaceMode)
+    {
+        if (replaceMode && !sheet.Rows.Any(row => !row.All(string.IsNullOrWhiteSpace)))
+            throw new InvalidDataException(
+                "Replace mode cannot run with an empty workbook because it could mark every existing record as deleted. Add at least one data row or use upsert mode.");
     }
 
     private static ExcelSheet ReadExcelSheet(string path)
