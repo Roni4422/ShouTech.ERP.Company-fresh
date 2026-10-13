@@ -91,7 +91,7 @@ public partial class DatWin : Window
         ImportTab.Header = L("Import", "Import Data");
         ExportTab.Header = L("FullExport", "Full database package (.stei)");
         StructuredExportTab.Header = L("ExcelPdf", "Dataset export (Excel / PDF / STEI)");
-        StructuredExportHintText.Text = L("ChooseDataset", "Choose a dataset and export it as Excel, PDF or an encrypted STEI package.");
+        StructuredExportHintText.Text = L("ChooseDataset", "Choose a dataset and export it as Excel, PDF or an encrypted STEI package. Keep the header row when editing an Excel export.");
         ExportFormatLabel.Text = L("Format", "Format");
         if (ExportFormatBox.Items.Count >= 3)
         {
@@ -111,7 +111,7 @@ public partial class DatWin : Window
         DatasetPasswordLabel.Text = L("Password", "Package password");
         DatasetPasswordConfirmLabel.Text = L("ConfirmPassword", "Confirm password");
         ImportDatasetLabel.Text = L("DatasetType", "Dataset type");
-        ImportHintText.Text = L("ImportDatasetHint", "Import a ShouTech export with its original hidden identity column, or a generic .xlsx whose first-row headers exactly match database field names. Choose the matching dataset. Primary keys and company scope are required.");
+        ImportHintText.Text = L("ImportDatasetHint", "Import a ShouTech export or a plain .xlsx with headers matching the selected dataset. A primary or unique key is required; unknown columns are rejected.");
         if (ImportModeLabel != null)
             ImportModeLabel.Text = L("ImportModeLabel", "Import mode for master data (e.g. material cards)");
         if (ImportUpsertRadio != null)
