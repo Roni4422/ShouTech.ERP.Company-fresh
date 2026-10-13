@@ -133,7 +133,7 @@ public partial class DatWin : Window
         };
         PathHintText.Text = _mode switch
         {
-            ExchangeMode.Import => L("ReadyImport", "Choose a .stei file, then start the operation."),
+            ExchangeMode.Import => L("ReadyImport", "Choose a .stei package or .xlsx workbook, then select the dataset type."),
             ExchangeMode.Export => L("ReadyExport", "Choose where to save the .stei file, then start the operation."),
             _ => L("ReadyStructuredExport", "Select a dataset and format, then export the selected data.")
         };
@@ -234,7 +234,7 @@ public partial class DatWin : Window
         var dialog = new OpenFileDialog
         {
             Title = L("Import", "Import Data"),
-            Filter = L("OpenPackage", "ShouTech packages and editable Excel (*.stei;*.xlsx)|*.stei;*.xlsx"),
+            Filter = L("OpenPackage", "ShouTech packages and Excel workbooks (*.stei;*.xlsx)|*.stei;*.xlsx"),
             CheckFileExists = true,
             Multiselect = false,
             AddExtension = true
@@ -247,7 +247,7 @@ public partial class DatWin : Window
         if (!string.Equals(extension, ".stei", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show(L("InvalidExtension", "Choose a .stei package or a ShouTech Excel (.xlsx) export."), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(L("InvalidExtension", "Choose a .stei package or an Excel (.xlsx) workbook."), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
