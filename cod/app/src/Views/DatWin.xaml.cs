@@ -120,7 +120,7 @@ public partial class DatWin : Window
             ImportReplaceRadio.Content = L("ImportReplaceMode", "Wipe missing rows to recycle bin (soft-delete) — can restore from Bin on main window");
         if (ImportReplaceHintText != null)
             ImportReplaceHintText.Text = L("ImportReplaceHint", "Example: export materials, delete some cards in Excel, then import. Upsert keeps them in DB; wipe-to-bin moves missing cards to the recycle bin so you can restore them later.");
-        StructuredExportHintText.Text = L("ChooseDataset", "Select a data type to export as Excel, PDF or an encrypted STEI package. Excel exports stay importable if you keep the header row.");
+        StructuredExportHintText.Text = L("ChooseDataset", "Select a data type to export as Excel, PDF or an encrypted STEI package. Excel files include a hidden encrypted type marker; edit data cells, not column headers.");
     }
 
     private void ApplyMode()
@@ -247,7 +247,7 @@ public partial class DatWin : Window
         if (!string.Equals(extension, ".stei", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show(L("InvalidExtension", "Choose a .stei package or a ShouTech Excel (.xlsx) export."), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(L("InvalidExtension", "Choose a .stei package or an Excel workbook (.xlsx)."), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
