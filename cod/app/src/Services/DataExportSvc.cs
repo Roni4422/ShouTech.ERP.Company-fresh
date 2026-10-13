@@ -398,6 +398,9 @@ public static class DataExportSvc
         if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                 x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidOperationException("The selected dataset cannot be imported.");
+        if (!IsMasterDataImportAllowed(option))
+            throw new InvalidOperationException(
+                "Encrypted dataset imports are limited to approved master-data datasets. Transactional records must use their business workflows.");
 
         if (!string.Equals(Path.GetExtension(path), ".shx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Only .shx encrypted dataset files can be imported here.");
@@ -475,6 +478,9 @@ public static class DataExportSvc
         if (option.IsSystemInfo || !Catalog.Any(x => x.Key == option.Key && x.Filter == option.Filter &&
                 x.TableCandidates.Contains(option.TableName, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidOperationException("The selected dataset cannot be imported from a package.");
+        if (!IsMasterDataImportAllowed(option))
+            throw new InvalidOperationException(
+                "Encrypted dataset imports are limited to approved master-data datasets. Transactional records must use their business workflows.");
         return SteiSvc.ImportDatasetAsync(
             path, password, option.Key, option.TableName, simulation, progress, ct);
     }
