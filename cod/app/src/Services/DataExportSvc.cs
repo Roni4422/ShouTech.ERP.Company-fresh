@@ -1223,7 +1223,7 @@ public static class DataExportSvc
                     : throw new InvalidDataException($"'{value}' is not a valid Boolean value."),
             RptColType.Date or RptColType.DateTime => DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var date)
                 ? date
-                : value,
+                : throw new InvalidDataException($"'{value}' is not a valid date or date-time value."),
             _ => value
         };
     }
