@@ -54,6 +54,7 @@
     "PriceList": "قائمة الأسعار",
     "EndOfPeriod": "بضاعة آخر المدة",
     "ShortageList": "لائحة النواقص",
+    "ShortageNeeded": "الكمية المطلوبة",
     "TransferMaterial": "نقل حركة مادة",
     "InventoryAdjustment": "تسوية جردية",
     "MaterialReports": "تقارير المواد",
@@ -401,12 +402,7 @@
       "Aging0_30": "0-30 يوم",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "أكثر من 90",
-      "Shortage": "النقص",
-      "LastMove": "آخر حركة",
-      "DaysNoMove": "أيام بدون حركة",
-      "MoveCount": "عدد الحركات",
-      "AlertDays": "تنبيه قبل (أيام)"
+      "Aging90Plus": "أكثر من 90"
     },
     "Filter": {
       "All": "الكل",
@@ -1451,6 +1447,34 @@
     "Status": "حالة الطلبية",
     "ConvertToInvoice": "تحويل إلى فاتورة",
     "Saved": "تم حفظ الطلبية بنجاح"
+  },
+  "BarcodeDesign": {
+    "SaveDesign": "حفظ التصميم",
+    "LoadDesign": "استرجاع التصميم",
+    "LabelSize": "مقاس الملصق:",
+    "BarSize": "مقاس الباركود:",
+    "BarWidth": "العرض",
+    "BarHeight": "الارتفاع",
+    "Font": "الخط:",
+    "FontSize": "الحجم:",
+    "TextColor": "النص:",
+    "BarColor": "الأعمدة:",
+    "Background": "الخلفية:",
+    "Elements": "العناصر:",
+    "Sample": "محتوى تجريبي:",
+    "ShowName": "الاسم",
+    "ShowPrice": "السعر",
+    "ShowCode": "الرمز",
+    "Bold": "غامق"
+  },
+  "BarcodeGen": {
+    "Prefix": "البادئة:",
+    "GenerateMissing": "توليد للمواد بدون باركود",
+    "RegenerateAll": "إعادة توليد الكل",
+    "Generated": "تم التوليد",
+    "Summary": "تم عرض {0} من {1} مادة. بدون باركود: {2}.",
+    "Result": "باركودات مولّدة: {0}. تم تخطيها (مرمّزة مسبقاً): {1}. إجمالي المواد: {2}. استخدم زر الحفظ لكتابتها في بطاقات المواد.",
+    "SavedSummary": "تم الحفظ في بطاقات المواد: {0}. فشل: {1}."
   },
   "BarcodeTool": {
     "Title": "توليد وتصميم طباعة الباركود",

@@ -51,6 +51,7 @@
     "PriceList": "Fiyat Listesi",
     "EndOfPeriod": "Dönem Sonu Stoku",
     "ShortageList": "Eksiklik Listesi",
+    "ShortageNeeded": "Gerekli miktar",
     "TransferMaterial": "Malzeme Hareketi Aktar",
     "InventoryAdjustment": "Envanter Düzeltmesi",
     "MaterialReports": "Malzeme Raporları",
@@ -398,12 +399,7 @@
       "Aging0_30": "0-30 gün",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "90+",
-      "Shortage": "Eksik",
-      "LastMove": "Son hareket",
-      "DaysNoMove": "Hareketsiz gün",
-      "MoveCount": "Hareket sayısı",
-      "AlertDays": "Uyarı öncesi (gün)"
+      "Aging90Plus": "90+"
     },
     "Filter": {
       "All": "Tümü",
@@ -1296,5 +1292,33 @@
       "CopyRow": "Satırı kopyala",
       "CopyCell": "Hücreyi kopyala"
     }
+  },
+  "BarcodeDesign": {
+    "SaveDesign": "Tasarımı kaydet",
+    "LoadDesign": "Tasarımı yükle",
+    "LabelSize": "Etiket boyutu:",
+    "BarSize": "Barkod boyutu:",
+    "BarWidth": "genişlik",
+    "BarHeight": "yükseklik",
+    "Font": "Yazı tipi:",
+    "FontSize": "Boyut:",
+    "TextColor": "Metin:",
+    "BarColor": "Çubuklar:",
+    "Background": "Arka plan:",
+    "Elements": "Öğeler:",
+    "Sample": "Örnek içerik:",
+    "ShowName": "Ad",
+    "ShowPrice": "Fiyat",
+    "ShowCode": "Kod",
+    "Bold": "Kalın"
+  },
+  "BarcodeGen": {
+    "Prefix": "Ön ek:",
+    "GenerateMissing": "Barkodu olmayan ürünler için üret",
+    "RegenerateAll": "Tümünü yeniden üret",
+    "Generated": "Üretildi",
+    "Summary": "{1} üründen {0} tanesi gösteriliyor. Barkodsuz: {2}.",
+    "Result": "Üretilen barkodlar: {0}. Atlanan (zaten kodlu): {1}. Toplam ürün: {2}. Kartlara yazmak için Kaydet'i kullanın.",
+    "SavedSummary": "Ürün kartlarına kaydedildi: {0}. Hatalı: {1}."
   }
 }

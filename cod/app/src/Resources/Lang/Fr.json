@@ -51,6 +51,7 @@
     "PriceList": "Liste des Prix",
     "EndOfPeriod": "Stock de Fin de Période",
     "ShortageList": "Liste des Pénuries",
+    "ShortageNeeded": "Quantité requise",
     "TransferMaterial": "Transférer Mouvement de Matière",
     "InventoryAdjustment": "Ajustement d'Inventaire",
     "MaterialReports": "Rapports sur les Matières",
@@ -398,12 +399,7 @@
       "Aging0_30": "0-30 j",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "90+",
-      "Shortage": "Manque",
-      "LastMove": "Dernier mouvement",
-      "DaysNoMove": "Jours sans mouvement",
-      "MoveCount": "Mouvements",
-      "AlertDays": "Alerte avant (jours)"
+      "Aging90Plus": "90+"
     },
     "Filter": {
       "All": "Tous",
@@ -1296,5 +1292,33 @@
       "CopyRow": "Copier la ligne",
       "CopyCell": "Copier la cellule"
     }
+  },
+  "BarcodeDesign": {
+    "SaveDesign": "Enregistrer la conception",
+    "LoadDesign": "Charger la conception",
+    "LabelSize": "Taille de l'étiquette :",
+    "BarSize": "Taille du code-barres :",
+    "BarWidth": "largeur",
+    "BarHeight": "hauteur",
+    "Font": "Police :",
+    "FontSize": "Taille :",
+    "TextColor": "Texte :",
+    "BarColor": "Barres :",
+    "Background": "Arrière-plan :",
+    "Elements": "Éléments :",
+    "Sample": "Contenu d'exemple :",
+    "ShowName": "Nom",
+    "ShowPrice": "Prix",
+    "ShowCode": "Code",
+    "Bold": "Gras"
+  },
+  "BarcodeGen": {
+    "Prefix": "Préfixe :",
+    "GenerateMissing": "Générer pour les articles sans code-barres",
+    "RegenerateAll": "Régénérer tout",
+    "Generated": "Généré",
+    "Summary": "{0} sur {1} article(s) affiché(s). Sans code-barres : {2}.",
+    "Result": "Codes-barres générés : {0}. Ignorés (déjà codés) : {1}. Total des articles : {2}. Utilisez Enregistrer pour les écrire dans les fiches articles.",
+    "SavedSummary": "Enregistrés dans les fiches articles : {0}. Échecs : {1}."
   }
 }

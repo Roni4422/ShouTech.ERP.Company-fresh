@@ -351,6 +351,10 @@ public sealed class BcdGenWin : BaseWin
     protected override void ApplyLocalizedText()
     {
         Title = L("Inventory.GenerateBarcode", "Generate barcode");
+        _btnGenerateMissing.Content = L("BarcodeGen.GenerateMissing", "Generate for materials without barcode");
+        _btnGenerateAll.Content = L("BarcodeGen.RegenerateAll", "Regenerate all");
+        _btnSave.Content = T("Common.Save");
+        _btnPrint.Content = T("Common.Print");
     }
 
     private static string L(string key, string fallback)

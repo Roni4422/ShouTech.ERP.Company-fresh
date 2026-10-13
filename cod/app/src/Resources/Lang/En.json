@@ -378,6 +378,7 @@
     "SerialNumbersReport": "Serial Numbers Report",
     "ServiceMaterials": "Service Materials Reports",
     "ShortageList": "Shortage List",
+    "ShortageNeeded": "Needed quantity",
     "StockCountHint": "Edit counted quantities and costs, then post the differences to stock.",
     "StockCountCurrent": "Current",
     "StockCountDifference": "Difference",
@@ -872,12 +873,7 @@
       "Aging0_30": "0-30 days",
       "Aging31_60": "31-60",
       "Aging61_90": "61-90",
-      "Aging90Plus": "90+",
-      "Shortage": "Shortage",
-      "LastMove": "Last movement",
-      "DaysNoMove": "Days without movement",
-      "MoveCount": "Movements",
-      "AlertDays": "Alert before (days)"
+      "Aging90Plus": "90+"
     },
     "Filter": {
       "All": "All",
@@ -1310,6 +1306,34 @@
     "Status": "Order Status",
     "ConvertToInvoice": "Convert to Invoice",
     "Saved": "Order saved successfully"
+  },
+  "BarcodeDesign": {
+    "SaveDesign": "Save design",
+    "LoadDesign": "Load design",
+    "LabelSize": "Label size:",
+    "BarSize": "Barcode size:",
+    "BarWidth": "width",
+    "BarHeight": "height",
+    "Font": "Font:",
+    "FontSize": "Size:",
+    "TextColor": "Text:",
+    "BarColor": "Bars:",
+    "Background": "Background:",
+    "Elements": "Elements:",
+    "Sample": "Sample content:",
+    "ShowName": "Name",
+    "ShowPrice": "Price",
+    "ShowCode": "Code",
+    "Bold": "Bold"
+  },
+  "BarcodeGen": {
+    "Prefix": "Prefix:",
+    "GenerateMissing": "Generate for materials without barcode",
+    "RegenerateAll": "Regenerate all",
+    "Generated": "Generated",
+    "Summary": "{0} of {1} material(s) shown. Missing barcode: {2}.",
+    "Result": "Barcodes generated: {0}. Skipped (already coded): {1}. Total materials: {2}. Use Save to write them to the material cards.",
+    "SavedSummary": "Saved to material cards: {0}. Failed: {1}."
   },
   "BarcodeTool": {
     "Title": "Barcode Generator & Designer",
