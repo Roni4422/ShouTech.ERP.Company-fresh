@@ -111,7 +111,7 @@ public partial class DatWin : Window
         DatasetPasswordLabel.Text = L("Password", "Package password");
         DatasetPasswordConfirmLabel.Text = L("ConfirmPassword", "Confirm password");
         ImportDatasetLabel.Text = L("DatasetType", "Dataset type");
-        ImportHintText.Text = L("ImportDatasetHint", "Import a .stei package, a ShouTech Excel export, or any .xlsx whose first row uses the dataset column names. Extra columns are ignored.");
+        ImportHintText.Text = L("ImportDatasetHint", "Import a ShouTech export with its original hidden identity column, or a generic .xlsx whose first-row headers exactly match database field names. Choose the matching dataset. Primary keys and company scope are required.");
         if (ImportModeLabel != null)
             ImportModeLabel.Text = L("ImportModeLabel", "Import mode for master data (e.g. material cards)");
         if (ImportUpsertRadio != null)
@@ -120,7 +120,7 @@ public partial class DatWin : Window
             ImportReplaceRadio.Content = L("ImportReplaceMode", "Wipe missing rows to recycle bin (soft-delete) — can restore from Bin on main window");
         if (ImportReplaceHintText != null)
             ImportReplaceHintText.Text = L("ImportReplaceHint", "Example: export materials, delete some cards in Excel, then import. Upsert keeps them in DB; wipe-to-bin moves missing cards to the recycle bin so you can restore them later.");
-        StructuredExportHintText.Text = L("ChooseDataset", "Select a data type to export as Excel, PDF or an encrypted STEI package. Excel exports stay importable if you keep the header row.");
+        StructuredExportHintText.Text = L("ChooseDataset", "Select a data type to export as Excel, PDF or an encrypted STEI package. For generic Excel imports, use database field names as headers; ShouTech exports retain their hidden identity column.");
     }
 
     private void ApplyMode()
@@ -133,7 +133,7 @@ public partial class DatWin : Window
         };
         PathHintText.Text = _mode switch
         {
-            ExchangeMode.Import => L("ReadyImport", "Choose a .stei file, then start the operation."),
+            ExchangeMode.Import => L("ReadyImport", "Choose a .stei package or .xlsx workbook, then select the dataset type."),
             ExchangeMode.Export => L("ReadyExport", "Choose where to save the .stei file, then start the operation."),
             _ => L("ReadyStructuredExport", "Select a dataset and format, then export the selected data.")
         };
@@ -234,7 +234,7 @@ public partial class DatWin : Window
         var dialog = new OpenFileDialog
         {
             Title = L("Import", "Import Data"),
-            Filter = L("OpenPackage", "ShouTech packages and editable Excel (*.stei;*.xlsx)|*.stei;*.xlsx"),
+            Filter = L("OpenPackage", "ShouTech packages and Excel workbooks (*.stei;*.xlsx)|*.stei;*.xlsx"),
             CheckFileExists = true,
             Multiselect = false,
             AddExtension = true
@@ -247,7 +247,7 @@ public partial class DatWin : Window
         if (!string.Equals(extension, ".stei", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            MessageBox.Show(L("InvalidExtension", "Choose a .stei package or a ShouTech Excel (.xlsx) export."), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(L("InvalidExtension", "Choose a .stei package or an Excel (.xlsx) workbook."), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
