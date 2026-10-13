@@ -87,6 +87,8 @@ SQLite and PostgreSQL do not have identical migration decomposition: SQLite core
 
 A shared table-name list alone is not sufficient; column types, primary keys, foreign keys, unique constraints, and tenant scope must also be compared. The legacy monolithic snapshots are not a safe substitute for missing active migrations.
 
+The migration runner now detects byte-identical SQL files and records later duplicate IDs without executing the same body again. This avoids re-running the duplicated PostgreSQL module schema on fresh installs while retaining both historical IDs and checksums for compatibility. The redundant file remains present intentionally until a future migration-baseline policy can retire it safely.
+
 ### 7. Additional importer hardening
 
 The current importer now separates legacy company-code-scoped tables from tables that require an internal company ID. Legacy tables do not query the global company registry merely to obtain a value they store as a code. Tables that require an internal ID fail with a specific initialization error if the registry exists but is empty; the importer does not guess an ID.
