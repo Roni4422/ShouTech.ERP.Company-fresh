@@ -1154,8 +1154,18 @@ public static class DataExportSvc
         command.Parameters.Add(parameter);
         var value = await command.ExecuteScalarAsync(ct);
         if (value is null or DBNull)
+        {
+            // An empty registry means a company-scoped database that was bootstrapped
+            // with the table but never populated; it holds no other company to leak into.
+            await using var countCommand = connection.CreateCommand();
+            countCommand.CommandText = $"SELECT COUNT(*) FROM {QuoteIdentifier(companyTable)}";
+            var count = await countCommand.ExecuteScalarAsync(ct);
+            if (count is null or DBNull || Convert.ToInt64(count, System.Globalization.CultureInfo.InvariantCulture) == 0)
+                return companyCode.Trim();
+        }
+        if (value is null or DBNull)
             throw new InvalidOperationException(
-                $"Company '{companyCode}' is not registered in the current database. Verify that the selected company and database belong together, or run the company/database initialization step.");
+                $"Company '{companyCode}' is not registered in the current database ({connection.DataSource}). Verify that the selected company and database belong together, or run the company/database initialization step.");
         return value;
     }
 
