@@ -201,7 +201,8 @@ public sealed class BcdDesWin : BaseWin
         // Font family + size + bold.
         var fontRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         fontRow.Children.Add(MakeLabel(L("BarcodeDesign.Font", "Font:")));
-        foreach (var family in new[] { "Segoe UI", "Tahoma", "Arial", "Consolas", "Times New Roman" })
+        foreach (var family in new[]
+                 { "Cairo", "Somar Sans", "Alameen Sans", "Segoe UI", "Tahoma", "Arial", "Consolas", "Times New Roman" })
             _cbFont.Items.Add(family);
         _cbFont.SelectedIndex = 0;
         fontRow.Children.Add(_cbFont);
