@@ -92,7 +92,7 @@ public partial class DatWin : Window
         ImportTab.Header = L("Import", "Import Data");
         ExportTab.Header = L("FullExport", "Full database package (.stei)");
         StructuredExportTab.Header = L("ExcelPdf", "Dataset export (Excel / PDF / STEI)");
-        StructuredExportHintText.Text = L("ChooseDataset", "Choose a dataset and export it as Excel, PDF or an encrypted STEI package.");
+        StructuredExportHintText.Text = L("ChooseDataset", "Choose a dataset and export it as Excel, PDF or an encrypted STEI package. Keep the header row when editing an Excel export.");
         ExportFormatLabel.Text = L("Format", "Format");
         if (ExportFormatBox.Items.Count >= 3)
         {
@@ -136,7 +136,7 @@ public partial class DatWin : Window
         };
         PathHintText.Text = _mode switch
         {
-            ExchangeMode.Import => L("ReadyImport", "Choose a .stei file, then start the operation."),
+            ExchangeMode.Import => L("ReadyImport", "Choose a .stei package or .xlsx workbook, then select the dataset type."),
             ExchangeMode.Export => L("ReadyExport", "Choose where to save the .stei file, then start the operation."),
             _ => L("ReadyStructuredExport", "Select a dataset and format, then export the selected data.")
         };
@@ -269,7 +269,7 @@ public partial class DatWin : Window
         var dialog = new OpenFileDialog
         {
             Title = L("Import", "Import Data"),
-            Filter = L("OpenPackage", "ShouTech packages and editable Excel (*.stei;*.xlsx)|*.stei;*.xlsx"),
+            Filter = L("OpenPackage", "ShouTech packages and Excel workbooks (*.stei;*.xlsx)|*.stei;*.xlsx"),
             CheckFileExists = true,
             Multiselect = false,
             AddExtension = true
@@ -494,30 +494,59 @@ public partial class DatWin : Window
                     }
 
                     var replaceMode = ImportReplaceRadio?.IsChecked == true;
-                    if (replaceMode)
-                    {
-                        var confirm = MessageBox.Show(
-                            L("ReplaceConfirm",
-                                "This will update/insert every row in the file and move existing company rows that are not in the workbook to the recycle bin (soft-delete).\n\nYou can restore them from the Archive Bin on the main window. Continue?"),
-                            Title,
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning);
-                        if (confirm != MessageBoxResult.Yes)
-                            return;
-                    }
-
                     var actor = GetCurrentUserName();
                     var company = GetCurrentCompanyCode();
                     var startedAt = DateTime.Now;
                     LogOp("ImportExcel.Start",
                         $"key={importOption.Key} | mode={(replaceMode ? "Replace" : "Upsert")} | user={actor} | company={company} | at={startedAt:yyyy-MM-dd HH:mm:ss} | file={path}");
 
+                    // Hash the source before preview so we can reject a changed workbook
+                    // before committing the reviewed operation.
+                    var previewHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+
+                    // Execute the same database validations and writes inside a transaction,
+                    // then roll it back. This gives users a real constraint-aware preview
+                    // before the committed import, rather than a header-only estimate.
+                    var preview = await DataExportSvc.ImportExcelAsync(
+                        path,
+                        importOption,
+                        AppState.CurrentCompanyCode ?? string.Empty,
+                        replaceMode: replaceMode,
+                        ct: CancellationToken.None,
+                        previewOnly: true);
+
+                    var previewSummary = string.Join(Environment.NewLine,
+                        importOption.DisplayName,
+                        $"{L("Mode", "Mode")}: {(replaceMode ? L("Replace", "Wipe to bin (missing rows soft-deleted)") : L("Upsert", "Update / insert only (missing rows kept)"))}",
+                        $"{L("UpsertedRows", "Rows to write")}: {preview.UpsertedRows.ToString("N0", CultureInfo.CurrentCulture)}",
+                        $"{L("DeletedRows", "Rows to move to recycle bin")}: {preview.DeletedRows.ToString("N0", CultureInfo.CurrentCulture)}",
+                        L("ImportPreviewRollback", "Preview only: all test writes were rolled back. No data has been changed."));
+                    var confirmText = previewSummary + Environment.NewLine + Environment.NewLine +
+                        L("ImportPreviewConfirm", "Continue and apply these changes?");
+                    if (MessageBox.Show(confirmText, Title, MessageBoxButton.YesNo,
+                            replaceMode ? MessageBoxImage.Warning : MessageBoxImage.Question) != MessageBoxResult.Yes)
+                    {
+                        ResultStatusText.Text = L("Cancelled", "Cancelled");
+                        ResultTextBox.Text = previewSummary;
+                        _lastDetails = previewSummary;
+                        DetailsButton.IsEnabled = false;
+                        LogOp("ImportExcel.CancelledAfterPreview",
+                            $"key={importOption.Key} | mode={(replaceMode ? "Replace" : "Upsert")} | user={actor} | company={company}");
+                        return;
+                    }
+
+                    // The user may edit/replace the workbook while the confirmation dialog is open.
+                    // Compare before any committed writes; never report an error after a successful commit.
+                    var confirmedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+                    if (!string.Equals(previewHash, confirmedHash, StringComparison.Ordinal))
+                        throw new InvalidDataException(L("ImportFileChanged", "The workbook changed after preview. Preview it again before importing."));
                     var importResult = await DataExportSvc.ImportExcelAsync(
                         path,
                         importOption,
                         AppState.CurrentCompanyCode ?? string.Empty,
                         replaceMode: replaceMode,
-                        ct: CancellationToken.None);
+                        ct: CancellationToken.None,
+                        expectedFileSha256: previewHash);
 
                     var finishedAt = DateTime.Now;
                     ResultStatusText.Text = L("Success", "Completed successfully");

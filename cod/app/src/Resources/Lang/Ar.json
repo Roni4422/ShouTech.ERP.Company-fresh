@@ -1773,5 +1773,8 @@
     "EXL-3010": "Excel Duplicate Identity",
     "EXL-3011": "Excel Export Failed",
     "EXL-3012": "Error Catalog Unavailable"
-  }
+  },
+    "ImportPreviewRollback": "معاينة فقط: تم التراجع عن جميع الكتابات التجريبية، ولم تتغير البيانات.",
+    "ImportPreviewConfirm": "هل تريد متابعة تطبيق هذه التغييرات؟",
+    "ImportFileChanged": "تغيّر ملف Excel بعد المعاينة. أعد معاينته قبل الاستيراد."
 }

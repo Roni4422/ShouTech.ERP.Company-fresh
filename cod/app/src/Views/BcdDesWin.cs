@@ -46,12 +46,12 @@ public sealed class BcdDesWin : BaseWin
     private readonly TextBlock _prevCode = new();
 
     private static string DesignFolder =>
-        Path.Combine(
+        System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "ShouTech");
 
     private static string DesignFile =>
-        Path.Combine(DesignFolder, "barcode-design.cfg");
+        System.IO.Path.Combine(DesignFolder, "barcode-design.cfg");
 
     public BcdDesWin()
     {
