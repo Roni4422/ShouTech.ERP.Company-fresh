@@ -449,8 +449,17 @@ public static class DataExportSvc
             else
             {
                 (identity, sheet, var skipped) = await BuildPlainWorkbookIdentityAsync(sheet, option, ct);
+                if (skipped.Count > 0)
+                    throw new InvalidDataException(
+                        $"Unrecognized Excel columns: {string.Join(", ", skipped.Take(12))}. Rename them to supported field names or remove them before importing.");
                 plainSkipped = skipped;
             }
+
+            // The workbook identity can change the resolved dataset. Re-check the policy
+            // after resolution so a master-data dropdown cannot authorize a transaction import.
+            if (!IsMasterDataImportAllowed(option))
+                throw new InvalidOperationException(
+                    "Spreadsheet import is limited to approved master-data datasets. Transactional records must be created or corrected through their business workflows.");
 
             var result = await ImportRowsAsync(
                 sheet, identity, option, companyCode, identityColumnIndex, replaceMode, ct, previewOnly) with
