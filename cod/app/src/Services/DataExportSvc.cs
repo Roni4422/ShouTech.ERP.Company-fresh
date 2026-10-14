@@ -1646,6 +1646,142 @@ public static class DataExportSvc
         return columns;
     }
 
+    private static bool HasNonBlankWorkbookValuesForField(
+        ExcelSheet sheet,
+        DatasetIdentity identity,
+        string field)
+    {
+        var identityIndex = Array.FindIndex(identity.Fields, value =>
+            value.Equals(field, StringComparison.OrdinalIgnoreCase));
+        if (identityIndex < 0)
+            return false;
+
+        var header = identity.Headers[identityIndex];
+        var sheetIndex = -1;
+        for (var index = 0; index < sheet.Headers.Count; index++)
+        {
+            if (sheet.Headers[index].Equals(header, StringComparison.Ordinal))
+            {
+                sheetIndex = index;
+                break;
+            }
+        }
+        if (sheetIndex < 0)
+            return false;
+
+        foreach (var row in sheet.Rows)
+        {
+            if (row.All(string.IsNullOrWhiteSpace))
+                continue;
+            if (sheetIndex >= row.Count || string.IsNullOrWhiteSpace(row[sheetIndex]))
+                return false;
+        }
+        return sheet.Rows.Any(row => !row.All(string.IsNullOrWhiteSpace));
+    }
+
+    private static async Task<List<string>> GetImportKeyColumnsAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlySet<string> availableFields,
+        CancellationToken ct)
+    {
+        var primaryKeys = await GetPrimaryKeyColumnsAsync(connection, table, ct);
+        var uniqueKeys = await GetUniqueConstraintColumnsAsync(connection, table, ct);
+        var usableKey = SelectUsableImportKeyColumns(primaryKeys, uniqueKeys, availableFields);
+        return usableKey ?? throw new InvalidDataException(
+            "The workbook must include either the complete primary key or a complete database-enforced unique key. Generated IDs may be omitted only when the selected dataset has another unique key, such as company plus code.");
+    }
+
+    private static List<string>? SelectUsableImportKeyColumns(
+        IReadOnlyList<string> primaryKeys,
+        IReadOnlyList<List<string>> uniqueKeys,
+        IReadOnlySet<string> availableFields)
+    {
+        if (primaryKeys.Count > 0 && primaryKeys.All(availableFields.Contains))
+            return primaryKeys.ToList();
+
+        return uniqueKeys.FirstOrDefault(key =>
+            key.Count > 0 && key.All(availableFields.Contains));
+    }
+
+    private static async Task<List<List<string>>> GetUniqueConstraintColumnsAsync(
+        DbConnection connection,
+        string table,
+        CancellationToken ct)
+    {
+        var result = new List<List<string>>();
+        if (DatabaseRuntime.IsSqlite())
+        {
+            var indexes = new List<string>();
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = $"PRAGMA index_list({QuoteIdentifier(table)})";
+                await using var reader = await command.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    var isUnique = reader.GetInt32(2) == 1;
+                    var isPartial = reader.FieldCount > 4 && reader.GetInt32(4) == 1;
+                    if (isUnique && !isPartial)
+                        indexes.Add(reader.GetString(1));
+                }
+            }
+
+            foreach (var index in indexes)
+            {
+                var columns = new List<string>();
+                var hasExpression = false;
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"PRAGMA index_info({QuoteIdentifier(index)})";
+                await using var reader = await command.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    if (reader.IsDBNull(2))
+                    {
+                        hasExpression = true;
+                        break;
+                    }
+                    columns.Add(reader.GetString(2));
+                }
+                if (!hasExpression && columns.Count > 0)
+                    result.Add(columns);
+            }
+            return result;
+        }
+
+        var groups = new Dictionary<string, List<(int Ordinal, string Column)>>(StringComparer.Ordinal);
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT tc.constraint_name, kcu.column_name, kcu.ordinal_position
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                 AND tc.constraint_schema = kcu.constraint_schema
+                 AND tc.table_name = kcu.table_name
+                WHERE tc.constraint_type = 'UNIQUE'
+                  AND tc.table_schema = current_schema()
+                  AND tc.table_name = @table
+                ORDER BY tc.constraint_name, kcu.ordinal_position
+                """;
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@table";
+            parameter.Value = table;
+            command.Parameters.Add(parameter);
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(0);
+                if (!groups.TryGetValue(name, out var columns))
+                    groups[name] = columns = new List<(int Ordinal, string Column)>();
+                columns.Add((reader.GetInt32(2), reader.GetString(1)));
+            }
+        }
+
+        result.AddRange(groups.Values
+            .Select(columns => columns.OrderBy(column => column.Ordinal).Select(column => column.Column).ToList()));
+        return result;
+    }
+
     private static async Task<List<string>> GetPrimaryKeyColumnsAsync(DbConnection connection, string table, CancellationToken ct)
     {
         var keys = new List<string>();
