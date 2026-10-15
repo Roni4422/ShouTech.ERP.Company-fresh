@@ -481,18 +481,19 @@ public static class RecycleBinSvc
 
     private static async Task EnsureDeletionAuditTableAsync(DbConnection connection, CancellationToken cancellationToken)
     {
-        await using (var command = connection.CreateCommand())
-        {
-            command.CommandText = "CREATE TABLE IF NOT EXISTS deletion_audit_log (" +
-                "event_id TEXT PRIMARY KEY, company_code TEXT NOT NULL, table_name TEXT NOT NULL, " +
-                "record_key TEXT NOT NULL, action_type TEXT NOT NULL, actor TEXT NOT NULL, " +
-                "occurred_at TEXT NOT NULL, method TEXT NOT NULL, reason TEXT, record_snapshot TEXT)";
-            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-        }
+        await using var command = connection.CreateCommand();
+        command.CommandText = connection is NpgsqlConnection
+            ? "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'deletion_audit_log';"
+            : "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'deletion_audit_log';";
+        var exists = Convert.ToInt32(
+            await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
+            CultureInfo.InvariantCulture) == 1;
+        if (!exists)
+            throw new InvalidOperationException(
+                "Deletion-audit schema is missing. Apply the provider migrations under dba/mig.");
 
-        // SQLite-level guardrail: capture company-scoped soft and hard deletes even when
-        // a legacy screen bypasses RecycleBinSvc. App handlers should still call
-        // RecordDeletionAsync to provide the authenticated actor and the user's reason.
+        // Trigger installation remains a separate compatibility step; table definitions are
+        // owned by DBA migrations, not by this service.
         try
         {
             if (connection is SqliteConnection)
@@ -502,7 +503,6 @@ public static class RecycleBinSvc
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Auditing must never prevent ordinary reads/writes if a provider lacks DDL privileges.
             LogWarning($"Database delete-audit trigger installation was incomplete: {ex.Message}");
         }
     }
