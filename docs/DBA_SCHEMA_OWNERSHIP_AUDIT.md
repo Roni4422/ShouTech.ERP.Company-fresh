@@ -22,6 +22,20 @@ The existing `docs/SCHEMA_AUDIT_PHASE1.md` reports 540 SQL table-definition occu
 
 A repository-wide search also found schema snapshots in `dba/lite.sql` and `dba/pg.sql`, older scripts under `dba/`, and active migrations under `dba/mig/sqlite/` and `dba/mig/postgresql/`. The archived SQL Server scripts under `archive/legacy_sqlserver/` must remain clearly separated from deployable migrations.
 
+## Implementation progress (2026-10-15)
+
+The first centralization pass has been committed directly to `main`:
+
+- `DocSchema.cs`: embedded SQLite/PostgreSQL table DDL removed; now validates the DBA-managed commercial-document schema.
+- `InvRepo.cs`: inline creation of `document_reversals` removed; now validates its presence.
+- `RecycleBinSvc.cs`: inline creation of `deletion_audit_log` removed; table presence is validated before audit operations. Provider-specific audit-trigger installation remains in the service and is a separate schema-ownership follow-up.
+- `Accounting.cs`: inline account-table DDL and its runtime column bootstrap removed.
+- `Inventory.cs`: inline DDL for materials, child tables, material groups, group sequences, and warehouses removed. The old warehouse compatibility path that could drop a legacy `warehouses` table was removed to avoid data loss. The service now validates required tables.
+- `Data.cs`: inline core-table bootstrap and development-only table-drop reset removed; permission-table creation and runtime permission-column additions were moved to DBA migrations.
+- Added provider-specific migrations for commercial documents/reversals, audit storage, accounts, inventory, groups/warehouses, and the missing SQLite category/brand tables. SQLite migrations now support the explicit `-- @if-column-missing table.column` directive for safe conditional column additions to existing databases.
+
+This is a significant first pass, not a claim that the entire repository has been audited and validated end-to-end. The PostgreSQL migration numbering/content issue documented below remains unresolved. GitHub Actions builds triggered during this pass initially reported compile errors; fixes were committed, and the latest CI run must complete before treating the code as build-verified. Fresh SQLite/PostgreSQL migration execution and representative existing-database upgrade tests are still required.
+
 ## Important migration defect found
 
 In `dba/mig/postgresql/`, `003_modules.sql` and `004_modules.sql` have identical Git blob hashes and identical content. Also, `003_rbac.sql` shares the `003` filename prefix with `003_modules.sql`. The current migrator derives each migration ID from the path relative to the provider migration directory and sorts those IDs; duplicate content and unclear ordering require correction.
