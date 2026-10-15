@@ -6,7 +6,7 @@ The canonical definitions of application tables must live under `dba/` (preferab
 
 ## Audit result
 
-The existing `docs/SCHEMA_AUDIT_PHASE1.md` reports 540 SQL table-definition occurrences, 120 repeated table names, and 55 runtime C# `CREATE TABLE` statements. A direct review of the current `main` branch confirms that table DDL is embedded in multiple service files and some definitions are duplicated within a single service.
+The historical `docs/SCHEMA_AUDIT_PHASE1.md` report records an earlier baseline (540 SQL table-definition occurrences, 120 repeated names, and 55 runtime C# `CREATE TABLE` statements); those counts are not a current measurement. Run `python tools/schema_audit.py` to produce a fresh inventory across table, column, index, trigger, function, view, and drop DDL. The current review found that most service table bootstrap code has already been removed, while provider-specific delete-audit trigger installation still remains in `RecycleBinSvc.cs` and is a known outstanding migration task.
 
 ### Confirmed service files containing table/schema DDL
 
@@ -17,8 +17,8 @@ The existing `docs/SCHEMA_AUDIT_PHASE1.md` reports 540 SQL table-definition occu
 | `cod/app/src/Services/DocSchema.cs` | Embeds separate SQLite and PostgreSQL DDL strings for `sales_documents`, `sales_document_lines`, `purchase_documents`, `purchase_document_lines`, `party_ledger`, and `stock_movements`, plus indexes. |
 | `cod/app/src/Services/InvRepo.cs` | Defines `document_reversals` separately for the two providers. |
 | `cod/app/src/Services/Inventory.cs` | Creates `materials`, material child tables, stock tables, `material_groups`, `material_group_sequences`, and `warehouses`; several table definitions are repeated for provider variants; also performs dynamic column additions and creates indexes. |
-| `cod/app/src/Services/RecycleBinSvc.cs` | Creates `deletion_audit_log` at runtime. |
-| `tools/SqlMigrator/Program.cs` | Creates the migration-history infrastructure table `schema_migrations`. This is infrastructure DDL; if the ownership rule is absolute, it too must be moved to the DBA bootstrap SQL while preserving first-run behavior. |
+| `cod/app/src/Services/RecycleBinSvc.cs` | Table creation was removed; provider-specific audit function/trigger DDL and trigger discovery/installation still run at application runtime. Move this to provider-specific DBA migrations before claiming schema ownership is complete. |
+| `tools/SqlMigrator/Program.cs` | The migrator now bootstraps `schema_migrations` from `dba/mig/{provider}/000_history.sql`; it no longer contains the table definition inline. The bootstrap SQL is also processed and recorded by the normal migration loop. |
 
 A repository-wide search also found schema snapshots in `dba/lite.sql` and `dba/pg.sql`, older scripts under `dba/`, and active migrations under `dba/mig/sqlite/` and `dba/mig/postgresql/`. The archived SQL Server scripts under `archive/legacy_sqlserver/` must remain clearly separated from deployable migrations.
 
@@ -58,3 +58,33 @@ In `dba/mig/postgresql/`, `003_modules.sql` and `004_modules.sql` have identical
 The refactor is complete only when all supported table-creation DDL is under `dba/`, service C# contains no table-creation definitions (except any explicitly documented bootstrap exception that is also moved into DBA scripts), migration IDs are unique and compatible, and the build plus database integration tests pass for both supported providers.
 
 This document records the audit findings and safe execution order; it does not claim that the full refactor or integration tests have already been completed.
+
+
+## Follow-up remediation (2026-10-15)
+
+### Completed in this pass
+
+- Added `dba/mig/sqlite/000_history.sql` and `dba/mig/postgresql/000_history.sql` as the canonical definitions for the migration-history table.
+- Changed `tools/SqlMigrator/Program.cs` to load the provider's `000_history.sql` before reading the history ledger. The migration is then processed by the normal ordered migration loop and recorded with its checksum.
+- This is compatible with an existing database that already has `schema_migrations`: `CREATE TABLE IF NOT EXISTS` leaves it intact, and the new migration ID is recorded without rewriting existing migration IDs or checksums.
+- Expanded `tools/schema_audit.py` to inventory CREATE TABLE, ALTER TABLE, CREATE INDEX, CREATE TRIGGER, CREATE FUNCTION, CREATE VIEW, and DROP TABLE statements; it separates application-service DDL from non-archive SQL outside `dba/`, and supports `--strict` to fail when service DDL remains.
+
+### Policy decision: where schema belongs
+
+- **Application/business tables, columns, constraints, indexes, views, triggers, and database functions:** canonical definitions belong in provider-specific DBA migrations under `dba/mig/sqlite/` and `dba/mig/postgresql/`.
+- **Services/repositories:** may perform CRUD, business validation, metadata discovery for safe queries, and explicit schema-presence checks. They must not create or alter persistent schema objects.
+- **Migration runner:** may orchestrate migrations and bootstrap the migration ledger, but the ledger's DDL must itself come from the DBA-owned bootstrap SQL.
+- **Tests:** may create isolated temporary/in-memory tables to test behavior. Such fixtures are not production schema.
+- **Archive snapshots and legacy SQL Server scripts:** remain reference-only and must not be part of the active migration path.
+- **Seed/reference data:** may be managed by DBA migrations when it is versioned and required for application operation; user/company-specific operational data belongs in application services.
+
+### Outstanding item — audit triggers
+
+`RecycleBinSvc.cs` still discovers tables and installs provider-specific audit triggers/functions dynamically. This is not compliant with the policy above. It has deliberately not been removed in this pass because deleting it without a complete replacement would silently weaken hard-delete and soft-delete auditing. The next safe change must:
+1. define an explicit, reviewed set of auditable tables and keys per provider;
+2. add the SQLite and PostgreSQL trigger/function definitions as new forward-only migrations (do not edit already-released migrations);
+3. preserve the existing deletion-audit table contract and snapshot/actor semantics, or explicitly version and test any intentional change;
+4. remove runtime DDL and auto-discovery from `RecycleBinSvc.cs`;
+5. test fresh databases and upgrades from databases where the old service already installed triggers.
+
+Do not mark schema ownership complete until that migration and both-provider integration tests pass.
