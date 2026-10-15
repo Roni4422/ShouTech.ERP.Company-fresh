@@ -67,7 +67,7 @@ internal static class Program
         {
             await using var connection = CreateConnection(provider, connectionString);
             await connection.OpenAsync();
-            await EnsureHistoryTableAsync(connection, provider);
+            await EnsureHistoryTableAsync(connection, migrationDirectory);
 
             var applied = await ReadAppliedAsync(connection);
             var hasExistingSchema = await HasExistingApplicationSchemaAsync(connection, provider);
@@ -187,19 +187,20 @@ internal static class Program
         _ => throw new InvalidOperationException($"Unsupported provider '{provider}'.")
     };
 
-    private static async Task EnsureHistoryTableAsync(DbConnection connection, string provider)
+    private static async Task EnsureHistoryTableAsync(DbConnection connection, string migrationDirectory)
     {
-        var sql = provider switch
-        {
-            "sqlite" => "CREATE TABLE IF NOT EXISTS schema_migrations (migration_id TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);",
-            "postgresql" => "CREATE TABLE IF NOT EXISTS schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());",
-            _ => throw new InvalidOperationException("Unsupported provider.")
-        };
+        // The history table is schema too: its canonical definition lives in DBA migrations.
+        // Bootstrap it before reading the applied-migration ledger, then let 000_history.sql
+        // be recorded normally by the standard migration loop.
+        var path = Path.Combine(migrationDirectory, "000_history.sql");
+        if (!File.Exists(path))
+            throw new FileNotFoundException(
+                "Required DBA migration-history bootstrap is missing.", path);
+
         await using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        command.CommandText = await File.ReadAllTextAsync(path);
         await command.ExecuteNonQueryAsync();
     }
-
 
     private static async Task<bool> HasExistingApplicationSchemaAsync(DbConnection connection, string provider)
     {
