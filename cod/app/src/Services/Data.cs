@@ -790,39 +790,18 @@ internal static class SqliteSchemaBootstrapper
     // ═══════════════════════════════════════════════════════════════════
     private static void EnsureEnterprisePermissionSchema(SqliteConnection connection)
     {
-        Execute(connection, """
-            CREATE TABLE IF NOT EXISTS permission_groups (
-                group_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                group_code TEXT NOT NULL UNIQUE,
-                name_ar TEXT NOT NULL,
-                name_en TEXT NOT NULL,
-                display_order INTEGER NOT NULL DEFAULT 0,
-                is_active INTEGER NOT NULL DEFAULT 1
-            );
-
-            CREATE TABLE IF NOT EXISTS user_permissions (
-                user_id TEXT NOT NULL,
-                permission_id INTEGER NOT NULL,
-                effect INTEGER NOT NULL CHECK(effect IN (0,1)),
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY(user_id, permission_id),
-                FOREIGN KEY(user_id) REFERENCES users(user_id),
-                FOREIGN KEY(permission_id) REFERENCES permissions(permission_id)
-            );
-
-            CREATE INDEX IF NOT EXISTS ix_user_permissions_permission
-                ON user_permissions(permission_id);
-            """);
-
-        // Ensure columns exist on permissions (migration-safe)
-        EnsureColumn(connection, "permissions", "group_code", "TEXT NOT NULL DEFAULT 'SYSTEM'");
-        EnsureColumn(connection, "permissions", "feature_code", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "permissions", "operation_code", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "permissions", "name_ar", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "permissions", "name_en", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(connection, "permissions", "description", "TEXT");
-        EnsureColumn(connection, "permissions", "display_order", "INTEGER NOT NULL DEFAULT 0");
-        EnsureColumn(connection, "permissions", "is_sensitive", "INTEGER NOT NULL DEFAULT 0");
+        using (var schemaCheck = connection.CreateCommand())
+        {
+            schemaCheck.CommandText = """
+                SELECT COUNT(*)
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name IN ('permission_groups', 'user_permissions')
+                """;
+            if (Convert.ToInt32(schemaCheck.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 2)
+                throw new InvalidOperationException(
+                    "Permission schema is incomplete. Apply the SQLite migrations under dba/mig.");
+        }
 
         // Permission groups
         var groups = new (string Code, string Ar, string En, int Order)[]
@@ -956,22 +935,6 @@ internal static class SqliteSchemaBootstrapper
 
     // ═══════════════════════════════════════════════════════════════════
     // Helper: add column if not exists (migration-safe)
-    // ═══════════════════════════════════════════════════════════════════
-    private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
-    {
-        using var check = connection.CreateCommand();
-        check.CommandText = $"PRAGMA table_info({table});";
-        using var reader = check.ExecuteReader();
-        while (reader.Read())
-        {
-            if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
-                return;
-        }
-        Execute(connection, $"ALTER TABLE {table} ADD COLUMN {column} {definition};");
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Helper: execute SQL with parameters
     // ═══════════════════════════════════════════════════════════════════
     private static void Execute(SqliteConnection connection, string sql, params (string Name, object Value)[] values)
     {
