@@ -1481,37 +1481,6 @@ internal static class MatRepo
 			throw new InvalidOperationException("Material-group schema is missing. Apply the provider migrations under dba/mig.");
 	}
 
-	private static void EnsureColumn(DbConnection conn, string table, string column, string typeDecl)
-	{
-		try
-		{
-			if (DatabaseRuntime.IsPostgreSql())
-			{
-				using var cmd = conn.CreateCommand();
-				cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {typeDecl};";
-				cmd.ExecuteNonQuery();
-				return;
-			}
-
-			// SQLite: pragma check then ALTER.
-			using (var cmd = conn.CreateCommand())
-			{
-				cmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}';";
-				var exists = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
-				if (exists != 0) return;
-			}
-			using (var alter = conn.CreateCommand())
-			{
-				alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {typeDecl};";
-				alter.ExecuteNonQuery();
-			}
-		}
-		catch
-		{
-			// Best-effort schema evolution; do not block the UI.
-		}
-	}
-
 	// ====================================================================
 	// Warehouse master
 	// ====================================================================
