@@ -28,5 +28,7 @@
         );
         CREATE INDEX IF NOT EXISTS ix_accounts_parent ON accounts(company_id, parent_code, account_code);
         CREATE INDEX IF NOT EXISTS ix_accounts_code ON accounts(company_id, account_code);
+-- @if-column-missing accounts.deleted_at
 ALTER TABLE accounts ADD COLUMN deleted_at TEXT;
+-- @if-column-missing accounts.deleted_by
 ALTER TABLE accounts ADD COLUMN deleted_by TEXT;
