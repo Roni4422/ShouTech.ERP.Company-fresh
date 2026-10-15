@@ -240,103 +240,21 @@ internal static class AccRepo
 
     internal sealed record AccountGuard(bool CanDelete, bool CanDisable, IReadOnlyList<string> Reasons);
 
-    private const string SchemaSqlite = """
-        CREATE TABLE IF NOT EXISTS accounts (
-            account_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            company_id TEXT NOT NULL DEFAULT '',
-            account_code TEXT NOT NULL,
-            parent_code TEXT,
-            name_ar TEXT NOT NULL,
-            name_en TEXT NOT NULL DEFAULT '',
-            posting_mode TEXT NOT NULL DEFAULT 'قابل للترحيل',
-            status TEXT NOT NULL DEFAULT 'فعال',
-            risk TEXT NOT NULL DEFAULT 'منخفض',
-            cost_center TEXT NOT NULL DEFAULT 'غير محدد',
-            allow_reconcile INTEGER NOT NULL DEFAULT 0,
-            taxable INTEGER NOT NULL DEFAULT 0,
-            foreign_currency INTEGER NOT NULL DEFAULT 0,
-            cost_required INTEGER NOT NULL DEFAULT 0,
-            budget INTEGER NOT NULL DEFAULT 0,
-            is_default INTEGER NOT NULL DEFAULT 0,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            description TEXT NOT NULL DEFAULT '',
-            balance NUMERIC NOT NULL DEFAULT 0,
-            debit NUMERIC NOT NULL DEFAULT 0,
-            credit NUMERIC NOT NULL DEFAULT 0,
-            is_deleted INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT,
-            UNIQUE(company_id, account_code)
-        );
-        CREATE INDEX IF NOT EXISTS ix_accounts_parent ON accounts(company_id, parent_code, account_code);
-        CREATE INDEX IF NOT EXISTS ix_accounts_code ON accounts(company_id, account_code);
-        """;
-
-    private const string SchemaPostgres = """
-        CREATE TABLE IF NOT EXISTS accounts (
-            account_id BIGSERIAL PRIMARY KEY,
-            company_id TEXT NOT NULL DEFAULT '',
-            account_code TEXT NOT NULL,
-            parent_code TEXT,
-            name_ar TEXT NOT NULL,
-            name_en TEXT NOT NULL DEFAULT '',
-            posting_mode TEXT NOT NULL DEFAULT 'قابل للترحيل',
-            status TEXT NOT NULL DEFAULT 'فعال',
-            risk TEXT NOT NULL DEFAULT 'منخفض',
-            cost_center TEXT NOT NULL DEFAULT 'غير محدد',
-            allow_reconcile BOOLEAN NOT NULL DEFAULT FALSE,
-            taxable BOOLEAN NOT NULL DEFAULT FALSE,
-            foreign_currency BOOLEAN NOT NULL DEFAULT FALSE,
-            cost_required BOOLEAN NOT NULL DEFAULT FALSE,
-            budget BOOLEAN NOT NULL DEFAULT FALSE,
-            is_default BOOLEAN NOT NULL DEFAULT FALSE,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            description TEXT NOT NULL DEFAULT '',
-            balance NUMERIC NOT NULL DEFAULT 0,
-            debit NUMERIC NOT NULL DEFAULT 0,
-            credit NUMERIC NOT NULL DEFAULT 0,
-            is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMPTZ,
-            UNIQUE(company_id, account_code)
-        );
-        CREATE INDEX IF NOT EXISTS ix_accounts_parent ON accounts(company_id, parent_code, account_code);
-        CREATE INDEX IF NOT EXISTS ix_accounts_code ON accounts(company_id, account_code);
-        """;
 
     public static void EnsureSchema()
     {
         var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) return;
+        if (string.IsNullOrWhiteSpace(cs))
+            throw new InvalidOperationException("No connection to the current company database.");
         using var connection = Open(cs);
         using var command = connection.CreateCommand();
-        command.CommandText = DatabaseRuntime.IsPostgreSql() ? SchemaPostgres : SchemaSqlite;
-        command.ExecuteNonQuery();
-        EnsureColumn(connection, "accounts", "deleted_at", DatabaseRuntime.IsPostgreSql() ? "TIMESTAMPTZ" : "TEXT");
-        EnsureColumn(connection, "accounts", "deleted_by", "TEXT");
+        command.CommandText = DatabaseRuntime.IsPostgreSql()
+            ? "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'accounts';"
+            : "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'accounts';";
+        if (Convert.ToInt32(command.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 1)
+            throw new InvalidOperationException("accounts schema is missing. Apply the provider migrations under dba/mig.");
     }
 
-    private static void EnsureColumn(DbConnection connection, string table, string column, string type)
-    {
-        if (DatabaseRuntime.IsPostgreSql())
-        {
-            using var command = connection.CreateCommand();
-            command.CommandText = $"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {type};";
-            command.ExecuteNonQuery();
-            return;
-        }
-
-        using (var check = connection.CreateCommand())
-        {
-            check.CommandText = $"SELECT COUNT(1) FROM pragma_table_info('{table}') WHERE name = '{column}';";
-            if (Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
-                return;
-        }
-
-        using var alter = connection.CreateCommand();
-        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {type};";
-        alter.ExecuteNonQuery();
-    }
 
     public static List<AccRec> LoadAll()
     {
