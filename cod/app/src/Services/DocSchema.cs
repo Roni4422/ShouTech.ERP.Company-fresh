@@ -6,37 +6,47 @@ using Npgsql;
 namespace ShouTech.App.Services;
 
 /// <summary>
-/// Ensures commercial document tables required by invoices and party balances.
-/// Idempotent; safe to call on every report/invoice open.
-/// Aligns with international accounting practice: header/lines, tax lines,
-/// party ledger, and immutable posted documents (soft-delete only on drafts).
+/// Validates the commercial-document schema provisioned by DBA migrations.
+/// Schema definitions belong exclusively in dba/mig; this service performs no DDL.
 /// </summary>
 public static class DocSchema
 {
     private static readonly object Gate = new();
-    private static bool _ready;
+    private static bool _validated;
 
     public static void Ensure()
     {
-        if (_ready) return;
+        if (_validated) return;
         lock (Gate)
         {
-            if (_ready) return;
+            if (_validated) return;
             var cs = DatabaseRuntime.GetConnectionString();
-            if (string.IsNullOrWhiteSpace(cs)) return;
+            if (string.IsNullOrWhiteSpace(cs))
+                throw new InvalidOperationException("No database connection is configured.");
 
-            try
-            {
-                using var connection = Open(cs);
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = DatabaseRuntime.IsPostgreSql() ? PostgresDdl : SqliteDdl;
-                cmd.ExecuteNonQuery();
-                _ready = true;
-            }
-            catch
-            {
-                // Schema bootstrap must not block application startup paths.
-            }
+            using var connection = Open(cs);
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = DatabaseRuntime.IsPostgreSql()
+                ? """
+                  SELECT COUNT(*)
+                  FROM information_schema.tables
+                  WHERE table_schema = current_schema()
+                    AND table_name IN ('sales_documents', 'sales_document_lines',
+                      'purchase_documents', 'purchase_document_lines', 'party_ledger', 'stock_movements')
+                  """
+                : """
+                  SELECT COUNT(*)
+                  FROM sqlite_master
+                  WHERE type = 'table'
+                    AND name IN ('sales_documents', 'sales_document_lines',
+                      'purchase_documents', 'purchase_document_lines', 'party_ledger', 'stock_movements')
+                  """;
+            var count = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+            if (count != 6)
+                throw new InvalidOperationException(
+                    "Commercial-document schema is incomplete. Apply the provider migrations under dba/mig before using invoices.");
+
+            _validated = true;
         }
     }
 
@@ -48,256 +58,4 @@ public static class DocSchema
         connection.Open();
         return connection;
     }
-
-    private const string SqliteDdl = """
-        CREATE TABLE IF NOT EXISTS sales_documents (
-            doc_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_id TEXT NOT NULL,
-            doc_kind TEXT NOT NULL DEFAULT 'SAL',
-            doc_no TEXT NOT NULL,
-            doc_date TEXT NOT NULL,
-            party_id INTEGER,
-            party_name TEXT,
-            warehouse_id INTEGER,
-            currency_code TEXT NOT NULL DEFAULT 'SAR',
-            exchange_rate NUMERIC NOT NULL DEFAULT 1,
-            subtotal NUMERIC NOT NULL DEFAULT 0,
-            discount_amount NUMERIC NOT NULL DEFAULT 0,
-            tax_amount NUMERIC NOT NULL DEFAULT 0,
-            grand_total NUMERIC NOT NULL DEFAULT 0,
-            paid_amount NUMERIC NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'Draft',
-            tax_code TEXT,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            notes TEXT,
-            created_by TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            posted_by TEXT,
-            posted_at TEXT,
-            is_deleted INTEGER NOT NULL DEFAULT 0,
-            UNIQUE (company_id, doc_kind, doc_no)
-        );
-
-        CREATE TABLE IF NOT EXISTS sales_document_lines (
-            line_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            doc_id INTEGER NOT NULL REFERENCES sales_documents(doc_id) ON DELETE CASCADE,
-            line_no INTEGER NOT NULL,
-            material_id INTEGER,
-            material_code TEXT,
-            description TEXT NOT NULL,
-            unit TEXT,
-            qty NUMERIC NOT NULL DEFAULT 0,
-            unit_price NUMERIC NOT NULL DEFAULT 0,
-            discount_pct NUMERIC NOT NULL DEFAULT 0,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            line_subtotal NUMERIC NOT NULL DEFAULT 0,
-            line_tax NUMERIC NOT NULL DEFAULT 0,
-            line_total NUMERIC NOT NULL DEFAULT 0,
-            warehouse_id INTEGER,
-            UNIQUE (doc_id, line_no)
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_documents (
-            doc_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_id TEXT NOT NULL,
-            doc_kind TEXT NOT NULL DEFAULT 'PUR',
-            doc_no TEXT NOT NULL,
-            doc_date TEXT NOT NULL,
-            party_id INTEGER,
-            party_name TEXT,
-            warehouse_id INTEGER,
-            currency_code TEXT NOT NULL DEFAULT 'SAR',
-            exchange_rate NUMERIC NOT NULL DEFAULT 1,
-            subtotal NUMERIC NOT NULL DEFAULT 0,
-            discount_amount NUMERIC NOT NULL DEFAULT 0,
-            tax_amount NUMERIC NOT NULL DEFAULT 0,
-            grand_total NUMERIC NOT NULL DEFAULT 0,
-            paid_amount NUMERIC NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'Draft',
-            tax_code TEXT,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            notes TEXT,
-            created_by TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            posted_by TEXT,
-            posted_at TEXT,
-            is_deleted INTEGER NOT NULL DEFAULT 0,
-            UNIQUE (company_id, doc_kind, doc_no)
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_document_lines (
-            line_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            doc_id INTEGER NOT NULL REFERENCES purchase_documents(doc_id) ON DELETE CASCADE,
-            line_no INTEGER NOT NULL,
-            material_id INTEGER,
-            material_code TEXT,
-            description TEXT NOT NULL,
-            unit TEXT,
-            qty NUMERIC NOT NULL DEFAULT 0,
-            unit_price NUMERIC NOT NULL DEFAULT 0,
-            discount_pct NUMERIC NOT NULL DEFAULT 0,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            line_subtotal NUMERIC NOT NULL DEFAULT 0,
-            line_tax NUMERIC NOT NULL DEFAULT 0,
-            line_total NUMERIC NOT NULL DEFAULT 0,
-            warehouse_id INTEGER,
-            UNIQUE (doc_id, line_no)
-        );
-
-        CREATE TABLE IF NOT EXISTS party_ledger (
-            ledger_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_id TEXT NOT NULL,
-            party_kind TEXT NOT NULL CHECK (party_kind IN ('C','S')),
-            party_id INTEGER NOT NULL,
-            doc_kind TEXT,
-            doc_id INTEGER,
-            doc_no TEXT,
-            entry_date TEXT NOT NULL,
-            debit NUMERIC NOT NULL DEFAULT 0,
-            credit NUMERIC NOT NULL DEFAULT 0,
-            currency_code TEXT NOT NULL DEFAULT 'SAR',
-            note TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-
-        CREATE INDEX IF NOT EXISTS ix_party_ledger_party
-            ON party_ledger(company_id, party_kind, party_id);
-
-        CREATE TABLE IF NOT EXISTS stock_movements (
-            stock_movement_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_id TEXT NOT NULL,
-            warehouse_id INTEGER,
-            product_id INTEGER,
-            movement_date TEXT NOT NULL,
-            movement_type TEXT NOT NULL,
-            document_no TEXT,
-            qty_in NUMERIC NOT NULL DEFAULT 0,
-            qty_out NUMERIC NOT NULL DEFAULT 0,
-            unit_cost NUMERIC NOT NULL DEFAULT 0,
-            note TEXT
-        );
-        """;
-
-    private const string PostgresDdl = """
-        CREATE TABLE IF NOT EXISTS sales_documents (
-            doc_id BIGSERIAL PRIMARY KEY,
-            company_id TEXT NOT NULL,
-            doc_kind TEXT NOT NULL DEFAULT 'SAL',
-            doc_no TEXT NOT NULL,
-            doc_date TEXT NOT NULL,
-            party_id BIGINT,
-            party_name TEXT,
-            warehouse_id INT,
-            currency_code TEXT NOT NULL DEFAULT 'SAR',
-            exchange_rate NUMERIC NOT NULL DEFAULT 1,
-            subtotal NUMERIC NOT NULL DEFAULT 0,
-            discount_amount NUMERIC NOT NULL DEFAULT 0,
-            tax_amount NUMERIC NOT NULL DEFAULT 0,
-            grand_total NUMERIC NOT NULL DEFAULT 0,
-            paid_amount NUMERIC NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'Draft',
-            tax_code TEXT,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            notes TEXT,
-            created_by TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            posted_by TEXT,
-            posted_at TIMESTAMPTZ,
-            is_deleted INT NOT NULL DEFAULT 0,
-            UNIQUE (company_id, doc_kind, doc_no)
-        );
-        CREATE TABLE IF NOT EXISTS sales_document_lines (
-            line_id BIGSERIAL PRIMARY KEY,
-            doc_id BIGINT NOT NULL REFERENCES sales_documents(doc_id) ON DELETE CASCADE,
-            line_no INT NOT NULL,
-            material_id BIGINT,
-            material_code TEXT,
-            description TEXT NOT NULL,
-            unit TEXT,
-            qty NUMERIC NOT NULL DEFAULT 0,
-            unit_price NUMERIC NOT NULL DEFAULT 0,
-            discount_pct NUMERIC NOT NULL DEFAULT 0,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            line_subtotal NUMERIC NOT NULL DEFAULT 0,
-            line_tax NUMERIC NOT NULL DEFAULT 0,
-            line_total NUMERIC NOT NULL DEFAULT 0,
-            warehouse_id INT,
-            UNIQUE (doc_id, line_no)
-        );
-        CREATE TABLE IF NOT EXISTS purchase_documents (
-            doc_id BIGSERIAL PRIMARY KEY,
-            company_id TEXT NOT NULL,
-            doc_kind TEXT NOT NULL DEFAULT 'PUR',
-            doc_no TEXT NOT NULL,
-            doc_date TEXT NOT NULL,
-            party_id BIGINT,
-            party_name TEXT,
-            warehouse_id INT,
-            currency_code TEXT NOT NULL DEFAULT 'SAR',
-            exchange_rate NUMERIC NOT NULL DEFAULT 1,
-            subtotal NUMERIC NOT NULL DEFAULT 0,
-            discount_amount NUMERIC NOT NULL DEFAULT 0,
-            tax_amount NUMERIC NOT NULL DEFAULT 0,
-            grand_total NUMERIC NOT NULL DEFAULT 0,
-            paid_amount NUMERIC NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'Draft',
-            tax_code TEXT,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            notes TEXT,
-            created_by TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            posted_by TEXT,
-            posted_at TIMESTAMPTZ,
-            is_deleted INT NOT NULL DEFAULT 0,
-            UNIQUE (company_id, doc_kind, doc_no)
-        );
-        CREATE TABLE IF NOT EXISTS purchase_document_lines (
-            line_id BIGSERIAL PRIMARY KEY,
-            doc_id BIGINT NOT NULL REFERENCES purchase_documents(doc_id) ON DELETE CASCADE,
-            line_no INT NOT NULL,
-            material_id BIGINT,
-            material_code TEXT,
-            description TEXT NOT NULL,
-            unit TEXT,
-            qty NUMERIC NOT NULL DEFAULT 0,
-            unit_price NUMERIC NOT NULL DEFAULT 0,
-            discount_pct NUMERIC NOT NULL DEFAULT 0,
-            tax_rate NUMERIC NOT NULL DEFAULT 0,
-            line_subtotal NUMERIC NOT NULL DEFAULT 0,
-            line_tax NUMERIC NOT NULL DEFAULT 0,
-            line_total NUMERIC NOT NULL DEFAULT 0,
-            warehouse_id INT,
-            UNIQUE (doc_id, line_no)
-        );
-        CREATE TABLE IF NOT EXISTS party_ledger (
-            ledger_id BIGSERIAL PRIMARY KEY,
-            company_id TEXT NOT NULL,
-            party_kind TEXT NOT NULL CHECK (party_kind IN ('C','S')),
-            party_id BIGINT NOT NULL,
-            doc_kind TEXT,
-            doc_id BIGINT,
-            doc_no TEXT,
-            entry_date TEXT NOT NULL,
-            debit NUMERIC NOT NULL DEFAULT 0,
-            credit NUMERIC NOT NULL DEFAULT 0,
-            currency_code TEXT NOT NULL DEFAULT 'SAR',
-            note TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS ix_party_ledger_party
-            ON party_ledger(company_id, party_kind, party_id);
-        CREATE TABLE IF NOT EXISTS stock_movements (
-            stock_movement_id BIGSERIAL PRIMARY KEY,
-            company_id TEXT NOT NULL,
-            warehouse_id INT,
-            product_id BIGINT,
-            movement_date TEXT NOT NULL,
-            movement_type TEXT NOT NULL,
-            document_no TEXT,
-            qty_in NUMERIC NOT NULL DEFAULT 0,
-            qty_out NUMERIC NOT NULL DEFAULT 0,
-            unit_cost NUMERIC NOT NULL DEFAULT 0,
-            note TEXT
-        );
-        """;
 }
