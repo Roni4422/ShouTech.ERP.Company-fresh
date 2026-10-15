@@ -1,4 +1,6 @@
-# Schema Audit
+# Historical Schema Audit — Phase 1 (superseded)
+
+> This is a historical baseline, not a current inventory. The counts below were collected before the schema-centralization work and must not be interpreted as current totals. Use `python tools/schema_audit.py` for a fresh repository-wide report, including table, column, index, trigger, function, view, and drop DDL.
 
 - SQL table definitions found: 540
 - Table names defined more than once: 120
