@@ -205,5 +205,7 @@
             unit_cost NUMERIC NOT NULL DEFAULT 0, note TEXT, is_deleted INTEGER NOT NULL DEFAULT 0);
         CREATE INDEX IF NOT EXISTS ix_material_stock_movements_wh_mat_date
             ON material_stock_movements(company_id, warehouse_id, material_id, movement_date);
+-- @if-column-missing materials.deleted_at
 ALTER TABLE materials ADD COLUMN deleted_at TEXT;
+-- @if-column-missing materials.deleted_by
 ALTER TABLE materials ADD COLUMN deleted_by TEXT;
