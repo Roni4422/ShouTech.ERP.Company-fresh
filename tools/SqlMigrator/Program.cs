@@ -111,7 +111,9 @@ internal static class Program
                     {
                         command.Transaction = transaction;
                         command.CommandTimeout = 600;
-                        command.CommandText = migration.Sql;
+                        command.CommandText = provider == "sqlite"
+                            ? await PrepareSqliteConditionalStatementsAsync(connection, migration.Sql, transaction)
+                            : migration.Sql;
                         await command.ExecuteNonQueryAsync();
                     }
                     await RecordMigrationAsync(connection, migration, provider, transaction);
@@ -133,6 +135,49 @@ internal static class Program
             Console.Error.WriteLine($"Migration failed: {ex.GetType().Name}: {ex.Message}");
             return 1;
         }
+    }
+
+    private static async Task<string> PrepareSqliteConditionalStatementsAsync(
+        DbConnection connection, string sql, DbTransaction transaction)
+    {
+        // A small migration directive keeps SQLite ADD COLUMN operations idempotent
+        // without embedding schema mutation logic in application services.
+        var lines = sql.Replace("\r\n", "\n").Split('\n');
+        var output = new System.Text.StringBuilder();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            const string directive = "-- @if-column-missing ";
+            if (!trimmed.StartsWith(directive, StringComparison.OrdinalIgnoreCase))
+            {
+                output.AppendLine(lines[i]);
+                continue;
+            }
+
+            var target = trimmed[directive.Length..].Trim();
+            var parts = target.Split('.', StringSplitOptions.TrimEntries);
+            if (parts.Length != 2
+                || !System.Text.RegularExpressions.Regex.IsMatch(parts[0], "^[A-Za-z_][A-Za-z0-9_]*$")
+                || !System.Text.RegularExpressions.Regex.IsMatch(parts[1], "^[A-Za-z_][A-Za-z0-9_]*$"))
+                throw new InvalidOperationException($"Invalid SQLite conditional-column directive: {target}");
+
+            var statement = new System.Text.StringBuilder();
+            while (i + 1 < lines.Length && !lines[i + 1].TrimStart().StartsWith("-- @if-column-missing ", StringComparison.OrdinalIgnoreCase))
+            {
+                i++;
+                statement.AppendLine(lines[i]);
+                if (lines[i].Contains(';', StringComparison.Ordinal))
+                    break;
+            }
+
+            await using var check = connection.CreateCommand();
+            check.Transaction = transaction;
+            check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{parts[0]}') WHERE name = '{parts[1]}';";
+            var exists = Convert.ToInt32(await check.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+            if (!exists)
+                output.Append(statement);
+        }
+        return output.ToString();
     }
 
     private static DbConnection CreateConnection(string provider, string connectionString) => provider switch
