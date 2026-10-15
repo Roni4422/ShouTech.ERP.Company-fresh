@@ -1465,104 +1465,20 @@ internal static class MatRepo
 
 	private static void EnsureGroupCardSchema(DbConnection conn)
 	{
-		// Create material_groups if missing (fixes: SQLite "no such table: material_groups").
-		using (var cmd = conn.CreateCommand())
-		{
-			cmd.CommandText = DatabaseRuntime.IsPostgreSql()
-				? @"
-					CREATE TABLE IF NOT EXISTS material_groups
-					(
-						group_id        BIGSERIAL PRIMARY KEY,
-						company_id      TEXT NOT NULL DEFAULT '',
-						card_no         BIGINT,
-						group_code      TEXT NOT NULL,
-						group_name      TEXT NOT NULL DEFAULT '',
-						group_name_en   TEXT NOT NULL DEFAULT '',
-						parent_code     TEXT,
-						warehouse       TEXT,
-						notes           TEXT NOT NULL DEFAULT '',
-						general_specs   TEXT NOT NULL DEFAULT '',
-						image_path      TEXT,
-						is_sales_class  INTEGER NOT NULL DEFAULT 0,
-						is_deleted      INTEGER NOT NULL DEFAULT 0,
-						status          TEXT NOT NULL DEFAULT 'Active',
-						created_by      TEXT,
-						created_at      TEXT,
-						updated_by      TEXT,
-						updated_at      TEXT
-					);"
-				: @"
-					CREATE TABLE IF NOT EXISTS material_groups
-					(
-						group_id        INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-						company_id      TEXT NOT NULL DEFAULT '',
-						card_no         INTEGER,
-						group_code      TEXT NOT NULL,
-						group_name      TEXT NOT NULL DEFAULT '',
-						group_name_en   TEXT NOT NULL DEFAULT '',
-						parent_code     TEXT,
-						warehouse       TEXT,
-						notes           TEXT NOT NULL DEFAULT '',
-						general_specs   TEXT NOT NULL DEFAULT '',
-						image_path      TEXT,
-						is_sales_class  INTEGER NOT NULL DEFAULT 0,
-						is_deleted      INTEGER NOT NULL DEFAULT 0,
-						status          TEXT NOT NULL DEFAULT 'Active',
-						created_by      TEXT,
-						created_at      TEXT,
-						updated_by      TEXT,
-						updated_at      TEXT
-					);";
-			cmd.ExecuteNonQuery();
-		}
-
-		// Ensure optional columns exist on older databases.
-		EnsureColumn(conn, "material_groups", "card_no",
-			DatabaseRuntime.IsPostgreSql() ? "BIGINT" : "INTEGER");
-		EnsureColumn(conn, "material_groups", "general_specs", "TEXT NOT NULL DEFAULT ''");
-		EnsureColumn(conn, "material_groups", "image_path", "TEXT");
-		EnsureColumn(conn, "material_groups", "parent_code", "TEXT");
-		EnsureColumn(conn, "material_groups", "warehouse", "TEXT");
-		EnsureColumn(conn, "material_groups", "notes", "TEXT NOT NULL DEFAULT ''");
-		EnsureColumn(conn, "material_groups", "group_name_en", "TEXT NOT NULL DEFAULT ''");
-		EnsureColumn(conn, "material_groups", "status", "TEXT NOT NULL DEFAULT 'Active'");
-		EnsureColumn(conn, "material_groups", "is_sales_class", "INTEGER NOT NULL DEFAULT 0");
-		EnsureColumn(conn, "material_groups", "is_deleted", "INTEGER NOT NULL DEFAULT 0");
-		EnsureColumn(conn, "material_groups", "created_by", "TEXT");
-		EnsureColumn(conn, "material_groups", "created_at", "TEXT");
-		EnsureColumn(conn, "material_groups", "updated_by", "TEXT");
-		EnsureColumn(conn, "material_groups", "updated_at", "TEXT");
-		EnsureColumn(conn, "material_groups", "deleted_at", DatabaseRuntime.IsPostgreSql() ? "TIMESTAMPTZ" : "TEXT");
-		EnsureColumn(conn, "material_groups", "deleted_by", "TEXT");
-
-		// Permanent per-company card-number sequence.
-		using (var cmd = conn.CreateCommand())
-		{
-			cmd.CommandText = DatabaseRuntime.IsPostgreSql()
-				? @"
-					CREATE TABLE IF NOT EXISTS material_group_sequences
-					(
-						company_id TEXT PRIMARY KEY,
-						last_card_no BIGINT NOT NULL DEFAULT 0
-					);"
-				: @"
-					CREATE TABLE IF NOT EXISTS material_group_sequences
-					(
-						company_id TEXT PRIMARY KEY,
-						last_card_no INTEGER NOT NULL DEFAULT 0
-					);";
-			cmd.ExecuteNonQuery();
-		}
-
-		// Card number is unique inside each company.
-		using (var cmd = conn.CreateCommand())
-		{
-			cmd.CommandText = @"
-				CREATE UNIQUE INDEX IF NOT EXISTS
-				ux_material_groups_company_card
-				ON material_groups(company_id, card_no);";
-			cmd.ExecuteNonQuery();
-		}
+		using var command = conn.CreateCommand();
+		command.CommandText = DatabaseRuntime.IsPostgreSql()
+			? """
+			  SELECT COUNT(*) FROM information_schema.tables
+			  WHERE table_schema = current_schema()
+			    AND table_name IN ('material_groups', 'material_group_sequences')
+			  """
+			: """
+			  SELECT COUNT(*) FROM sqlite_master
+			  WHERE type = 'table'
+			    AND name IN ('material_groups', 'material_group_sequences')
+			  """;
+		if (Convert.ToInt32(command.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 2)
+			throw new InvalidOperationException("Material-group schema is missing. Apply the provider migrations under dba/mig.");
 	}
 
 	private static void EnsureColumn(DbConnection conn, string table, string column, string typeDecl)
@@ -1663,179 +1579,12 @@ internal static class MatRepo
 
 	internal static void EnsureWarehouseSchema(DbConnection conn)
 	{
-	// ----------------------------------------------------------------
-	// Step 1: Detect and remove legacy schemas with incompatible types.
-	//
-	// Old installations may have created warehouses with:
-	//   warehouse_id   TEXT NOT NULL PRIMARY KEY
-	//   warehouse_code TEXT NOT NULL
-	// Those types cannot be migrated in place on SQLite (ALTER TABLE
-	// cannot change a column type). Recreate the table instead.
-	// ----------------------------------------------------------------
-	try
-	{
-	bool legacy;
-
-	if (DatabaseRuntime.IsPostgreSql())
-	{
-		using var probe = conn.CreateCommand();
-		probe.CommandText = @"
-			SELECT data_type
-			FROM information_schema.columns
-			WHERE table_name = 'warehouses'
-			  AND column_name = 'warehouse_id';";
-
-		var result = probe.ExecuteScalar();
-		legacy = result != null
-			  && result != DBNull.Value
-			  && !result.ToString()!.Trim().ToUpperInvariant().Contains("INT", StringComparison.Ordinal);
-	}
-	else
-	{
-		using var probe = conn.CreateCommand();
-		probe.CommandText =
-			"SELECT type FROM pragma_table_info('warehouses') WHERE name = 'warehouse_id';";
-
-		var result = probe.ExecuteScalar();
-		legacy = result != null
-			  && result != DBNull.Value
-			  && !result.ToString()!.Trim().ToUpperInvariant().Contains("INT", StringComparison.Ordinal);
-	}
-
-	if (legacy)
-	{
-		using var drop = conn.CreateCommand();
-		drop.CommandText = "DROP TABLE IF EXISTS warehouses;";
-		drop.ExecuteNonQuery();
-	}
-	}
-	catch
-	{
-	// If probing fails (table does not exist yet), continue normally.
-	}
-
-	// ----------------------------------------------------------------
-	// Step 2: Create the table with the correct types.
-	// ----------------------------------------------------------------
-	using (var cmd = conn.CreateCommand())
-	{
-	cmd.CommandText = DatabaseRuntime.IsPostgreSql()
-		? @"
-			CREATE TABLE IF NOT EXISTS warehouses
-			(
-				warehouse_id      BIGSERIAL PRIMARY KEY,
-				company_id        TEXT    NOT NULL DEFAULT '',
-				card_no           BIGINT  NOT NULL DEFAULT 0,
-				warehouse_code    BIGINT  NOT NULL DEFAULT 0,
-				warehouse_name_ar TEXT    NOT NULL DEFAULT '',
-				warehouse_name_en TEXT,
-				parent_code       BIGINT,
-				address_line1     TEXT,
-				city              TEXT,
-				region            TEXT,
-				country           TEXT,
-				phone             TEXT,
-				aisle             TEXT,
-				rack              TEXT,
-				shelf             TEXT,
-				notes             TEXT,
-				is_default        INTEGER NOT NULL DEFAULT 0,
-				is_active         INTEGER NOT NULL DEFAULT 1,
-				is_deleted        INTEGER NOT NULL DEFAULT 0,
-				created_at        TEXT,
-				updated_at        TEXT
-			);"
-		: @"
-			CREATE TABLE IF NOT EXISTS warehouses
-			(
-				warehouse_id      INTEGER PRIMARY KEY AUTOINCREMENT,
-				company_id        TEXT    NOT NULL DEFAULT '',
-				card_no           INTEGER NOT NULL DEFAULT 0,
-				warehouse_code    INTEGER NOT NULL DEFAULT 0,
-				warehouse_name_ar TEXT    NOT NULL DEFAULT '',
-				warehouse_name_en TEXT,
-				parent_code       INTEGER,
-				address_line1     TEXT,
-				city              TEXT,
-				region            TEXT,
-				country           TEXT,
-				phone             TEXT,
-				aisle             TEXT,
-				rack              TEXT,
-				shelf             TEXT,
-				notes             TEXT,
-				is_default        INTEGER NOT NULL DEFAULT 0,
-				is_active         INTEGER NOT NULL DEFAULT 1,
-				is_deleted        INTEGER NOT NULL DEFAULT 0,
-				created_at        TEXT,
-				updated_at        TEXT
-			);";
-
-	cmd.ExecuteNonQuery();
-	}
-
-	// ----------------------------------------------------------------
-	// Step 3: Best-effort schema evolution for databases created before v0.2.
-	// ----------------------------------------------------------------
-	EnsureColumn(conn, "warehouses", "card_no",
-	DatabaseRuntime.IsPostgreSql() ? "BIGINT  NOT NULL DEFAULT 0"
-								   : "INTEGER NOT NULL DEFAULT 0");
-
-	EnsureColumn(conn, "warehouses", "parent_code",
-	DatabaseRuntime.IsPostgreSql() ? "BIGINT" : "INTEGER");
-
-	EnsureColumn(conn, "warehouses", "address_line1", "TEXT");
-	EnsureColumn(conn, "warehouses", "city",          "TEXT");
-	EnsureColumn(conn, "warehouses", "region",        "TEXT");
-	EnsureColumn(conn, "warehouses", "country",       "TEXT");
-	EnsureColumn(conn, "warehouses", "phone",         "TEXT");
-	EnsureColumn(conn, "warehouses", "aisle",         "TEXT");
-	EnsureColumn(conn, "warehouses", "rack",          "TEXT");
-	EnsureColumn(conn, "warehouses", "shelf",         "TEXT");
-	EnsureColumn(conn, "warehouses", "notes",         "TEXT");
-	EnsureColumn(conn, "warehouses", "is_default",    "INTEGER NOT NULL DEFAULT 0");
-	EnsureColumn(conn, "warehouses", "is_active",     "INTEGER NOT NULL DEFAULT 1");
-	EnsureColumn(conn, "warehouses", "is_deleted",    "INTEGER NOT NULL DEFAULT 0");
-
-	// ----------------------------------------------------------------
-	// Step 4: Filtered uniqueness: card_no unique per company when > 0.
-	// ----------------------------------------------------------------
-	try
-	{
-	using var cmd = conn.CreateCommand();
-
-	cmd.CommandText = @"
-		CREATE UNIQUE INDEX IF NOT EXISTS
-			ux_warehouses_company_cardno
-		ON warehouses (company_id, card_no)
-		WHERE card_no > 0 AND is_deleted = 0;";
-
-	cmd.ExecuteNonQuery();
-	}
-	catch
-	{
-	// Older SQLite builds may not support filtered indexes.
-	}
-
-	// ----------------------------------------------------------------
-	// Step 5: Performance index on company + active flag.
-	// ----------------------------------------------------------------
-	try
-	{
-	using var cmd = conn.CreateCommand();
-
-	cmd.CommandText = @"
-		CREATE INDEX IF NOT EXISTS
-			ix_warehouses_company
-		ON warehouses (company_id, is_active)
-		WHERE is_deleted = 0;";
-
-	cmd.ExecuteNonQuery();
-	}
-	catch
-	{
-	// Best-effort.
-	}
+		using var command = conn.CreateCommand();
+		command.CommandText = DatabaseRuntime.IsPostgreSql()
+			? "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'warehouses';"
+			: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'warehouses';";
+		if (Convert.ToInt32(command.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 1)
+			throw new InvalidOperationException("Warehouse schema is missing. Apply the provider migrations under dba/mig.");
 	}
 
 	private static string RequireCurrentCompanyCode()
