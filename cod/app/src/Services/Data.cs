@@ -772,7 +772,7 @@ internal static class SqliteSchemaBootstrapper
                 WHERE type = 'table'
                   AND name IN ('companies', 'users', 'fiscal_years', 'roles', 'permissions', 'user_roles', 'role_permissions', 'units_of_measure', 'product_categories', 'brands', 'products', 'journal_entries', 'journal_entry_lines', 'journal_audit_events', 'stock_balances', 'stock_movements')
                 """;
-            if (Convert.ToInt32(schemaCheck.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 16)
+            if (Convert.ToInt32(schemaCheck.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture) != 16)
                 throw new InvalidOperationException(
                     "Core database schema is incomplete. Apply the SQLite migrations under dba/mig before opening the company database.");
         }
@@ -798,7 +798,7 @@ internal static class SqliteSchemaBootstrapper
                 WHERE type = 'table'
                   AND name IN ('permission_groups', 'user_permissions')
                 """;
-            if (Convert.ToInt32(schemaCheck.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 2)
+            if (Convert.ToInt32(schemaCheck.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture) != 2)
                 throw new InvalidOperationException(
                     "Permission schema is incomplete. Apply the SQLite migrations under dba/mig.");
         }
