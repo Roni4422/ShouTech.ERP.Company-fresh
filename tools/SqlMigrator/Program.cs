@@ -166,7 +166,7 @@ internal static class Program
             {
                 i++;
                 statement.AppendLine(lines[i]);
-                if (lines[i].Contains(';', StringComparison.Ordinal))
+                if (lines[i].Contains(';'))
                     break;
             }
 
