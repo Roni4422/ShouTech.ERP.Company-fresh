@@ -596,41 +596,15 @@ public static class InvRepo
     private static void EnsureReversalSchema()
     {
         var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) throw new InvalidOperationException("No database connection.");
+        if (string.IsNullOrWhiteSpace(cs))
+            throw new InvalidOperationException("No database connection.");
         using var connection = Open(cs);
         using var cmd = connection.CreateCommand();
         cmd.CommandText = DatabaseRuntime.IsPostgreSql()
-            ? """
-              CREATE TABLE IF NOT EXISTS document_reversals (
-                  reversal_id TEXT PRIMARY KEY,
-                  company_id TEXT NOT NULL,
-                  original_doc_kind TEXT NOT NULL,
-                  original_doc_id BIGINT NOT NULL,
-                  reversal_doc_kind TEXT NOT NULL,
-                  reversal_doc_id BIGINT,
-                  reason TEXT NOT NULL,
-                  actor TEXT NOT NULL,
-                  created_at TEXT NOT NULL,
-                  status TEXT NOT NULL,
-                  UNIQUE (company_id, original_doc_kind, original_doc_id)
-              );
-              """
-            : """
-              CREATE TABLE IF NOT EXISTS document_reversals (
-                  reversal_id TEXT PRIMARY KEY,
-                  company_id TEXT NOT NULL,
-                  original_doc_kind TEXT NOT NULL,
-                  original_doc_id INTEGER NOT NULL,
-                  reversal_doc_kind TEXT NOT NULL,
-                  reversal_doc_id INTEGER,
-                  reason TEXT NOT NULL,
-                  actor TEXT NOT NULL,
-                  created_at TEXT NOT NULL,
-                  status TEXT NOT NULL,
-                  UNIQUE (company_id, original_doc_kind, original_doc_id)
-              );
-              """;
-        cmd.ExecuteNonQuery();
+            ? "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'document_reversals';"
+            : "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'document_reversals';";
+        if (Convert.ToInt32(cmd.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) != 1)
+            throw new InvalidOperationException("Reversal schema is missing. Apply the provider migrations under dba/mig.");
     }
 
     private static void BindHeader(DbCommand cmd, InvDoc doc)
