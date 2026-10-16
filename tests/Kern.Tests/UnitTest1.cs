@@ -287,11 +287,14 @@ namespace Kern.Tests
                 "user-001",
                 new[]
                 {
-                    new JournalLineRequest(debitAccount, 250m, 0m),
-                    new JournalLineRequest(creditAccount, 0m, 250m)
+                    new JournalLineRequest(debitAccount, 250m, 0m, CostCenter: "CC-100"),
+                    new JournalLineRequest(creditAccount, 0m, 250m, CostCenter: "CC-200")
                 });
 
             Assert.Equal(id, repository.SavedEntry?.Id);
+            Assert.Collection(repository.SavedEntry!.Lines,
+                line => Assert.Equal("CC-100", line.CostCenter),
+                line => Assert.Equal("CC-200", line.CostCenter));
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateDraftAsync(
                 Guid.NewGuid(),
                 new DateOnly(2026, 8, 21),
