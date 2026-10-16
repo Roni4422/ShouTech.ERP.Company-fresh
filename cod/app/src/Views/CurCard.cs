@@ -217,6 +217,7 @@ public sealed class CurCard : BaseWin
             _rates.Clear();
             foreach (var item in snapshot.Rates)
                 _rates.Add(new RateHistoryVm(item));
+            _dtRateDate.SelectedDate = DateTime.Today;
 
             if (snapshot.Rates.Count > 0)
             {
@@ -227,7 +228,6 @@ public sealed class CurCard : BaseWin
                 _txtMinRate.Text = latest.MinRate.ToString("0.########", CultureInfo.CurrentCulture);
                 _txtMaxRate.Text = latest.MaxRate.ToString("0.########", CultureInfo.CurrentCulture);
                 _txtRateNotes.Text = latest.Notes ?? string.Empty;
-                _dtRateDate.SelectedDate = latest.EffectiveDate.ToDateTime(TimeOnly.MinValue);
             }
             else if (string.Equals(code, _baseCurrencyCode, StringComparison.OrdinalIgnoreCase))
             {
@@ -295,6 +295,7 @@ public sealed class CurCard : BaseWin
 
             _currentCompanyId = companyId;
             _baseCurrencyCode = baseCurrency;
+            _txtCode.IsReadOnly = true;
             _rates.Insert(0, new RateHistoryVm(draft) { IsPending = true });
             _dtRateDate.SelectedDate = selectedDate.Date.AddDays(1);
             RefreshBaseCurrencyStatus(_rates.Count(item => item.IsPending));
