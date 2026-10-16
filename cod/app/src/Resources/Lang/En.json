@@ -1264,6 +1264,17 @@
     "Rate": "Exchange Rate",
     "MinRate": "Min Rate",
     "MaxRate": "Max Rate",
+    "DecimalPlaces": "Decimal Places",
+    "BuyRate": "Buy Rate",
+    "SellRate": "Sell Rate",
+    "RateDate": "Effective Date",
+    "RateNotes": "Rate Bulletin Notes",
+    "BaseCurrency": "Company base currency: {0}. The rate is base-currency units per one unit of the selected currency.",
+    "PendingRates": "New rate observations pending save: {0}",
+    "Load": "Load Currency",
+    "Loaded": "Currency details and rate history were loaded from the database.",
+    "SavedSummary": "Currency {0} saved; {1} new exchange-rate observation(s) appended.",
+    "OperationFailed": "The operation could not be completed. Review the error details below.",
     "Saved": "Currency data saved successfully"
   },
   "BankCard": {
