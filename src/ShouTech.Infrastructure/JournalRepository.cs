@@ -58,6 +58,26 @@ public sealed class JournalRepository : IJournalRepository
         return accountId;
     }
 
+    public async Task<string> ResolveAccountNameAsync(Guid companyId, string accountCode, CancellationToken cancellationToken = default)
+    {
+        if (companyId == Guid.Empty) throw new ArgumentException("Company is required.", nameof(companyId));
+        if (string.IsNullOrWhiteSpace(accountCode)) throw new ArgumentException("Account code is required.", nameof(accountCode));
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        var activePredicate = _provider == "PostgreSQL"
+            ? "is_active=true AND is_deleted=false AND is_postable=true"
+            : "is_active=1 AND is_deleted=0 AND is_postable=1";
+        command.CommandText = $"SELECT account_name FROM chart_of_accounts WHERE company_id=@company AND account_code=@code AND {activePredicate}";
+        Add(command, "@company", FormatGuid(companyId));
+        Add(command, "@code", accountCode.Trim());
+        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (value is null or DBNull || string.IsNullOrWhiteSpace(Convert.ToString(value, CultureInfo.InvariantCulture)))
+            throw new InvalidOperationException($"Account code '{accountCode.Trim()}' could not be resolved to an active, postable account for this company.");
+        return Convert.ToString(value, CultureInfo.InvariantCulture)!;
+    }
+
     public async Task SaveDraftAsync(Guid companyId, JournalEntry entry, string userId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
