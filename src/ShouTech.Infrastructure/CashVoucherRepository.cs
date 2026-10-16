@@ -87,7 +87,7 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
         {
             await EnsureActiveCompanyAsync(connection, transaction, companyId, cancellationToken).ConfigureAwait(false);
             var periodId = await GetOpenPeriodIdAsync(connection, transaction, companyId, voucher.VoucherDate, cancellationToken).ConfigureAwait(false);
-            await EnsurePostableAccountAsync(connection, transaction, companyId, voucher.TreasuryAccountId, "Treasury/bank", cancellationToken).ConfigureAwait(false);
+            await EnsurePostableAccountAsync(connection, transaction, companyId, voucher.TreasuryAccountId, "Treasury/bank", cancellationToken, requireAsset: true).ConfigureAwait(false);
             foreach (var line in voucher.Lines)
                 await EnsurePostableAccountAsync(connection, transaction, companyId, line.AccountId, "Allocation", cancellationToken).ConfigureAwait(false);
 
@@ -242,7 +242,7 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
             var lines = await ReadVoucherLinesForPostingAsync(connection, transaction, voucherId, cancellationToken).ConfigureAwait(false);
             ValidateStoredVoucher(header, lines);
             await EnsureOpenPeriodAsync(connection, transaction, companyId, header.FiscalPeriodId, header.VoucherDate, cancellationToken).ConfigureAwait(false);
-            await EnsurePostableAccountAsync(connection, transaction, companyId, header.TreasuryAccountId, "Treasury/bank", cancellationToken).ConfigureAwait(false);
+            await EnsurePostableAccountAsync(connection, transaction, companyId, header.TreasuryAccountId, "Treasury/bank", cancellationToken, requireAsset: true).ConfigureAwait(false);
             foreach (var line in lines)
                 await EnsurePostableAccountAsync(connection, transaction, companyId, line.AccountId, "Allocation", cancellationToken).ConfigureAwait(false);
 
@@ -643,14 +643,16 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
         Guid companyId,
         Guid accountId,
         string role,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool requireAsset = false)
     {
+        var accountTypePredicate = requireAsset ? " AND account_type='ASSET'" : string.Empty;
         await using var command = CreateCommand(connection, transaction,
-            $"SELECT COUNT(*) FROM chart_of_accounts WHERE company_id=@company AND account_id=@account AND {PostablePredicate("is_active", "is_deleted", "is_postable")}");
+            $"SELECT COUNT(*) FROM chart_of_accounts WHERE company_id=@company AND account_id=@account AND {PostablePredicate("is_active", "is_deleted", "is_postable")}{accountTypePredicate}");
         Add(command, "@company", FormatGuid(companyId));
         Add(command, "@account", FormatGuid(accountId));
         if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture) != 1)
-            throw new InvalidOperationException($"{role} account '{accountId:D}' is missing, inactive, deleted, or not postable for this company.");
+            throw new InvalidOperationException($"{role} account '{accountId:D}' is missing, inactive, deleted, not postable, or not an asset account for this company.");
     }
 
     private async Task<Guid> GetOpenPeriodIdAsync(
