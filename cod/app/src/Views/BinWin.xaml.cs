@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text;
 using System.Windows;
 using ShouTech.App;
 using ShouTech.App.Services;
@@ -12,6 +14,9 @@ namespace ShouTech.App.Views;
 /// </summary>
 public partial class BinWin : Window
 {
+    private static readonly ConcurrentDictionary<string, CompositeFormat> FormatCache =
+        new(StringComparer.Ordinal);
+
     private bool _busy;
 
     public BinWin()
@@ -30,6 +35,12 @@ public partial class BinWin : Window
     }
 
     private static bool IsArabic => (App.CurrentLanguageCode ?? "en").StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+    private static string FormatLocalized(string en, string ar, params object?[] arguments)
+    {
+        var template = L(en, ar);
+        var format = FormatCache.GetOrAdd(template, static value => CompositeFormat.Parse(value));
+        return string.Format(CultureInfo.CurrentCulture, format, arguments);
+    }
     private static string L(string en, string ar) => IsArabic ? ar : en;
 
     private void ApplyLanguage()
@@ -77,9 +88,9 @@ public partial class BinWin : Window
             ItemsGrid.ItemsSource = items;
             StatusText.Text = items.Count == 0
                 ? L("The recycle bin is empty for this company.", "سلة المحذوفات فارغة لهذه الشركة.")
-                : string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("{0:N0} item(s) in the recycle bin for company {1}.", "عدد العناصر في سلة المحذوفات: {0:N0}، الشركة: {1}."),
+                : FormatLocalized(
+                    "{0:N0} item(s) in the recycle bin for company {1}.",
+                    "عدد العناصر في سلة المحذوفات: {0:N0}، الشركة: {1}.",
                     items.Count,
                     companyCode);
         }
@@ -118,15 +129,16 @@ public partial class BinWin : Window
             if (failed == 0)
             {
                 MessageBox.Show(this,
-                    string.Format(CultureInfo.CurrentCulture, L("Restored {0:N0} item(s).", "تمت استعادة {0:N0} عنصر."), restored),
+                    FormatLocalized("Restored {0:N0} item(s).", "تمت استعادة {0:N0} عنصر.", restored),
                     Title, MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 var firstError = results.FirstOrDefault(result => !result.Succeeded)?.ErrorMessage;
                 MessageBox.Show(this,
-                    string.Format(CultureInfo.CurrentCulture,
-                        L("Restored {0:N0} item(s). {1:N0} failed.{2}{3}", "تمت استعادة {0:N0} عنصر، وفشلت استعادة {1:N0}.{2}{3}"),
+                    FormatLocalized(
+                        "Restored {0:N0} item(s). {1:N0} failed.{2}{3}",
+                        "تمت استعادة {0:N0} عنصر، وفشلت استعادة {1:N0}.{2}{3}",
                         restored, failed, Environment.NewLine, firstError ?? string.Empty),
                     Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -179,14 +191,15 @@ public partial class BinWin : Window
             if (failed == 0)
             {
                 MessageBox.Show(this,
-                    string.Format(CultureInfo.CurrentCulture, L("Permanently deleted {0:N0} item(s).", "تم حذف {0:N0} عنصر نهائياً."), purged),
+                    FormatLocalized("Permanently deleted {0:N0} item(s).", "تم حذف {0:N0} عنصر نهائياً.", purged),
                     Title, MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 MessageBox.Show(this,
-                    string.Format(CultureInfo.CurrentCulture,
-                        L("Permanently deleted {0:N0} item(s). {1:N0} failed.{2}{3}", "تم حذف {0:N0} عنصر نهائياً، وفشل حذف {1:N0}.{2}{3}"),
+                    FormatLocalized(
+                        "Permanently deleted {0:N0} item(s). {1:N0} failed.{2}{3}",
+                        "تم حذف {0:N0} عنصر نهائياً، وفشل حذف {1:N0}.{2}{3}",
                         purged, failed, Environment.NewLine, firstError ?? string.Empty),
                     Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
