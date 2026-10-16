@@ -57,7 +57,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 | `CoaWin.xaml.cs` | `AccRepo.EnsureSchema`, `AccRepo.LoadAll`, `AccRepo.Save`, account import/export | Real account repository path; inspect every account property and import mapping | Not passed |
 | `PosWin.cs` | `MatRepo.LoadById` and inventory/unit lookups; final checkout delegated to invoice workflow | Sales workspace itself is not the final persistence boundary; checkout and payment metadata need tracing | Not passed |
 | `MatDirWin.xaml.cs` | `MatRepo.LoadAll`, `LoadGroups`, `SoftDelete` | Directory/search and delete use repository reads; verify delete confirmation/audit and all entry points | Not passed |
-| `BcdGenWin.cs` | `MatRepo.LoadAll`, `LoadById(includeChildren: true)`, `MatRepo.Save` | Barcode generation writes through material repository and reports saved/failed counts; needs a test proving generated barcode survives reload | Not passed |
+| `BcdGenWin.cs` | `MatRepo.LoadAll`, `LoadById(includeChildren: true)`, `MatRepo.Save` | Real material repository path. Commit `85d9e69` removes the unconditional success dialog: it now displays the saved/failed summary with an outcome-appropriate icon and logs per-material exceptions. | Not passed; generated barcode still needs reload verification |
 | `SerWin.xaml.cs` | `MatRepo.LoadAll`; saves search-window preferences separately | Search dialog payload is a selected material, not a business-record save form | Not applicable to material persistence; preference round-trip not tested |
 | `BkpWin.xaml.cs` / `RestoreCoWin.xaml.cs` | Backup/restore service workflow | These operate on backup packages/companies rather than ordinary form-row CRUD; require separate restore integrity tests | Not passed |
 | `BarWin.cs` / `BcdDesWin.cs` | Barcode printing/design; design is documented as local configuration | Printing is not DB persistence; template/config persistence must be distinguished from business data | Not passed |
@@ -76,3 +76,9 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 2. Add automated integration tests using temporary SQLite databases for full create/read/update/re-read and child-row add/edit/remove; then run equivalent PostgreSQL tests.
 3. Build a machine-readable per-window field matrix from controls and repository mappings. Mark a field **PASS** only after the persisted value is read back and compared; mark unsupported fields **BLOCKED**, never assume success.
 4. Finish inventory of remaining `cod/app/src/Views/**` windows (reports, administration, import/export, company/user/security, configuration and document modules). Those windows are not certified by this partial report.
+
+
+## Third-pass correction (2026-10-16)
+
+- `BcdGenWin.SaveGenerated()` previously showed `Messages.SaveSuccess` even when `saved == 0` and all selected writes failed. Fixed on `main` in commit `85d9e69d47c74cede31e8075e2225cda73699983`: the dialog now shows the actual saved/failed summary and uses warning/error icons for partial/total failure; individual persistence exceptions are sent to `AppHost.Logging.LogError` with the material ID.
+- This is a source-level correction only. It has **not** been runtime-tested here; barcode persistence must still be proven by reloading each changed material from the database. This audit remains partial and does not certify all windows or fields.
