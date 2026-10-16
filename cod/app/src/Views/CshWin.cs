@@ -22,6 +22,22 @@ public enum CshKind
 /// </summary>
 public sealed class CshWin : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        MessageBox.Show(
+            this,
+            "لم تُنفّذ عملية الحفظ في قاعدة البيانات لهذه النافذة بعد. لم يتم حفظ أي بيانات.",
+            "الحفظ غير متاح",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly CshKind _kind;
 
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
@@ -221,7 +237,7 @@ public sealed class CshWin : BaseWin
 
     private void SaveVoucher()
     {
-        MessageBox.Show(this, T("Vouchers.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowPersistenceUnavailable();
     }
 
     private void PostVoucher()
