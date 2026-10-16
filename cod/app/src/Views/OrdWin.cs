@@ -267,9 +267,8 @@ public sealed class OrdWin : BaseWin
 
     private void ConvertToInvoice()
     {
-        var invKind = _kind == OrdKind.Sales ? InvDocKind.SalesInvoice : InvDocKind.PurchaseInvoice;
-        var invoiceWin = new InvoiceWin(invKind) { Owner = this };
-        invoiceWin.Show();
+        // An order is not persisted yet; opening a blank invoice is not a conversion.
+        ShowOperationUnavailable("ConvertToInvoice");
     }
 
     protected override void ApplyLocalizedText()
