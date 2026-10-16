@@ -1169,6 +1169,7 @@
   "Vouchers": {
     "JournalTitle": "Journal Voucher",
     "Load": "Load Journal",
+    "InvalidAmount": "Invalid amount or unsupported decimal precision",
     "ReceiptTitle": "Receipt Voucher",
     "PaymentTitle": "Payment Voucher",
     "ChequeTitle": "Securities and Cheques",
