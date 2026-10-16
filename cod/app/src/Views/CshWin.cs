@@ -257,15 +257,7 @@ public sealed class CshWin : BaseWin
 
     private void PostVoucher()
     {
-        if (MessageBox.Show(this, T("Vouchers.ConfirmPost"), T("Vouchers.Post"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-            return;
-
-        _isPosted = true;
-        _btnSave.IsEnabled = false;
-        _btnPost.IsEnabled = false;
-        _grid.IsReadOnly = true;
-        RefreshCalculations();
-        MessageBox.Show(this, T("Vouchers.Posted"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowPersistenceUnavailable();
     }
 
     protected override void ApplyLocalizedText()
