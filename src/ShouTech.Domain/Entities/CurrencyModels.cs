@@ -22,8 +22,6 @@ public sealed record CurrencyDefinition
             throw new ArgumentException("Currency code must be a three-letter ASCII ISO code.", nameof(code));
         if (string.IsNullOrWhiteSpace(nameArabic))
             throw new ArgumentException("Arabic currency name is required.", nameof(nameArabic));
-        if (code.Trim().Length > 3)
-            throw new ArgumentException("Currency code cannot exceed three characters.", nameof(code));
         if (decimalPlaces is < 0 or > 6)
             throw new ArgumentOutOfRangeException(nameof(decimalPlaces), "Currency decimal places must be between zero and six.");
 
