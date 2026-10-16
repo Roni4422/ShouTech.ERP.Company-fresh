@@ -324,6 +324,49 @@ namespace Kern.Tests
                     exchangeRate: 0.7095m,
                     documentNumber: "JV-ROUNDTRIP-001");
 
+                var loadedSnapshot = await service.FindByDocumentNumberAsync(companyId, "JV-ROUNDTRIP-001");
+                Assert.NotNull(loadedSnapshot);
+                Assert.Equal(journalId, loadedSnapshot!.Id);
+                Assert.Equal(companyId, loadedSnapshot.CompanyId);
+                Assert.Equal(new DateOnly(2026, 10, 16), loadedSnapshot.EntryDate);
+                Assert.Equal("Journal header round trip", loadedSnapshot.Description);
+                Assert.Equal("REF-001", loadedSnapshot.ReferenceNumber);
+                Assert.Equal("JOD", loadedSnapshot.CurrencyCode);
+                Assert.Equal(0.7095m, loadedSnapshot.ExchangeRate);
+                Assert.Equal(JournalEntryStatus.Draft, loadedSnapshot.Status);
+                Assert.Collection(loadedSnapshot.Lines,
+                    line =>
+                    {
+                        Assert.Equal("1101", line.AccountCode);
+                        Assert.Equal("Cash", line.AccountName);
+                        Assert.Equal(12.5m, line.Debit);
+                        Assert.Equal(0m, line.Credit);
+                        Assert.Equal("CC-10", line.CostCenter);
+                        Assert.Equal("Debit note", line.Note);
+                    },
+                    line =>
+                    {
+                        Assert.Equal("4101", line.AccountCode);
+                        Assert.Equal("Sales", line.AccountName);
+                        Assert.Equal(0m, line.Debit);
+                        Assert.Equal(12.5m, line.Credit);
+                        Assert.Equal("CC-20", line.CostCenter);
+                        Assert.Equal("Credit note", line.Note);
+                    });
+
+                await Assert.ThrowsAsync<SqliteException>(async () =>
+                    await service.CreateDraftAsync(
+                        companyId,
+                        new DateOnly(2026, 10, 16),
+                        "Duplicate journal document number",
+                        actor,
+                        new[]
+                        {
+                            new JournalLineRequest(debitAccount, 1m, 0m),
+                            new JournalLineRequest(creditAccount, 0m, 1m)
+                        },
+                        documentNumber: "JV-ROUNDTRIP-001"));
+
                 await using (var verify = new SqliteConnection(connectionString))
                 {
                     await verify.OpenAsync();
@@ -361,6 +404,14 @@ namespace Kern.Tests
 
                 await service.PostAsync(journalId, actor);
                 var reversalId = await service.ReverseAsync(journalId, actor, "round-trip test reversal");
+                var loadedAfterReversal = await service.FindByDocumentNumberAsync(companyId, "JV-ROUNDTRIP-001");
+                Assert.NotNull(loadedAfterReversal);
+                Assert.Equal(JournalEntryStatus.Reversed, loadedAfterReversal!.Status);
+                Assert.Equal("REF-001", loadedAfterReversal.ReferenceNumber);
+                Assert.Equal("JOD", loadedAfterReversal.CurrencyCode);
+                Assert.Equal(0.7095m, loadedAfterReversal.ExchangeRate);
+                Assert.Equal("CC-10", loadedAfterReversal.Lines[0].CostCenter);
+                Assert.Equal("CC-20", loadedAfterReversal.Lines[1].CostCenter);
 
                 await using (var verify = new SqliteConnection(connectionString))
                 {
@@ -656,6 +707,9 @@ namespace Kern.Tests
         private sealed class InMemoryJournalRepository : IJournalRepository
         {
             public JournalEntry? SavedEntry { get; private set; }
+
+            public Task<JournalEntrySnapshot?> FindByDocumentNumberAsync(Guid companyId, string documentNumber, CancellationToken cancellationToken = default) =>
+                Task.FromResult<JournalEntrySnapshot?>(null);
 
             public Task SaveDraftAsync(Guid companyId, JournalEntry entry, string userId, CancellationToken cancellationToken = default)
             {
