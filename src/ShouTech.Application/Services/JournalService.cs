@@ -23,11 +23,12 @@ public sealed class JournalService
         CancellationToken cancellationToken = default,
         string? referenceNumber = null,
         string currencyCode = "SAR",
-        decimal exchangeRate = 1m)
+        decimal exchangeRate = 1m,
+        string? documentNumber = null)
     {
         ArgumentNullException.ThrowIfNull(lines);
 
-        var entry = new JournalEntry(entryDate, description, referenceNumber, currencyCode, exchangeRate);
+        var entry = new JournalEntry(entryDate, description, referenceNumber, currencyCode, exchangeRate, documentNumber);
         foreach (var line in lines)
             entry.AddLine(line.AccountId, line.Debit, line.Credit, line.Note, line.CostCenter);
 
