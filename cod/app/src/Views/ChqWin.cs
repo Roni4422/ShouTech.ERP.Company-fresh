@@ -22,10 +22,25 @@ public sealed class ChqWin : BaseWin
     /// </summary>
     private void ShowPersistenceUnavailable()
     {
+        const string errorCode = "APP-2010";
+        const string context = "This window has no database persistence implementation.";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var exception = new NotSupportedException(context);
+
+        // Errors are routed to errors.log; the operational trace goes to log.log.
+        AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "PersistenceUnavailable",
+            $"Code={definition.Code} | Window={GetType().Name}");
+
         MessageBox.Show(
             this,
-            "لم تُنفّذ عملية الحفظ في قاعدة البيانات لهذه النافذة بعد. لم يتم حفظ أي بيانات.",
-            "الحفظ غير متاح",
+            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
+            "العملية غير متاحة",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
