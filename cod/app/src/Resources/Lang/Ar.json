@@ -1310,6 +1310,7 @@
   "Vouchers": {
     "JournalTitle": "سند قيد",
     "Load": "فتح قيد",
+    "InvalidAmount": "مبلغ غير صالح أو يتجاوز دقة العملة المسموحة",
     "ReceiptTitle": "سند قبض",
     "PaymentTitle": "سند دفع / صرف",
     "ChequeTitle": "الأوراق المالية والشيكات",
