@@ -248,6 +248,24 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public void JournalLine_ShouldRejectAmountsThatWouldRoundDifferentlyAcrossProviders()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new JournalLine(Guid.NewGuid(), debit: 1.00001m, credit: 0m));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new JournalLine(Guid.NewGuid(), debit: 0m, credit: 1_000_000_000_000_000m));
+        }
+
+        [Fact]
+        public void JournalEntry_ShouldRejectInvalidCurrencyCodesAndUnsupportedExchangePrecision()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                new JournalEntry(new DateOnly(2026, 10, 16), "Bad currency", currencyCode: "1$D"));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new JournalEntry(new DateOnly(2026, 10, 16), "Rate precision", exchangeRate: 1.000000001m));
+        }
+
+        [Fact]
         public void UserPreferences_ShouldNormalizeRegionalAndWindowSettings()
         {
             var preferences = new UsrPref
@@ -354,7 +372,7 @@ namespace Kern.Tests
                         Assert.Equal("Credit note", line.Note);
                     });
 
-                await Assert.ThrowsAsync<SqliteException>(async () =>
+                await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     await service.CreateDraftAsync(
                         companyId,
                         new DateOnly(2026, 10, 16),
