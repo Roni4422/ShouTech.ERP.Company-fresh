@@ -577,7 +577,7 @@ public sealed class BcdDesWin : BaseWin
         }
         catch (Exception ex)
         {
-            AppHost.Logging?.LogError("BarcodeDesign", "Failed to save barcode design configuration.", ex);
+            ShouTech.App.Services.AppHost.Logging?.LogError("BarcodeDesign", "Failed to save barcode design configuration.", ex);
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
