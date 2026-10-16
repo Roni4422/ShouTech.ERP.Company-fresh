@@ -897,4 +897,11 @@
     "catalogRef": "CATALOG.001",
     "messageKey": "Errors.EXL-3012"
   }
+  ,"APP-2010": {
+    "type": "System",
+    "name": "WindowPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "APPLICATION.PERSISTENCE.010"
+  }
 }
