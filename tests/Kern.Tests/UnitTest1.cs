@@ -74,7 +74,7 @@ namespace Kern.Tests
         {
             var converter = new NullToVisibilityConverter();
 
-            var result = converter.ConvertBack(null, typeof(bool), null, null!);
+            var result = converter.ConvertBack(null!, typeof(bool), null!, null!);
 
             Assert.False((bool)result);
         }
