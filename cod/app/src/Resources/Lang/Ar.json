@@ -1309,6 +1309,7 @@
   },
   "Vouchers": {
     "JournalTitle": "سند قيد",
+    "Load": "فتح قيد",
     "ReceiptTitle": "سند قبض",
     "PaymentTitle": "سند دفع / صرف",
     "ChequeTitle": "الأوراق المالية والشيكات",
