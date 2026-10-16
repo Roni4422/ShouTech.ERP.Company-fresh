@@ -37,10 +37,6 @@ ALTER TABLE material_groups ADD COLUMN created_at TEXT;
 ALTER TABLE material_groups ADD COLUMN updated_by TEXT;
 -- @if-column-missing material_groups.updated_at
 ALTER TABLE material_groups ADD COLUMN updated_at TEXT;
--- @if-column-missing material_groups.deleted_at
-ALTER TABLE material_groups ADD COLUMN deleted_at TEXT;
--- @if-column-missing material_groups.deleted_by
-ALTER TABLE material_groups ADD COLUMN deleted_by TEXT;
 CREATE TABLE IF NOT EXISTS material_group_sequences (
     company_id TEXT PRIMARY KEY,
     last_card_no INTEGER NOT NULL DEFAULT 0
@@ -93,10 +89,6 @@ ALTER TABLE warehouses ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE warehouses ADD COLUMN created_at TEXT;
 -- @if-column-missing warehouses.updated_at
 ALTER TABLE warehouses ADD COLUMN updated_at TEXT;
--- @if-column-missing warehouses.deleted_at
-ALTER TABLE warehouses ADD COLUMN deleted_at TEXT;
--- @if-column-missing warehouses.deleted_by
-ALTER TABLE warehouses ADD COLUMN deleted_by TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_warehouses_company_cardno
     ON warehouses(company_id, card_no) WHERE card_no > 0 AND is_deleted = 0;
 CREATE INDEX IF NOT EXISTS ix_warehouses_company
