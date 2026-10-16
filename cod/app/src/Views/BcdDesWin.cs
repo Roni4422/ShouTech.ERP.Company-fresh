@@ -148,7 +148,7 @@ public sealed class BcdDesWin : BaseWin
         Content = root;
     }
 
-    private UIElement BuildToolbar()
+    private WrapPanel BuildToolbar()
     {
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
 
