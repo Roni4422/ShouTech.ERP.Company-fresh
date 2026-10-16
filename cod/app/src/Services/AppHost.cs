@@ -34,6 +34,8 @@ namespace ShouTech.App.Services
         public static JournalRepository? JournalStore { get; private set; }
         public static CashVoucherService? CashVouchers { get; private set; }
         public static CashVoucherRepository? CashVoucherStore { get; private set; }
+        public static CurrencyService? Currencies { get; private set; }
+        public static CurrencyRepository? CurrencyStore { get; private set; }
         public static AccountingStructureRepository? AccountingStructure { get; private set; }
         public static IDatabaseHealth? DatabaseHealth { get; private set; }
 
@@ -79,6 +81,7 @@ namespace ShouTech.App.Services
 
             Journal = CreateJournalService();
             CashVouchers = CreateCashVoucherService();
+            Currencies = CreateCurrencyService();
             AccountingStructure = CreateAccountingStructureRepository();
             DatabaseHealth = CreateDatabaseHealth();
 
@@ -209,6 +212,38 @@ namespace ShouTech.App.Services
             }
         }
 
+        private static CurrencyService? CreateCurrencyService()
+        {
+            var connection = ResolveDatabaseConnection();
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                connection = AppCfgSvc.Current.ConnectionStrings?
+                    .Values
+                    .FirstOrDefault()?
+                    .ConnectionString;
+            }
+
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                Logging.LogWarning("AppHost", "Currency persistence is unavailable: no database connection configured.");
+                return null;
+            }
+
+            var provider = AppCfgSvc.Current.ConnectionStrings?
+                .FirstOrDefault(item => item.Key.Equals("Default", System.StringComparison.OrdinalIgnoreCase))
+                .Value?.Provider ?? AppCfgSvc.Current.Database?.DefaultProvider ?? "SQLite";
+            try
+            {
+                CurrencyStore = new CurrencyRepository(provider, connection);
+                return new CurrencyService(CurrencyStore);
+            }
+            catch (System.Exception ex)
+            {
+                Logging.LogWarning("AppHost", $"Currency persistence could not be initialized: {ex.Message}");
+                return null;
+            }
+        }
+
         private static AccountingStructureRepository? CreateAccountingStructureRepository()
         {
             var connection = ResolveDatabaseConnection();
@@ -280,6 +315,7 @@ namespace ShouTech.App.Services
         public static IAuditService Audit => AppHost.Audit;
         public static JournalService? Journal => AppHost.Journal;
         public static CashVoucherService? CashVouchers => AppHost.CashVouchers;
+        public static CurrencyService? Currencies => AppHost.Currencies;
         public static AccountingStructureRepository? AccountingStructure => AppHost.AccountingStructure;
         public static IDatabaseHealth? DatabaseHealth => AppHost.DatabaseHealth;
         public static ILocSvc Localization => AppHost.Localization;
