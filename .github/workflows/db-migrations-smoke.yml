@@ -74,9 +74,10 @@ jobs:
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
       - name: Test existing PostgreSQL migration-history table
         env:
-          PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
+          PG_CONN_HISTORY: Host=localhost;Port=5432;Database=shoutest_existing_history;Username=shoutest;Password=shoutest
         run: |
-          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -c "CREATE TABLE schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());"
-          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
-          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
+          # Use a separate empty database: dropping public alone may leave application objects in other schemas.
+          PGPASSWORD=shoutest createdb -h localhost -U shoutest shoutest_existing_history
+          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest_existing_history -v ON_ERROR_STOP=1 -c "CREATE TABLE schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN_HISTORY"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN_HISTORY"
