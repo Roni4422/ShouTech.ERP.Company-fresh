@@ -41,31 +41,6 @@ public sealed class JrnWin : BaseWin
             MessageBoxImage.Warning);
     }
 
-    /// <summary>Prevents false success until journal persistence is implemented.</summary>
-    private void ShowPersistenceUnavailable()
-    {
-        const string errorCode = "APP-2010";
-        const string context = "This window has no database persistence implementation.";
-        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
-        var exception = new NotSupportedException(context);
-
-        ShouTech.App.Services.AppHost.Logging?.LogError(
-            "WindowPersistence",
-            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
-            exception);
-        ShouTech.App.Services.AppHost.Logging?.LogOperation(
-            "WindowPersistence",
-            "PersistenceUnavailable",
-            $"Code={definition.Code} | Window={GetType().Name}");
-
-        MessageBox.Show(
-            this,
-            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
-            "العملية غير متاحة",
-            MessageBoxButton.OK,
-            MessageBoxImage.Warning);
-    }
-
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
     private readonly DatePicker _dtDate = new() { Width = 120, Height = 26, SelectedDate = DateTime.Today };
     private readonly TextBox _txtRefNo = new() { Width = 110, Height = 26 };
@@ -75,6 +50,7 @@ public sealed class JrnWin : BaseWin
     private readonly TextBox _txtMemo = new() { Width = 400, Height = 26 };
 
     private readonly Button _btnNew = new();
+    private readonly Button _btnLoad = new();
     private readonly Button _btnSave = new();
     private readonly Button _btnPost = new();
     private readonly Button _btnPrint = new();
@@ -112,6 +88,7 @@ public sealed class JrnWin : BaseWin
         // 1. Toolbar
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         StyleButton(_btnNew, "Common.New");
+        StyleButton(_btnLoad, "Vouchers.Load");
         StyleButton(_btnSave, "Common.Save");
         StyleButton(_btnPost, "Vouchers.Post");
         StyleButton(_btnPrint, "Invoice.Print");
@@ -120,6 +97,7 @@ public sealed class JrnWin : BaseWin
         StyleButton(_btnAutoBal, "Vouchers.AutoBalance");
 
         _btnNew.Click += (_, _) => ResetVoucher();
+        _btnLoad.Click += async (_, _) => await LoadVoucherAsync();
         _btnSave.Click += async (_, _) => await SaveVoucherAsync();
         _btnPost.Click += async (_, _) => await PostVoucherAsync();
         _btnPrint.Click += (_, _) => ShowOperationUnavailable("Print");
@@ -141,7 +119,7 @@ public sealed class JrnWin : BaseWin
         };
         _btnAutoBal.Click += (_, _) => AutoBalance();
 
-        foreach (var b in new[] { _btnNew, _btnSave, _btnPost, _btnPrint, _btnAddLine, _btnRemoveLine, _btnAutoBal })
+        foreach (var b in new[] { _btnNew, _btnLoad, _btnSave, _btnPost, _btnPrint, _btnAddLine, _btnRemoveLine, _btnAutoBal })
             toolbar.Children.Add(b);
 
         DockPanel.SetDock(toolbar, Dock.Top);
@@ -249,9 +227,10 @@ public sealed class JrnWin : BaseWin
         _lines.Clear();
         _lines.Add(new JrnLineVm { LineNo = 1 });
         _lines.Add(new JrnLineVm { LineNo = 2 });
+        _btnLoad.IsEnabled = true;
         _btnSave.IsEnabled = true;
         _btnPost.IsEnabled = true;
-        _grid.IsReadOnly = false;
+        SetVoucherReadOnly(false);
         RefreshBalances();
     }
 
@@ -303,6 +282,99 @@ public sealed class JrnWin : BaseWin
         }
 
         RefreshBalances();
+    }
+
+    private async Task LoadVoucherAsync()
+    {
+        var documentNumber = _txtDocNo.Text.Trim();
+        if (string.IsNullOrWhiteSpace(documentNumber))
+        {
+            MessageBox.Show(this, "أدخل رقم القيد المراد فتحه.", "رقم القيد مطلوب",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            var user = ShouTech.App.Services.UsrSession.Current;
+            var companyCode = user?.CompanyId;
+            if (string.IsNullOrWhiteSpace(companyCode))
+                throw new InvalidOperationException("لا توجد شركة نشطة في جلسة المستخدم.");
+            if (ShouTech.App.Services.AppHost.JournalStore is not { } store ||
+                ShouTech.App.Services.AppHost.Journal is not { } journal)
+                throw new InvalidOperationException("خدمة القيود غير مهيأة؛ تحقق من إعداد اتصال قاعدة البيانات.");
+
+            var companyId = await store.ResolveCompanyIdAsync(companyCode);
+            var snapshot = await journal.FindByDocumentNumberAsync(companyId, documentNumber);
+            if (snapshot is null)
+                throw new InvalidOperationException($"لم يُعثر على القيد '{documentNumber}' في الشركة النشطة.");
+
+            _currentJournalId = snapshot.Id;
+            _journalPosted = snapshot.Status != ShouTech.Domain.Entities.JournalEntryStatus.Draft;
+            _txtDocNo.Text = snapshot.DocumentNumber ?? string.Empty;
+            _dtDate.SelectedDate = snapshot.EntryDate.ToDateTime(TimeOnly.MinValue);
+            _txtRefNo.Text = snapshot.ReferenceNumber ?? string.Empty;
+            _txtCur.Text = snapshot.CurrencyCode;
+            _txtRate.Text = snapshot.ExchangeRate.ToString("0.########", CultureInfo.CurrentCulture);
+            _txtMemo.Text = snapshot.Description;
+
+            _lines.Clear();
+            foreach (var line in snapshot.Lines)
+            {
+                _lines.Add(new JrnLineVm
+                {
+                    LineNo = line.LineNumber,
+                    AccountCode = line.AccountCode,
+                    AccountName = line.AccountName,
+                    Debit = line.Debit,
+                    Credit = line.Credit,
+                    CostCenter = line.CostCenter ?? string.Empty,
+                    Memo = line.Note ?? string.Empty
+                });
+            }
+
+            var costCenters = snapshot.Lines
+                .Select(line => line.CostCenter?.Trim())
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            _txtCc.Text = costCenters.Length == 1 &&
+                snapshot.Lines.All(line => string.IsNullOrWhiteSpace(line.CostCenter) ||
+                    string.Equals(line.CostCenter.Trim(), costCenters[0], StringComparison.OrdinalIgnoreCase))
+                ? costCenters[0]!
+                : string.Empty;
+
+            _btnSave.IsEnabled = false;
+            _btnPost.IsEnabled = snapshot.Status == ShouTech.Domain.Entities.JournalEntryStatus.Draft;
+            SetVoucherReadOnly(true);
+            RefreshBalances();
+
+            MessageBox.Show(
+                this,
+                $"تم تحميل القيد من قاعدة البيانات.\nالحالة: {snapshot.Status}\nالمعرف: {snapshot.Id:D}",
+                "تم التحميل",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ReportPersistenceFailure("LoadByDocumentNumber", ex);
+        }
+    }
+
+    private void SetVoucherReadOnly(bool readOnly)
+    {
+        _grid.IsReadOnly = readOnly;
+        _dtDate.IsEnabled = !readOnly;
+        _txtDocNo.IsReadOnly = readOnly;
+        _txtRefNo.IsReadOnly = readOnly;
+        _txtCur.IsReadOnly = readOnly;
+        _txtRate.IsReadOnly = readOnly;
+        _txtCc.IsReadOnly = readOnly;
+        _txtMemo.IsReadOnly = readOnly;
+        _btnAddLine.IsEnabled = !readOnly;
+        _btnRemoveLine.IsEnabled = !readOnly;
+        _btnAutoBal.IsEnabled = !readOnly;
     }
 
     private async Task SaveVoucherAsync()
@@ -377,6 +449,7 @@ public sealed class JrnWin : BaseWin
             _currentJournalId = id;
             _btnSave.IsEnabled = false;
             _btnPost.IsEnabled = true;
+            SetVoucherReadOnly(true);
             MessageBox.Show(this, $"تم حفظ مسودة القيد في قاعدة البيانات.\nالمعرف: {id:D}", "تم الحفظ", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -410,7 +483,7 @@ public sealed class JrnWin : BaseWin
             _journalPosted = true;
             _btnSave.IsEnabled = false;
             _btnPost.IsEnabled = false;
-            _grid.IsReadOnly = true;
+            SetVoucherReadOnly(true);
             MessageBox.Show(this, "تم ترحيل القيد فعليًا في قاعدة البيانات.", "تم الترحيل", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
