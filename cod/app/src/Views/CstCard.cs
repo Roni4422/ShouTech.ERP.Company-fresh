@@ -10,6 +10,22 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class CstCard : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        MessageBox.Show(
+            this,
+            "لم تُنفّذ عملية الحفظ في قاعدة البيانات لهذه النافذة بعد. لم يتم حفظ أي بيانات.",
+            "الحفظ غير متاح",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly TextBox _txtCode = new() { Width = 130, Height = 26 };
     private readonly TextBox _txtNameAr = new() { Width = 240, Height = 26 };
     private readonly TextBox _txtNameEn = new() { Width = 240, Height = 26 };
@@ -62,8 +78,8 @@ public sealed class CstCard : BaseWin
         StyleButton(_btnStmt, "CustCard.Statement");
 
         _btnNew.Click += (_, _) => ResetCard();
-        _btnSave.Click += (_, _) => MessageBox.Show(this, T("CustCard.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
-        _btnDelete.Click += (_, _) => MessageBox.Show(this, T("CustCard.Deleted"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnDelete.Click += (_, _) => ShowPersistenceUnavailable();
         _btnStmt.Click += (_, _) => MessageBox.Show(this, T("CustCard.Statement"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
 
         foreach (var b in new[] { _btnNew, _btnSave, _btnDelete, _btnStmt })
