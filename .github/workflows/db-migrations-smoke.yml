@@ -26,6 +26,19 @@ jobs:
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
       - name: Re-run migrations against the same SQLite database
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
+      - name: Assert journal header columns exist in SQLite
+        run: |
+          python3 - <<'PY'
+          import sqlite3, os
+          path = os.path.join(os.environ["RUNNER_TEMP"], "shoutech-fresh.db")
+          with sqlite3.connect(path) as con:
+              columns = {row[1] for row in con.execute("PRAGMA table_info(journal_entries)")}
+          required = {"reference_number", "currency_code", "exchange_rate", "document_number", "fiscal_period_id"}
+          missing = sorted(required - columns)
+          if missing:
+              raise SystemExit(f"SQLite journal_entries is missing columns: {missing}")
+          print("SQLite journal header schema verified.")
+          PY
       - name: Test existing SQLite migration-history table
         run: |
           python3 - <<'PY'
@@ -72,6 +85,14 @@ jobs:
         env:
           PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
+      - name: Assert journal header columns exist in PostgreSQL
+        env:
+          PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
+          PGPASSWORD: shoutest
+        run: |
+          count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='journal_entries' AND column_name IN ('reference_number','currency_code','exchange_rate','document_number','fiscal_period_id')")
+          test "$count" = "5" || { echo "Expected five journal header columns, found $count"; exit 1; }
+          echo "PostgreSQL journal header schema verified."
       - name: Test existing PostgreSQL migration-history table
         env:
           PG_CONN_HISTORY: Host=localhost;Port=5432;Database=shoutest_existing_history;Username=shoutest;Password=shoutest
