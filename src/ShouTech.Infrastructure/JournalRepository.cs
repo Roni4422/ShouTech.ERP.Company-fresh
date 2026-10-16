@@ -78,6 +78,119 @@ public sealed class JournalRepository : IJournalRepository
         return Convert.ToString(value, CultureInfo.InvariantCulture)!;
     }
 
+    public async Task<JournalEntrySnapshot?> FindByDocumentNumberAsync(
+        Guid companyId,
+        string documentNumber,
+        CancellationToken cancellationToken = default)
+    {
+        if (companyId == Guid.Empty) throw new ArgumentException("Company is required.", nameof(companyId));
+        if (string.IsNullOrWhiteSpace(documentNumber)) throw new ArgumentException("Document number is required.", nameof(documentNumber));
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        Guid journalId;
+        DateOnly entryDate;
+        string companyIdText;
+        string description;
+        int statusValue;
+        string? referenceNumber;
+        string currencyCode;
+        decimal exchangeRate;
+        string? storedDocumentNumber;
+
+        await using (var header = connection.CreateCommand())
+        {
+            header.CommandText = """
+                SELECT journal_entry_id, company_id, entry_date, description, status,
+                       reference_number, currency_code, exchange_rate, document_number
+                FROM journal_entries
+                WHERE company_id = @company AND document_number = @documentNumber
+                """;
+            Add(header, "@company", FormatGuid(companyId));
+            Add(header, "@documentNumber", documentNumber.Trim());
+
+            await using var reader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                return null;
+
+            if (!Guid.TryParse(Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture), out journalId) ||
+                journalId == Guid.Empty)
+                throw new InvalidOperationException("The saved journal has an invalid identifier.");
+            companyIdText = Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture) ?? string.Empty;
+            entryDate = _provider == "PostgreSQL"
+                ? reader.GetFieldValue<DateOnly>(2)
+                : DateOnly.Parse(Convert.ToString(reader.GetValue(2), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
+            description = reader.GetString(3);
+            statusValue = Convert.ToInt32(reader.GetValue(4), CultureInfo.InvariantCulture);
+            referenceNumber = reader.IsDBNull(5) ? null : reader.GetString(5);
+            currencyCode = reader.GetString(6);
+            exchangeRate = Convert.ToDecimal(reader.GetValue(7), CultureInfo.InvariantCulture);
+            storedDocumentNumber = reader.IsDBNull(8) ? null : reader.GetString(8);
+
+            if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                throw new InvalidOperationException(
+                    $"More than one journal uses document number '{documentNumber.Trim()}' for this company. Resolve the duplicate records before opening this journal.");
+        }
+
+        if (!Guid.TryParse(companyIdText, out var storedCompanyId) || storedCompanyId != companyId)
+            throw new InvalidOperationException("The saved journal company does not match the requested company.");
+        if (!Enum.IsDefined(typeof(JournalEntryStatus), statusValue))
+            throw new InvalidOperationException($"The saved journal has an unknown status value '{statusValue}'.");
+
+        var linesResult = new List<JournalEntryLineSnapshot>();
+        await using (var lines = connection.CreateCommand())
+        {
+            lines.CommandText = """
+                SELECT l.line_number, l.account_id, a.account_code, a.account_name,
+                       l.debit, l.credit, l.cost_center, l.note
+                FROM journal_entry_lines l
+                LEFT JOIN chart_of_accounts a
+                  ON a.account_id = l.account_id AND a.company_id = @company
+                WHERE l.journal_entry_id = @journalId
+                ORDER BY l.line_number
+                """;
+            Add(lines, "@company", FormatGuid(companyId));
+            Add(lines, "@journalId", FormatGuid(journalId));
+            await using var reader = await lines.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (reader.IsDBNull(2) || reader.IsDBNull(3))
+                    throw new InvalidOperationException(
+                        $"Journal line {Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture)} refers to an account missing from the selected company.");
+
+                if (!Guid.TryParse(Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture), out var accountId) ||
+                    accountId == Guid.Empty)
+                    throw new InvalidOperationException("A saved journal line contains an invalid account identifier.");
+
+                linesResult.Add(new JournalEntryLineSnapshot(
+                    Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture),
+                    accountId,
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    Convert.ToDecimal(reader.GetValue(4), CultureInfo.InvariantCulture),
+                    Convert.ToDecimal(reader.GetValue(5), CultureInfo.InvariantCulture),
+                    reader.IsDBNull(6) ? null : reader.GetString(6),
+                    reader.IsDBNull(7) ? null : reader.GetString(7)));
+            }
+        }
+
+        if (linesResult.Count < 2)
+            throw new InvalidOperationException("The saved journal contains fewer than two lines; its integrity must be reviewed.");
+
+        return new JournalEntrySnapshot(
+            journalId,
+            storedCompanyId,
+            entryDate,
+            description,
+            storedDocumentNumber,
+            referenceNumber,
+            currencyCode,
+            exchangeRate,
+            (JournalEntryStatus)statusValue,
+            linesResult.AsReadOnly());
+    }
+
     public async Task SaveDraftAsync(Guid companyId, JournalEntry entry, string userId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
