@@ -18,15 +18,30 @@ public sealed class JournalEntry
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new ArgumentException("Description is required.", nameof(description));
-        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Trim().Length is < 3 or > 3)
-            throw new ArgumentException("Currency code must be a three-letter ISO code.", nameof(currencyCode));
-        if (exchangeRate <= 0)
-            throw new ArgumentOutOfRangeException(nameof(exchangeRate), "Exchange rate must be greater than zero.");
+        var normalizedDescription = description.Trim();
+        if (normalizedDescription.Length > 500)
+            throw new ArgumentException("Description cannot exceed 500 characters.", nameof(description));
+        if (string.IsNullOrWhiteSpace(currencyCode) ||
+            currencyCode.Trim().Length != 3 ||
+            !currencyCode.Trim().All(char.IsAsciiLetter))
+            throw new ArgumentException("Currency code must be a three-letter ASCII ISO code.", nameof(currencyCode));
+        if (exchangeRate <= 0 ||
+            exchangeRate > 99_999_999_999.99999999m ||
+            decimal.Round(exchangeRate, 8) != exchangeRate)
+            throw new ArgumentOutOfRangeException(nameof(exchangeRate),
+                "Exchange rate must be positive and fit the database precision numeric(19,8).");
+
+        var normalizedDocumentNumber = string.IsNullOrWhiteSpace(documentNumber) ? null : documentNumber.Trim();
+        if (normalizedDocumentNumber?.Length > 100)
+            throw new ArgumentException("Document number cannot exceed 100 characters.", nameof(documentNumber));
+        var normalizedReferenceNumber = string.IsNullOrWhiteSpace(referenceNumber) ? null : referenceNumber.Trim();
+        if (normalizedReferenceNumber?.Length > 100)
+            throw new ArgumentException("Reference number cannot exceed 100 characters.", nameof(referenceNumber));
 
         EntryDate = entryDate;
-        Description = description.Trim();
-        DocumentNumber = string.IsNullOrWhiteSpace(documentNumber) ? null : documentNumber.Trim();
-        ReferenceNumber = string.IsNullOrWhiteSpace(referenceNumber) ? null : referenceNumber.Trim();
+        Description = normalizedDescription;
+        DocumentNumber = normalizedDocumentNumber;
+        ReferenceNumber = normalizedReferenceNumber;
         CurrencyCode = currencyCode.Trim().ToUpperInvariant();
         ExchangeRate = exchangeRate;
     }
@@ -85,21 +100,40 @@ public sealed class JournalLine
     public string? Note { get; }
     public string? CostCenter { get; }
 
+    private static void ValidateMoneyPrecision(decimal amount, string parameterName)
+    {
+        const decimal maximum = 999_999_999_999_999.9999m;
+        if (amount > maximum || decimal.Round(amount, 4) != amount)
+            throw new ArgumentOutOfRangeException(parameterName,
+                "Journal amounts must fit the database precision numeric(19,4).");
+    }
+
     public JournalLine(Guid accountId, decimal debit, decimal credit, string? note = null, string? costCenter = null)
     {
         if (accountId == Guid.Empty)
             throw new ArgumentException("Account is required.", nameof(accountId));
-        if (debit < 0 || credit < 0)
-            throw new ArgumentOutOfRangeException(nameof(debit), "Amounts cannot be negative.");
+        if (debit < 0)
+            throw new ArgumentOutOfRangeException(nameof(debit), "Debit amounts cannot be negative.");
+        if (credit < 0)
+            throw new ArgumentOutOfRangeException(nameof(credit), "Credit amounts cannot be negative.");
+        ValidateMoneyPrecision(debit, nameof(debit));
+        ValidateMoneyPrecision(credit, nameof(credit));
         if (debit > 0 && credit > 0)
             throw new ArgumentException("A line cannot contain both debit and credit.");
         if (debit == 0 && credit == 0)
             throw new ArgumentException("A line must contain a debit or credit amount.");
 
+        var normalizedNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        if (normalizedNote?.Length > 500)
+            throw new ArgumentException("Line note cannot exceed 500 characters.", nameof(note));
+        var normalizedCostCenter = string.IsNullOrWhiteSpace(costCenter) ? null : costCenter.Trim();
+        if (normalizedCostCenter?.Length > 100)
+            throw new ArgumentException("Cost center cannot exceed 100 characters.", nameof(costCenter));
+
         AccountId = accountId;
         Debit = debit;
         Credit = credit;
-        Note = note?.Trim();
-        CostCenter = string.IsNullOrWhiteSpace(costCenter) ? null : costCenter.Trim();
+        Note = normalizedNote;
+        CostCenter = normalizedCostCenter;
     }
 }
