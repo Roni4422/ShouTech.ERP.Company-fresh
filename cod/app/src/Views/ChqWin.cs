@@ -15,6 +15,22 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class ChqWin : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        MessageBox.Show(
+            this,
+            "لم تُنفّذ عملية الحفظ في قاعدة البيانات لهذه النافذة بعد. لم يتم حفظ أي بيانات.",
+            "الحفظ غير متاح",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
     private readonly DatePicker _dtDate = new() { Width = 120, Height = 26, SelectedDate = DateTime.Today };
     private readonly TextBox _txtBox = new() { Width = 160, Height = 26 };
@@ -59,7 +75,7 @@ public sealed class ChqWin : BaseWin
         StyleButton(_btnPrint, "Invoice.Print");
 
         _btnNew.Click += (_, _) => ResetBatch();
-        _btnSave.Click += (_, _) => MessageBox.Show(this, T("Vouchers.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
         _btnPrint.Click += (_, _) => MessageBox.Show(this, T("Common.Done"), T("Invoice.Print"), MessageBoxButton.OK, MessageBoxImage.Information);
         _btnAddChq.Click += (_, _) =>
         {
