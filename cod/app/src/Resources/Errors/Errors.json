@@ -903,5 +903,12 @@
     "message": "This window does not yet support database persistence.",
     "severity": "Error",
     "catalogRef": "APPLICATION.PERSISTENCE.010"
+  },
+  "APP-2011": {
+    "type": "System",
+    "name": "WindowOperationUnavailable",
+    "message": "This operation is not implemented in the current window.",
+    "severity": "Error",
+    "catalogRef": "APPLICATION.OPERATION.011"
   }
 }
