@@ -22,6 +22,31 @@ public enum OrdKind
 /// </summary>
 public sealed class OrdWin : BaseWin
 {
+    /// <summary>Logs unavailable operations instead of reporting a false success.</summary>
+    private void ShowOperationUnavailable(string operation)
+    {
+        const string errorCode = "APP-2011";
+        var context = $"Operation={operation} is not implemented in window {GetType().Name}.";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var exception = new NotSupportedException(context);
+
+        AppHost.Logging?.LogError(
+            "WindowOperation",
+            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "WindowOperation",
+            "OperationUnavailable",
+            $"Code={definition.Code} | Window={GetType().Name} | {context}");
+
+        MessageBox.Show(
+            this,
+            $"[{definition.Code}] {definition.Message}\n{context}",
+            "العملية غير متاحة",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
 
     /// <summary>
     /// Prevents a false success message when this screen has no database persistence wired.
@@ -106,7 +131,7 @@ public sealed class OrdWin : BaseWin
         _btnNew.Click += (_, _) => ResetOrder();
         _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
         _btnConvert.Click += (_, _) => ConvertToInvoice();
-        _btnPrint.Click += (_, _) => MessageBox.Show(this, T("Common.Done"), T("Invoice.Print"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnPrint.Click += (_, _) => ShowOperationUnavailable("Print");
 
         _btnAddLine.Click += (_, _) =>
         {
@@ -245,7 +270,6 @@ public sealed class OrdWin : BaseWin
         var invKind = _kind == OrdKind.Sales ? InvDocKind.SalesInvoice : InvDocKind.PurchaseInvoice;
         var invoiceWin = new InvoiceWin(invKind) { Owner = this };
         invoiceWin.Show();
-        MessageBox.Show(this, T("OrderDoc.ConvertToInvoice") + " - " + T("Common.Done"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     protected override void ApplyLocalizedText()
