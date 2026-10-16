@@ -19,9 +19,9 @@ public sealed class JournalEntry
         Description = description.Trim();
     }
 
-    public void AddLine(Guid accountId, decimal debit, decimal credit, string? note = null)
+    public void AddLine(Guid accountId, decimal debit, decimal credit, string? note = null, string? costCenter = null)
     {
-        var line = new JournalLine(accountId, debit, credit, note);
+        var line = new JournalLine(accountId, debit, credit, note, costCenter);
         _lines.Add(line);
     }
 
@@ -71,8 +71,9 @@ public sealed class JournalLine
     public decimal Debit { get; }
     public decimal Credit { get; }
     public string? Note { get; }
+    public string? CostCenter { get; }
 
-    public JournalLine(Guid accountId, decimal debit, decimal credit, string? note = null)
+    public JournalLine(Guid accountId, decimal debit, decimal credit, string? note = null, string? costCenter = null)
     {
         if (accountId == Guid.Empty)
             throw new ArgumentException("Account is required.", nameof(accountId));
@@ -87,5 +88,6 @@ public sealed class JournalLine
         Debit = debit;
         Credit = credit;
         Note = note?.Trim();
+        CostCenter = string.IsNullOrWhiteSpace(costCenter) ? null : costCenter.Trim();
     }
 }
