@@ -345,8 +345,12 @@ public sealed class BcdGenWin : BaseWin
                         MatRepo.Save(full, isNew: false);
                         s++;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        AppHost.Logging?.LogError(
+                            "BarcodeGeneration",
+                            $"Failed to persist generated barcode | MaterialId={id}",
+                            ex);
                         f++;
                     }
                 }
@@ -364,12 +368,18 @@ public sealed class BcdGenWin : BaseWin
             L("BarcodeGen.SavedSummary", "Saved to material cards: {0}. Failed: {1}."),
             saved, failed);
 
+        // Never display a success message when every write failed or some writes failed.
+        var outcomeIcon = failed == 0
+            ? MessageBoxImage.Information
+            : saved > 0
+                ? MessageBoxImage.Warning
+                : MessageBoxImage.Error;
         MessageBox.Show(
             this,
-            string.Format(CultureInfo.CurrentCulture, "{0} ({1})", T("Messages.SaveSuccess"), saved),
+            _status.Text,
             Title,
             MessageBoxButton.OK,
-            MessageBoxImage.Information);
+            outcomeIcon);
     }
 
     // ------------------------------------------------------------------
