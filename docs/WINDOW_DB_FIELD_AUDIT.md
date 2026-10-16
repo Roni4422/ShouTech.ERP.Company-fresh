@@ -19,7 +19,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 | `CcCard.cs` | Cost centers | No cost-center repository call in window | **Blocked**; save/delete report unavailable | Not passed |
 | `RepCard.cs` | Sales representatives | No representative repository call in window | **Blocked**; save/delete report unavailable | Not passed |
 | `CurCard.cs` | Currencies / exchange rates | No currency repository call in window | **Blocked**; save reports unavailable | Not passed; exchange-rate rows need explicit coverage |
-| `CshWin.cs` | Receipt/payment voucher + allocation lines | No voucher repository call in window | **Blocked**; save/post report unavailable | Not passed; header and every allocation row pending |
+| `CshWin.cs` | Receipt/payment voucher + allocation lines | `CashVoucherService` + provider-neutral `CashVoucherRepository`; DBA tables and transaction-backed GL posting/reversal | Save/load/post/reverse paths wired; failures logged rather than shown as success | SQLite integration test added for header, allocation rows, journal posting, reversal, duplicate number, and audit events; latest CI result pending |
 | `JrnWin.cs` | Journal header + debit/credit lines | `JournalService` + `JournalRepository`; company/account codes resolved through the active database | Real save/post path implemented; failures are logged and shown as failures | SQLite repository round-trip test added for header, lines, post, reversal, and cost centers; CI result pending; UI reopen/load is still not implemented |
 | `ChqWin.cs` | Cheque batch + cheque rows | No cheque repository call in window | **Blocked**; save reports unavailable | Not passed; batch and every cheque row pending |
 | `OrdWin.cs` | Sales/purchase order + item rows | No order repository call in window | **Blocked**; save is rejected and conversion now explicitly reports unavailable instead of opening an empty invoice (commit `ace64e2`) | Not passed |
@@ -99,7 +99,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 |---|---|---|---|
 | `CurCard.cs` | Save button calls `ShowPersistenceUnavailable()` | **Blocked**: currencies/rates cannot be saved from this form | Add provider-neutral currency/rate repository and test currency fields plus rate history |
 | `MfgWin.cs` | Save and post call `ShowPersistenceUnavailable()` | **Blocked**: manufacturing orders are not persisted | Define header/material-consumption/output rows and atomic posting effects |
-| `CshWin.cs` | Save/post handlers ultimately call `ShowPersistenceUnavailable()` | **Blocked**: voucher header and allocations are not persisted | Implement receipt/payment repository; test header, allocations, posting and balancing |
+| `CshWin.cs` | `CashVoucherService` saves header/allocations; posts and reverses through a linked general-ledger journal in one transaction | Real persistence path implemented; receipt debits treasury and credits allocations, payment debits allocations and credits treasury | Confirm latest CI; verify all UI fields and load state through the SQLite round-trip test; full PostgreSQL repository round-trip still pending |
 | `JrnWin.cs` | Save/post call `JournalService` backed by `JournalRepository` | Database save/post path now exists; no false-success fallback | Verify CI and add database-backed load/reopen before claiming full form round-trip |
 | `ChqWin.cs` | Save button calls `ShowPersistenceUnavailable()` | **Blocked**: cheque batch and cheque rows are not persisted | Implement batch/row persistence and audit lifecycle |
 | `InvoiceWin.cs` | `InvRepo.SaveDraft/Load/Post/ReversePostedInvoice` | Repository path exists | Verify all header/line fields and transactional stock/accounting effects by round-trip |
@@ -112,7 +112,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 
 ### Fifth-pass conclusions
 
-- Confirmed blocked data-entry forms include customer, bank, cost center, representative, currency, cash/payment voucher, cheque batch, order and manufacturing forms. `JrnWin` was removed from the blocked list after adding database save/post wiring and a repository round-trip test. These should remain explicitly unavailable rather than claim a save succeeded until real repository operations are wired.
+- Confirmed blocked data-entry forms include customer, bank, cost center, representative, currency, cheque batch, order and manufacturing forms. `JrnWin` and `CshWin` have since received database-backed journal and receipt/payment voucher operations with no false-success fallback. Their new repository tests must remain marked pending until the current CI run completes successfully.
 - `AccServ` currently contains an in-memory `Dictionary<Guid, JournalEntry>`; it is not durable database persistence. It must not be used as proof that journal entries survive application restart.
 - A repository call is only a starting point: report correctness and all-field persistence still require database-backed tests. No field is marked PASS without a create/save, reload, and value comparison.
 
@@ -125,3 +125,12 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 - New migrations persist the journal header's external reference, currency, and exchange rate in both SQLite (`012_journal_header_fields.sql`) and PostgreSQL (`014_journal_header_fields.sql`). The document number is persisted by the preceding provider-specific migrations. Existing records receive safe defaults for currency and exchange rate.
 - Tests added: an end-to-end SQLite database test applies DBA migrations, resolves company/account codes, creates a fiscal year and accounts, saves a journal, verifies reference/currency/rate/document number and line memo/cost centers, posts it, reverses it, and checks that reversal retains the reference/currency/rate/cost centers while swapping debit/credit. CI also checks required journal-header columns after clean migration and idempotent re-run.
 - **Not yet certified:** the WPF window does not yet provide a database-backed open/reload flow for a previously saved journal, and live CI results must be green before calling the change verified. PostgreSQL is schema-checked in migration CI; the full journal repository round-trip currently targets SQLite.
+
+
+
+## Seventh-pass correction (2026-10-16): receipt/payment voucher persistence
+
+- Added DBA-owned `cash_vouchers`, `cash_voucher_lines`, and `cash_voucher_audit_events` tables for SQLite and PostgreSQL. Unique (company, voucher type, number), accounting precision checks, foreign keys, and lookup indexes protect the stored voucher and its allocations.
+- `CshWin.cs` now resolves treasury/allocation accounts against the active company, saves and reloads header and child rows, validates the total against allocations, blocks unsupported decimal precision, and keeps saved forms read-only. The Load and Reverse actions are localized in Arabic and English.
+- Posting writes the corresponding balanced general-ledger journal and links it to the voucher in the same transaction; receipt/payment debit-credit directions differ correctly. Reversal requires a reason, keeps the source audit trail, creates a reversing journal, and does not delete the voucher or source lines.
+- Added SQLite integration coverage for save/read-back of all voucher header and child-line fields, duplicate number rejection, posting, balanced journal totals, reversal reason/audit and reversal line directions, plus payment posting direction. **CI result pending; this implementation is not called verified until the current build/test run passes.** PostgreSQL schema smoke checks are added; full PostgreSQL voucher repository integration testing remains outstanding.
