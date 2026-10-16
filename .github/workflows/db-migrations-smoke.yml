@@ -1,0 +1,77 @@
+name: Database migration smoke tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dba/mig/**'
+      - 'tools/SqlMigrator/**'
+      - '.github/workflows/db-migrations-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  sqlite-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Create clean SQLite database and apply migrations
+        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
+      - name: Re-run migrations against the same SQLite database
+        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
+      - name: Test existing SQLite migration-history table
+        run: |
+          python3 - <<'PY'
+          import sqlite3, os
+          path = os.path.join(os.environ["RUNNER_TEMP"], "shoutech-existing-history.db")
+          con = sqlite3.connect(path)
+          con.execute("""CREATE TABLE schema_migrations (
+              migration_id TEXT PRIMARY KEY,
+              checksum TEXT NOT NULL,
+              applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )""")
+          con.commit()
+          con.close()
+          PY
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-existing-history.db"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-existing-history.db"
+
+  postgresql-migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: shoutest
+          POSTGRES_PASSWORD: shoutest
+          POSTGRES_DB: shoutest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shoutest -d shoutest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Apply migrations to clean PostgreSQL database
+        env:
+          PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
+        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
+      - name: Re-run migrations against the same PostgreSQL database
+        env:
+          PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
+        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
+      - name: Test existing PostgreSQL migration-history table
+        env:
+          PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
+        run: |
+          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -c "CREATE TABLE schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
