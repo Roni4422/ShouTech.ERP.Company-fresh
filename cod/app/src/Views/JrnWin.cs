@@ -291,6 +291,17 @@ public sealed class JrnWin : BaseWin
         RefreshBalances();
     }
 
+    private static bool TryParseDecimalInput(string value, out decimal amount)
+    {
+        const NumberStyles styles =
+            NumberStyles.AllowLeadingSign |
+            NumberStyles.AllowDecimalPoint |
+            NumberStyles.AllowLeadingWhite |
+            NumberStyles.AllowTrailingWhite;
+        return decimal.TryParse(value, styles, CultureInfo.CurrentCulture, out amount) ||
+               decimal.TryParse(value, styles, CultureInfo.InvariantCulture, out amount);
+    }
+
     private async Task LoadVoucherAsync()
     {
         var documentNumber = _txtDocNo.Text.Trim();
@@ -418,11 +429,10 @@ public sealed class JrnWin : BaseWin
             var currency = _txtCur.Text.Trim().ToUpperInvariant();
             if (currency.Length != 3 || !currency.All(char.IsAsciiLetter))
                 throw new InvalidOperationException("رمز العملة يجب أن يتكون من ثلاثة أحرف لاتينية.");
-            if (!decimal.TryParse(_txtRate.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var rate) &&
-                !decimal.TryParse(_txtRate.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out rate))
+            if (!TryParseDecimalInput(_txtRate.Text, out var rate))
                 throw new InvalidOperationException("سعر الصرف غير صالح.");
-            if (rate <= 0)
-                throw new InvalidOperationException("سعر الصرف يجب أن يكون أكبر من صفر.");
+            if (rate <= 0 || rate > 99_999_999_999.99999999m || decimal.Round(rate, 8) != rate)
+                throw new InvalidOperationException("سعر الصرف يجب أن يكون موجبًا وبحد أقصى ثماني منازل عشرية.");
             if (_lines.Count < 2)
                 throw new InvalidOperationException("القيد يتطلب سطرين على الأقل.");
 
