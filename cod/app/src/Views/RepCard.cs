@@ -14,6 +14,37 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class RepCard : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        const string errorCode = "APP-2010";
+        const string context = "This window has no database persistence implementation.";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var exception = new NotSupportedException(context);
+
+        // Errors are routed to errors.log; the operational trace goes to log.log.
+        AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "PersistenceUnavailable",
+            $"Code={definition.Code} | Window={GetType().Name}");
+
+        MessageBox.Show(
+            this,
+            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
+            "العملية غير متاحة",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly TextBox _txtCode = new() { Width = 110, Height = 26 };
     private readonly TextBox _txtName = new() { Width = 220, Height = 26 };
     private readonly TextBox _txtPhone = new() { Width = 130, Height = 26 };
@@ -54,8 +85,8 @@ public sealed class RepCard : BaseWin
         StyleButton(_btnDelete, "Common.Delete");
 
         _btnNew.Click += (_, _) => ResetCard();
-        _btnSave.Click += (_, _) => MessageBox.Show(this, T("SalesRepCard.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
-        _btnDelete.Click += (_, _) => MessageBox.Show(this, T("Common.Done"), T("Common.Delete"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnDelete.Click += (_, _) => ShowPersistenceUnavailable();
 
         foreach (var b in new[] { _btnNew, _btnSave, _btnDelete })
             toolbar.Children.Add(b);

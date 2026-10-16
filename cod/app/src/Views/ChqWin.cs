@@ -15,6 +15,37 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class ChqWin : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        const string errorCode = "APP-2010";
+        const string context = "This window has no database persistence implementation.";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var exception = new NotSupportedException(context);
+
+        // Errors are routed to errors.log; the operational trace goes to log.log.
+        AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "PersistenceUnavailable",
+            $"Code={definition.Code} | Window={GetType().Name}");
+
+        MessageBox.Show(
+            this,
+            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
+            "العملية غير متاحة",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
     private readonly DatePicker _dtDate = new() { Width = 120, Height = 26, SelectedDate = DateTime.Today };
     private readonly TextBox _txtBox = new() { Width = 160, Height = 26 };
@@ -59,7 +90,7 @@ public sealed class ChqWin : BaseWin
         StyleButton(_btnPrint, "Invoice.Print");
 
         _btnNew.Click += (_, _) => ResetBatch();
-        _btnSave.Click += (_, _) => MessageBox.Show(this, T("Vouchers.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
         _btnPrint.Click += (_, _) => MessageBox.Show(this, T("Common.Done"), T("Invoice.Print"), MessageBoxButton.OK, MessageBoxImage.Information);
         _btnAddChq.Click += (_, _) =>
         {

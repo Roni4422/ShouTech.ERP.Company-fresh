@@ -22,6 +22,37 @@ public enum CshKind
 /// </summary>
 public sealed class CshWin : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        const string errorCode = "APP-2010";
+        const string context = "This window has no database persistence implementation.";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var exception = new NotSupportedException(context);
+
+        // Errors are routed to errors.log; the operational trace goes to log.log.
+        AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "PersistenceUnavailable",
+            $"Code={definition.Code} | Window={GetType().Name}");
+
+        MessageBox.Show(
+            this,
+            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
+            "العملية غير متاحة",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly CshKind _kind;
 
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
@@ -221,7 +252,7 @@ public sealed class CshWin : BaseWin
 
     private void SaveVoucher()
     {
-        MessageBox.Show(this, T("Vouchers.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowPersistenceUnavailable();
     }
 
     private void PostVoucher()
