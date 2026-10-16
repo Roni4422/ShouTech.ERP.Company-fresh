@@ -304,7 +304,7 @@ namespace Kern.Tests
         {
             var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-merge-{Guid.NewGuid():N}.sqlite3");
             var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
-            var schemaReadyField = typeof(DocSchema).GetField("_ready", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var schemaReadyField = typeof(DocSchema).GetField("_validated", BindingFlags.NonPublic | BindingFlags.Static)!;
             var oldSettings = settingsField.GetValue(null);
             var oldSchemaReady = schemaReadyField.GetValue(null);
             var oldCompany = AppState.CurrentCompanyCode;
