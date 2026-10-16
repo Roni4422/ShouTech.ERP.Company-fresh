@@ -92,3 +92,27 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 - **Account card failure logging:** commit `3a83615` adds a structured error log when `AccRepo.Save` fails, including the account code; the UI still reports failure rather than success.
 - **Barcode design configuration failure logging:** commit `93f89f0` logs exceptions when the local design file cannot be saved. This configuration is stored in a file, not the business database, and should be audited separately from DB-backed forms.
 - These are source-level checks only. No CI status was returned for the changes, and no database round-trip tests have been demonstrated.
+
+## Fifth-pass findings (2026-10-16): remaining high-priority forms and reports
+
+| Window | Persistence/data path observed | Current assessment | Required verification |
+|---|---|---|---|
+| `CurCard.cs` | Save button calls `ShowPersistenceUnavailable()` | **Blocked**: currencies/rates cannot be saved from this form | Add provider-neutral currency/rate repository and test currency fields plus rate history |
+| `MfgWin.cs` | Save and post call `ShowPersistenceUnavailable()` | **Blocked**: manufacturing orders are not persisted | Define header/material-consumption/output rows and atomic posting effects |
+| `CshWin.cs` | Save/post handlers ultimately call `ShowPersistenceUnavailable()` | **Blocked**: voucher header and allocations are not persisted | Implement receipt/payment repository; test header, allocations, posting and balancing |
+| `JrnWin.cs` | Save/post handlers ultimately call `ShowPersistenceUnavailable()` | **Blocked**: journal UI does not persist through the form | Wire the database journal repository; do not confuse the separate in-memory `AccServ` dictionary with durable storage |
+| `ChqWin.cs` | Save button calls `ShowPersistenceUnavailable()` | **Blocked**: cheque batch and cheque rows are not persisted | Implement batch/row persistence and audit lifecycle |
+| `InvoiceWin.cs` | `InvRepo.SaveDraft/Load/Post/ReversePostedInvoice` | Repository path exists | Verify all header/line fields and transactional stock/accounting effects by round-trip |
+| `PosCheckoutWin.cs` | Saves and posts through `InvRepo` | Repository path exists | Verify payment/tender fields, change due, customer, and every line survive reload |
+| `MatCard.xaml.cs` | `MatRepo.LoadById/Save/SoftDelete` | Repository path exists | Compare all controls to `MatRec` mappings, especially units, barcodes, prices, suppliers and optional Arabic names |
+| `WhsWin.xaml.cs` | `MatRepo.LoadWarehouses/SaveWarehouse/SoftDeleteWarehouse` | Repository path exists | Verify parent ID, code/name, active state, update and soft-delete persistence |
+| `ComWin.xaml.cs` | Company store and configuration save/load paths | Mixed storage: company registry and local configuration are distinct | Verify which fields belong to the company database vs local settings; remove swallowed save errors and test provider-specific paths |
+| `DatWin.xaml.cs` | Import/export options and provider-specific paths | Data movement workflow, not a business-record editor | Test import/upsert/replace modes, company matching, rollback, and accurate per-row failure reporting |
+| `TrialBalanceWin.cs`, `AccStmtWin.cs`, `SalListWin.cs` | Async report data loaders | Report query path exists, but this scan alone does not prove data is live or correctly filtered | Test against seeded DB entries; verify company/date/account filters, totals and empty/error states |
+
+### Fifth-pass conclusions
+
+- Confirmed blocked data-entry forms now include customer, bank, cost center, representative, currency, cash/payment voucher, journal, cheque batch, order and manufacturing forms. These should remain explicitly unavailable rather than claim a save succeeded until real repository operations are wired.
+- `AccServ` currently contains an in-memory `Dictionary<Guid, JournalEntry>`; it is not durable database persistence. It must not be used as proof that journal entries survive application restart.
+- A repository call is only a starting point: report correctness and all-field persistence still require database-backed tests. No field is marked PASS without a create/save, reload, and value comparison.
+
