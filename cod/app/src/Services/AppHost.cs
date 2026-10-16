@@ -31,6 +31,7 @@ namespace ShouTech.App.Services
         public static ISessionManager Session { get; private set; } = new SessionManager();
         public static IAuditService Audit { get; private set; } = null!;
         public static JournalService? Journal { get; private set; }
+        public static JournalRepository? JournalStore { get; private set; }
         public static AccountingStructureRepository? AccountingStructure { get; private set; }
         public static IDatabaseHealth? DatabaseHealth { get; private set; }
 
@@ -163,7 +164,8 @@ namespace ShouTech.App.Services
 
             try
             {
-                return new JournalService(new JournalRepository(provider, connection));
+                JournalStore = new JournalRepository(provider, connection);
+                return new JournalService(JournalStore);
             }
             catch (System.Exception ex)
             {
