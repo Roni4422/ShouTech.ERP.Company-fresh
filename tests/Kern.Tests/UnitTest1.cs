@@ -322,6 +322,7 @@ namespace Kern.Tests
                 var treasuryId = await structure.CreateAccountAsync(companyId, "1010", "Cash Treasury", "ASSET");
                 var receivableId = await structure.CreateAccountAsync(companyId, "1200", "Accounts Receivable", "ASSET");
                 var otherReceivableId = await structure.CreateAccountAsync(companyId, "1210", "Other Receivables", "ASSET");
+                var expenseId = await structure.CreateAccountAsync(companyId, "5100", "General Expense", "EXPENSE");
 
                 var repository = new ShouTech.Infrastructure.CashVoucherRepository("SQLite", connectionString);
                 var service = new CashVoucherService(repository);
@@ -484,6 +485,64 @@ namespace Kern.Tests
                     Assert.True(Convert.ToInt64(reader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture) >= 2);
                     Assert.True(Convert.ToInt64(reader.GetValue(3), System.Globalization.CultureInfo.InvariantCulture) >= 1);
                     Assert.Equal(3L, Convert.ToInt64(reader.GetValue(4), System.Globalization.CultureInfo.InvariantCulture));
+                    await reader.DisposeAsync();
+
+                    using var reversalLines = verify.CreateCommand();
+                    reversalLines.CommandText = """
+                        SELECT account_id, debit, credit, cost_center
+                        FROM journal_entry_lines WHERE journal_entry_id=$id ORDER BY line_number;
+                        """;
+                    reversalLines.Parameters.AddWithValue("$id", reversalId.ToString("D"));
+                    using var reversalLineReader = await reversalLines.ExecuteReaderAsync();
+                    Assert.True(await reversalLineReader.ReadAsync());
+                    Assert.Equal(treasuryId.ToString("D"), reversalLineReader.GetString(0));
+                    Assert.Equal(0m, Convert.ToDecimal(reversalLineReader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(100m, Convert.ToDecimal(reversalLineReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal("CC-HEADER", reversalLineReader.GetString(3));
+                    Assert.True(await reversalLineReader.ReadAsync());
+                    Assert.Equal(receivableId.ToString("D"), reversalLineReader.GetString(0));
+                    Assert.Equal(25.125m, Convert.ToDecimal(reversalLineReader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(0m, Convert.ToDecimal(reversalLineReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal("CC-AR", reversalLineReader.GetString(3));
+                }
+
+                var payment = new CashVoucher(
+                    CashVoucherKind.Payment,
+                    new DateOnly(2026, 10, 16),
+                    "PAY-ROUNDTRIP-001",
+                    treasuryId,
+                    "Round-trip supplier",
+                    40m,
+                    "JOD",
+                    1m,
+                    new[] { new CashVoucherLine(expenseId, 40m, "CC-EXP", invoiceReference: "BILL-100", note: "Supplier payment") },
+                    referenceNumber: "REF-PAY-001",
+                    costCenter: "CC-HEADER-PAY",
+                    memo: "Payment round trip");
+                var paymentId = await service.CreateDraftAsync(companyId, payment, actor);
+                var paymentJournalId = await service.PostAsync(companyId, CashVoucherKind.Payment, paymentId, actor);
+                await using (var verifyPayment = new SqliteConnection(connectionString))
+                {
+                    await verifyPayment.OpenAsync();
+                    using var paymentLines = verifyPayment.CreateCommand();
+                    paymentLines.CommandText = """
+                        SELECT a.account_code, l.debit, l.credit, l.cost_center
+                        FROM journal_entry_lines l
+                        JOIN chart_of_accounts a ON a.account_id=l.account_id
+                        WHERE l.journal_entry_id=$id ORDER BY l.line_number;
+                        """;
+                    paymentLines.Parameters.AddWithValue("$id", paymentJournalId.ToString("D"));
+                    using var paymentReader = await paymentLines.ExecuteReaderAsync();
+                    Assert.True(await paymentReader.ReadAsync());
+                    Assert.Equal("1010", paymentReader.GetString(0));
+                    Assert.Equal(0m, Convert.ToDecimal(paymentReader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(40m, Convert.ToDecimal(paymentReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal("CC-HEADER-PAY", paymentReader.GetString(3));
+                    Assert.True(await paymentReader.ReadAsync());
+                    Assert.Equal("5100", paymentReader.GetString(0));
+                    Assert.Equal(40m, Convert.ToDecimal(paymentReader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(0m, Convert.ToDecimal(paymentReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal("CC-EXP", paymentReader.GetString(3));
                 }
 
                 await Assert.ThrowsAsync<InvalidOperationException>(() =>
