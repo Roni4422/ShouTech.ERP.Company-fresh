@@ -284,6 +284,7 @@ public partial class AccCard : BaseWin
         }
         catch (Exception ex)
         {
+            AppHost.Logging?.LogError("AccountCard", $"Failed to save account | AccountCode={code}", ex);
             MessageBox.Show(this, $"تعذر حفظ الحساب.\n{ex.Message}", "حفظ الحساب", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
