@@ -253,10 +253,10 @@
             <ribbon:Ribbon Grid.Row="3" x:Name="RibbonControl"
                            Background="Transparent"
                            Foreground="{DynamicResource ShellRibbonForegroundBrush}"
-                           Visibility="Collapsed"
+                           Visibility="Visible"
                            IsMinimized="False">
 
-                <ribbon:RibbonTab x:Name="TabFile" Header="File" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabFile" Header="File" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.FileOperations" Header="Operations">
                         <ribbon:RibbonButton loc:LocProps.Key="Menu.New" Label="New" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton x:Name="RibbonOpenCompanyButton" loc:LocProps.Key="Menu.Open" Label="Open" Click="OnRibbonButtonClick"/>
@@ -272,7 +272,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabInventory" Header="Inventory" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabInventory" Header="Inventory" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.InventoryCards" Header="Cards">
                         <ribbon:RibbonButton x:Name="RibbonMaterialCardButton" loc:LocProps.Key="Inventory.MaterialCard" Label="Material card" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton x:Name="RibbonCategoryCardButton" loc:LocProps.Key="Inventory.CategoryCard" Label="Category card" Click="OnRibbonButtonClick"/>
@@ -321,7 +321,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabAccounts" Header="Accounts" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabAccounts" Header="Accounts" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.AccountsGeneral" Header="General">
                         <ribbon:RibbonButton x:Name="RibbonChartOfAccountsButton" loc:LocProps.Key="Accounts.ChartOfAccounts" Label="Chart of accounts" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton x:Name="RibbonAccountCardButton" loc:LocProps.Key="AccountCard" Label="Account card" Click="OnRibbonButtonClick"/>
@@ -368,7 +368,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabBonds" Header="Bonds" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabBonds" Header="Bonds" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.BondsVouchers" Header="Vouchers">
                         <ribbon:RibbonButton loc:LocProps.Key="Bonds.JournalVoucher" Label="Journal voucher" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Bonds.ReceiptVoucher" Label="Receipt voucher" Click="OnRibbonButtonClick"/>
@@ -396,7 +396,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabInvoices" Header="Invoices" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabInvoices" Header="Invoices" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.InvoicesInvoices" Header="Invoices">
                         <ribbon:RibbonButton loc:LocProps.Key="Invoices.Transfer" Label="Transfer" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Invoices.OpeningStock" Label="Opening stock invoice" Click="OnRibbonButtonClick"/>
@@ -429,7 +429,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabPOS" Header="Point of Sale" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabPOS" Header="Point of Sale" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.POSSales" Header="Sales">
                         <ribbon:RibbonButton loc:LocProps.Key="POS.OpenCashier" Label="Open POS Cashier" Click="OnRibbonButtonClick"/>
                     </ribbon:RibbonGroup>
@@ -447,7 +447,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabOrders" Header="Orders" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabOrders" Header="Orders" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.OrdersOrders" Header="Orders">
                         <ribbon:RibbonButton loc:LocProps.Key="Orders.PurchaseOrder" Label="Purchase order" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Orders.SalesOrder" Label="Sales order" Click="OnRibbonButtonClick"/>
@@ -461,7 +461,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabCustomers" Header="Customers" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabCustomers" Header="Customers" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.CustomersCards" Header="Cards">
                         <ribbon:RibbonButton loc:LocProps.Key="Customers.CustomerCard" Label="Customer card" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Customers.CustomerPrices" Label="Customer prices" Click="OnRibbonButtonClick"/>
@@ -487,7 +487,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabSalesRep" Header="Sales Representative" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabSalesRep" Header="Sales Representative" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.SalesRepCards" Header="Cards">
                         <ribbon:RibbonButton loc:LocProps.Key="SalesRep.SalesRepCard" Label="Sales rep card" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="SalesRep.SalesRepGroups" Label="Sales rep groups" Click="OnRibbonButtonClick"/>
@@ -507,7 +507,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabManufacturing" Header="Manufacturing" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabManufacturing" Header="Manufacturing" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.ManufacturingAdministration" Header="Administration">
                         <ribbon:RibbonButton loc:LocProps.Key="Manufacturing.ManufacturingModels" Label="Manufacturing templates" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Manufacturing.ManufacturingProcess" Label="Manufacturing operation" Click="OnRibbonButtonClick"/>
@@ -526,7 +526,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabBanks" Header="Banks" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabBanks" Header="Banks" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.BanksAdministration" Header="Administration">
                         <ribbon:RibbonButton loc:LocProps.Key="Banks.DefineBanks" Label="Define banks" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Banks.BankEstimate" Label="Estimated bank statement" Click="OnRibbonButtonClick"/>
@@ -535,7 +535,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabReports" Header="Reports" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabReports" Header="Reports" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.ReportsFinancial" Header="Financial">
                         <ribbon:RibbonButton loc:LocProps.Key="Accounts.TrialBalance" Label="Trial balance" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Reports.AccountStatement" Label="Account statement" Click="OnRibbonButtonClick"/>
@@ -562,7 +562,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabTools" Header="Tools" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabTools" Header="Tools" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.ToolsTools" Header="Tools">
                         <ribbon:RibbonButton loc:LocProps.Key="Tools.Calculator" Label="Calculator" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Tools.Keyboard" Label="Keyboard" Click="OnRibbonButtonClick"/>
@@ -586,7 +586,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabOtherTools" Header="Other Tools" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabOtherTools" Header="Other Tools" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.OtherToolsAdministration" Header="Administration">
                         <ribbon:RibbonButton loc:LocProps.Key="OtherTools.Rotation" Label="Rollover" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="OtherTools.Permissions" Label="Permissions" Click="OnRibbonButtonClick"/>
@@ -608,7 +608,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabView" Header="View" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabView" Header="View" Visibility="Visible">
                    
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.ViewTrees" Header="Trees">
                         <ribbon:RibbonButton loc:LocProps.Key="View.ChartOfAccounts" Label="Account tree" Click="OnRibbonButtonClick"/>
@@ -624,7 +624,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabExit" Header="Exit" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabExit" Header="Exit" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.ExitExit" Header="Exit">
                         <ribbon:RibbonButton loc:LocProps.Key="Exit.ScreenSaver" Label="Lock screen" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Exit.SwitchCompany" Label="Switch company" Click="OnRibbonButtonClick"/>
@@ -633,7 +633,7 @@
                     </ribbon:RibbonGroup>
                 </ribbon:RibbonTab>
 
-                <ribbon:RibbonTab x:Name="TabHelp" Header="Help" Visibility="Collapsed">
+                <ribbon:RibbonTab x:Name="TabHelp" Header="Help" Visibility="Visible">
                     <ribbon:RibbonGroup loc:LocProps.Key="RibbonGroups.HelpUpdates" Header="Updates">
                         <ribbon:RibbonButton loc:LocProps.Key="Help.CheckUpdates" Label="Check for updates" Click="OnRibbonButtonClick"/>
                         <ribbon:RibbonButton loc:LocProps.Key="Help.UpdateFromFile" Label="Update from file" Click="OnRibbonButtonClick"/>

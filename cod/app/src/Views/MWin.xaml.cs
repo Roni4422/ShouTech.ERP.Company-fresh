@@ -64,6 +64,9 @@ namespace ShouTech.App.Views
                 UpdateWindowChromeState();
                 RefreshLocalizedText();
 
+                // Initialize all ribbon tabs to be visible
+                InitializeRibbonTabs();
+
                 // Apply language direction safely.
                 try
                 {
@@ -1126,17 +1129,22 @@ namespace ShouTech.App.Views
         private static extern bool SetForegroundWindow(
             IntPtr hWnd);
 
+        private void InitializeRibbonTabs()
+        {
+            if (RibbonControl == null) return;
+            
+            foreach (RibbonTab tab in RibbonControl.Items)
+            {
+                tab.Visibility = Visibility.Visible;
+            }
+            RibbonControl.Visibility = Visibility.Visible;
+        }
+
         private void ShowRibbonTab(
             string tabName)
         {
             if (RibbonControl == null)
                 return;
-
-            foreach (RibbonTab tab in RibbonControl.Items)
-            {
-                tab.Visibility =
-                    Visibility.Collapsed;
-            }
 
             if (_currentTab == tabName &&
                 RibbonControl.Visibility ==

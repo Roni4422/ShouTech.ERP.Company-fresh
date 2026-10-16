@@ -1350,6 +1350,9 @@
         <Setter
             Property="WindowStyle"
             Value="None"/>
+        <Setter
+            Property="WindowStartupLocation"
+            Value="CenterOwner"/>
 
         <Setter
             Property="ResizeMode"
