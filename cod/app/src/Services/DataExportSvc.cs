@@ -710,7 +710,7 @@ public static class DataExportSvc
         }
     }
 
-    private static string BuildCompositeKey(Dictionary<string, object?> values, IReadOnlyList<string> keyColumns)
+    private static string BuildCompositeKey(Dictionary<string, object?> values, List<string> keyColumns)
     {
         var parts = new string[keyColumns.Count];
         for (var i = 0; i < keyColumns.Count; i++)
@@ -725,7 +725,7 @@ public static class DataExportSvc
         DbConnection connection,
         DbTransaction transaction,
         string table,
-        IReadOnlyList<string> keyColumns,
+        List<string> keyColumns,
         string? companyColumn,
         object? companyId,
         IReadOnlyList<string> keepKeys,
@@ -1008,18 +1008,18 @@ public static class DataExportSvc
             last--;
         if (last < 0)
             throw new InvalidDataException("The workbook header row is missing.");
-        header = header.Take(last + 1).Select(x => x ?? string.Empty).ToArray();
-        if (header.Any(string.IsNullOrWhiteSpace))
+        var normalizedHeader = header.Take(last + 1).Select(x => x ?? string.Empty).ToArray();
+        if (normalizedHeader.Any(string.IsNullOrWhiteSpace))
             throw new InvalidDataException("The workbook header row contains an empty column name.");
 
         var body = matrix.Skip(1).Select(row =>
         {
-            var values = new string?[header.Length];
-            for (var i = 0; i < header.Length && i < row.Count; i++)
+            var values = new string?[normalizedHeader.Length];
+            for (var i = 0; i < normalizedHeader.Length && i < row.Count; i++)
                 values[i] = row[i];
             return (IReadOnlyList<string?>)values;
         }).ToArray();
-        return new ExcelSheet(header, body);
+        return new ExcelSheet(normalizedHeader, body);
     }
 
     private static string[] ReadSharedStrings(ZipArchive archive)
@@ -1036,7 +1036,7 @@ public static class DataExportSvc
             .ToArray() ?? [];
     }
 
-    private static string? SharedStringValue(string? indexText, IReadOnlyList<string> sharedStrings)
+    private static string? SharedStringValue(string? indexText, string[] sharedStrings)
     {
         if (!int.TryParse(indexText, NumberStyles.None, CultureInfo.InvariantCulture, out var index) ||
             index < 0 || index >= sharedStrings.Count)
@@ -1096,13 +1096,13 @@ public static class DataExportSvc
         ExcelSheet sheet,
         DataExportOption option,
         CancellationToken ct)
-        => await BuildPlainWorkbookIdentityAsync(sheet, option, ct, allowPromoteHeader: true);
+        => await BuildPlainWorkbookIdentityAsync(sheet, option, allowPromoteHeader: true, ct: ct);
 
     private static async Task<(DatasetIdentity Identity, ExcelSheet Sheet, IReadOnlyList<string> Skipped)> BuildPlainWorkbookIdentityAsync(
         ExcelSheet sheet,
         DataExportOption option,
-        CancellationToken ct,
-        bool allowPromoteHeader)
+        bool allowPromoteHeader,
+        CancellationToken ct)
     {
         await using var connection = CreateConnection();
         await connection.OpenAsync(ct);
@@ -1139,7 +1139,7 @@ public static class DataExportSvc
             {
                 var rest = sheet.Rows.Skip(1).ToArray();
                 return await BuildPlainWorkbookIdentityAsync(
-                    new ExcelSheet(promoted, rest), option, ct, allowPromoteHeader: false);
+                    new ExcelSheet(promoted, rest), option, allowPromoteHeader: false, ct: ct);
             }
         }
 
@@ -1318,7 +1318,7 @@ public static class DataExportSvc
         DbConnection connection,
         DbTransaction transaction,
         string table,
-        IReadOnlyDictionary<string, object?> row,
+        Dictionary<string, object?> row,
         IReadOnlyList<string> columns,
         IReadOnlyList<string> primaryKeys,
         CancellationToken ct)
