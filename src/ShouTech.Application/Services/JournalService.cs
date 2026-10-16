@@ -14,6 +14,16 @@ public sealed class JournalService
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
+    public Task<JournalEntrySnapshot?> FindByDocumentNumberAsync(
+        Guid companyId,
+        string documentNumber,
+        CancellationToken cancellationToken = default)
+    {
+        if (companyId == Guid.Empty) throw new ArgumentException("Company is required.", nameof(companyId));
+        if (string.IsNullOrWhiteSpace(documentNumber)) throw new ArgumentException("Document number is required.", nameof(documentNumber));
+        return _repository.FindByDocumentNumberAsync(companyId, documentNumber.Trim(), cancellationToken);
+    }
+
     public async Task<Guid> CreateDraftAsync(
         Guid companyId,
         DateOnly entryDate,
