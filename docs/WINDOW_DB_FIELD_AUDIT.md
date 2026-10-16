@@ -84,3 +84,11 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 - This is a source-level correction only. It has **not** been runtime-tested here; barcode persistence must still be proven by reloading each changed material from the database. This audit remains partial and does not certify all windows or fields.
 
 - `OrdWin.ConvertToInvoice()` was also corrected in commit `ace64e241bc38a65ff4cf26b883b7e7df20b1015`: the previous handler opened a blank invoice without transferring or persisting the order. It now reports the operation as unavailable, avoiding a misleading conversion workflow. Actual order persistence and conversion remain unimplemented.
+
+
+## Fourth-pass findings (2026-10-16)
+
+- **Dashboard data is hard-coded, not database-backed:** `cod/app/src/Services/Data.cs` implements `DataServ.GetTotalCustomersAsync()` as the constant `1284`, `GetTotalProductsAsync()` as `3567`, `GetTotalPendingApprovalsAsync()` as `12`, and returns a fixed sample list from `GetRecentDocumentsAsync()`. Dashboard figures and recent documents must not be presented as live company data. This needs replacement with provider-aware repository queries and empty/error states.
+- **Account card failure logging:** commit `3a83615` adds a structured error log when `AccRepo.Save` fails, including the account code; the UI still reports failure rather than success.
+- **Barcode design configuration failure logging:** commit `93f89f0` logs exceptions when the local design file cannot be saved. This configuration is stored in a file, not the business database, and should be audited separately from DB-backed forms.
+- These are source-level checks only. No CI status was returned for the changes, and no database round-trip tests have been demonstrated.
