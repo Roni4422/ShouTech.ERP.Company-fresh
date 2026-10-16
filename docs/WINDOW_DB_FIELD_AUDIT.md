@@ -20,7 +20,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 | `RepCard.cs` | Sales representatives | No representative repository call in window | **Blocked**; save/delete report unavailable | Not passed |
 | `CurCard.cs` | Currencies / exchange rates | No currency repository call in window | **Blocked**; save reports unavailable | Not passed; exchange-rate rows need explicit coverage |
 | `CshWin.cs` | Receipt/payment voucher + allocation lines | No voucher repository call in window | **Blocked**; save/post report unavailable | Not passed; header and every allocation row pending |
-| `JrnWin.cs` | Journal voucher + journal lines | No journal repository call in window | **Blocked**; save/post report unavailable | Not passed; header and every debit/credit line pending |
+| `JrnWin.cs` | Journal header + debit/credit lines | `JournalService` + `JournalRepository`; company/account codes resolved through the active database | Real save/post path implemented; failures are logged and shown as failures | SQLite repository round-trip test added for header, lines, post, reversal, and cost centers; CI result pending; UI reopen/load is still not implemented |
 | `ChqWin.cs` | Cheque batch + cheque rows | No cheque repository call in window | **Blocked**; save reports unavailable | Not passed; batch and every cheque row pending |
 | `OrdWin.cs` | Sales/purchase order + item rows | No order repository call in window | **Blocked**; save is rejected and conversion now explicitly reports unavailable instead of opening an empty invoice (commit `ace64e2`) | Not passed |
 | `MfgWin.cs` | Manufacturing order + item rows | No manufacturing repository call in window | **Blocked**; save/post report unavailable | Not passed |
@@ -100,7 +100,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 | `CurCard.cs` | Save button calls `ShowPersistenceUnavailable()` | **Blocked**: currencies/rates cannot be saved from this form | Add provider-neutral currency/rate repository and test currency fields plus rate history |
 | `MfgWin.cs` | Save and post call `ShowPersistenceUnavailable()` | **Blocked**: manufacturing orders are not persisted | Define header/material-consumption/output rows and atomic posting effects |
 | `CshWin.cs` | Save/post handlers ultimately call `ShowPersistenceUnavailable()` | **Blocked**: voucher header and allocations are not persisted | Implement receipt/payment repository; test header, allocations, posting and balancing |
-| `JrnWin.cs` | Save/post handlers ultimately call `ShowPersistenceUnavailable()` | **Blocked**: journal UI does not persist through the form | Wire the database journal repository; do not confuse the separate in-memory `AccServ` dictionary with durable storage |
+| `JrnWin.cs` | Save/post call `JournalService` backed by `JournalRepository` | Database save/post path now exists; no false-success fallback | Verify CI and add database-backed load/reopen before claiming full form round-trip |
 | `ChqWin.cs` | Save button calls `ShowPersistenceUnavailable()` | **Blocked**: cheque batch and cheque rows are not persisted | Implement batch/row persistence and audit lifecycle |
 | `InvoiceWin.cs` | `InvRepo.SaveDraft/Load/Post/ReversePostedInvoice` | Repository path exists | Verify all header/line fields and transactional stock/accounting effects by round-trip |
 | `PosCheckoutWin.cs` | Saves and posts through `InvRepo` | Repository path exists | Verify payment/tender fields, change due, customer, and every line survive reload |
@@ -112,7 +112,16 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 
 ### Fifth-pass conclusions
 
-- Confirmed blocked data-entry forms now include customer, bank, cost center, representative, currency, cash/payment voucher, journal, cheque batch, order and manufacturing forms. These should remain explicitly unavailable rather than claim a save succeeded until real repository operations are wired.
+- Confirmed blocked data-entry forms include customer, bank, cost center, representative, currency, cash/payment voucher, cheque batch, order and manufacturing forms. `JrnWin` was removed from the blocked list after adding database save/post wiring and a repository round-trip test. These should remain explicitly unavailable rather than claim a save succeeded until real repository operations are wired.
 - `AccServ` currently contains an in-memory `Dictionary<Guid, JournalEntry>`; it is not durable database persistence. It must not be used as proof that journal entries survive application restart.
 - A repository call is only a starting point: report correctness and all-field persistence still require database-backed tests. No field is marked PASS without a create/save, reload, and value comparison.
 
+
+
+## Sixth-pass correction (2026-10-16): journal persistence wired
+
+- `JrnWin.cs` now resolves the active company code to the database company UUID, resolves account codes against active/postable company accounts, saves the journal header and all debit/credit lines through `JournalService`, and posts only after database validation. Exceptions are logged to the application log and displayed as failures, not success messages.
+- The account-name grid field is now read-only and populated from the database lookup, so users cannot enter an account name that is silently ignored.
+- New migrations persist the journal header's external reference, currency, and exchange rate in both SQLite (`012_journal_header_fields.sql`) and PostgreSQL (`014_journal_header_fields.sql`). The document number is persisted by the preceding provider-specific migrations. Existing records receive safe defaults for currency and exchange rate.
+- Tests added: an end-to-end SQLite database test applies DBA migrations, resolves company/account codes, creates a fiscal year and accounts, saves a journal, verifies reference/currency/rate/document number and line memo/cost centers, posts it, reverses it, and checks that reversal retains the reference/currency/rate/cost centers while swapping debit/credit. CI also checks required journal-header columns after clean migration and idempotent re-run.
+- **Not yet certified:** the WPF window does not yet provide a database-backed open/reload flow for a previously saved journal, and live CI results must be green before calling the change verified. PostgreSQL is schema-checked in migration CI; the full journal repository round-trip currently targets SQLite.
