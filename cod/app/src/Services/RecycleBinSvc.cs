@@ -312,6 +312,8 @@ public static class RecycleBinSvc
             if (companyColumn is null || companyValue is null)
                 return Failed(item, "Company scope could not be verified; permanent deletion was blocked.");
             var primaryKeyColumn = ResolveExistingColumn(columns, item.PrimaryKeyColumn);
+            if (string.IsNullOrWhiteSpace(primaryKeyColumn))
+                return Failed(item, "The primary-key column could not be resolved; permanent deletion was blocked.");
 
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
