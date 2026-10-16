@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +24,9 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class BcdGenWin : BaseWin
 {
+    private static readonly ConcurrentDictionary<string, CompositeFormat> FormatCache =
+        new(StringComparer.Ordinal);
+
     private readonly TextBox _txtPrefix = new() { Width = 90, Text = "628" };
     private readonly Button _btnGenerateMissing = new();
     private readonly Button _btnGenerateAll = new();
@@ -238,9 +243,9 @@ public sealed class BcdGenWin : BaseWin
         _grid.ItemsSource = source;
 
         var missing = source.Count(r => string.IsNullOrWhiteSpace(r.Barcode));
-        _status.Text = string.Format(
-            CultureInfo.CurrentCulture,
-            L("BarcodeGen.Summary", "{0} of {1} material(s) shown. Missing barcode: {2}."),
+        _status.Text = FormatLocalized(
+            "BarcodeGen.Summary",
+            "{0} of {1} material(s) shown. Missing barcode: {2}.",
             source.Count, _rows.Count, missing);
     }
 
@@ -293,9 +298,9 @@ public sealed class BcdGenWin : BaseWin
             generated++;
         }
 
-        _status.Text = string.Format(
-            CultureInfo.CurrentCulture,
-            L("BarcodeGen.Result", "Barcodes generated: {0}. Skipped (already coded): {1}. Total materials: {2}. Use Save to write them to the material cards."),
+        _status.Text = FormatLocalized(
+            "BarcodeGen.Result",
+            "Barcodes generated: {0}. Skipped (already coded): {1}. Total materials: {2}. Use Save to write them to the material cards.",
             generated, skipped, _rows.Count);
 
         _grid.Items.Refresh();
@@ -363,9 +368,9 @@ public sealed class BcdGenWin : BaseWin
             SetBusy(false);
         }
 
-        _status.Text = string.Format(
-            CultureInfo.CurrentCulture,
-            L("BarcodeGen.SavedSummary", "Saved to material cards: {0}. Failed: {1}."),
+        _status.Text = FormatLocalized(
+            "BarcodeGen.SavedSummary",
+            "Saved to material cards: {0}. Failed: {1}.",
             saved, failed);
 
         // Never display a success message when every write failed or some writes failed.
@@ -460,6 +465,13 @@ public sealed class BcdGenWin : BaseWin
         _btnPrint.Content = T("Common.Print");
         _btnSelectAll.Content = T("Common.SelectAll");
         _btnSelectNone.Content = T("Common.ClearAll");
+    }
+
+    private static string FormatLocalized(string key, string fallback, params object?[] arguments)
+    {
+        var template = L(key, fallback);
+        var format = FormatCache.GetOrAdd(template, static value => CompositeFormat.Parse(value));
+        return string.Format(CultureInfo.CurrentCulture, format, arguments);
     }
 
     private static string L(string key, string fallback)
