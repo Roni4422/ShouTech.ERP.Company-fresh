@@ -7,13 +7,14 @@ public sealed class JournalEntry
     public Guid Id { get; } = Guid.NewGuid();
     public DateOnly EntryDate { get; }
     public string Description { get; }
+    public string? DocumentNumber { get; }
     public string? ReferenceNumber { get; }
     public string CurrencyCode { get; }
     public decimal ExchangeRate { get; }
     public JournalEntryStatus Status { get; private set; } = JournalEntryStatus.Draft;
     public IReadOnlyCollection<JournalLine> Lines => _lines.AsReadOnly();
 
-    public JournalEntry(DateOnly entryDate, string description, string? referenceNumber = null, string currencyCode = "SAR", decimal exchangeRate = 1m)
+    public JournalEntry(DateOnly entryDate, string description, string? referenceNumber = null, string currencyCode = "SAR", decimal exchangeRate = 1m, string? documentNumber = null)
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new ArgumentException("Description is required.", nameof(description));
@@ -24,6 +25,7 @@ public sealed class JournalEntry
 
         EntryDate = entryDate;
         Description = description.Trim();
+        DocumentNumber = string.IsNullOrWhiteSpace(documentNumber) ? null : documentNumber.Trim();
         ReferenceNumber = string.IsNullOrWhiteSpace(referenceNumber) ? null : referenceNumber.Trim();
         CurrencyCode = currencyCode.Trim().ToUpperInvariant();
         ExchangeRate = exchangeRate;
