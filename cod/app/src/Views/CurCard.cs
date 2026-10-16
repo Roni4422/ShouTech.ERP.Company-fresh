@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -16,6 +18,9 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class CurCard : BaseWin
 {
+    private static readonly ConcurrentDictionary<string, CompositeFormat> FormatCache =
+        new(StringComparer.Ordinal);
+
     private readonly TextBox _txtCode = new() { Width = 90, Height = 26, Text = "USD" };
     private readonly TextBox _txtNameAr = new() { Width = 260, Height = 26 };
     private readonly TextBox _txtNameEn = new() { Width = 260, Height = 26 };
@@ -360,7 +365,7 @@ public sealed class CurCard : BaseWin
 
             MessageBox.Show(
                 this,
-                string.Format(CultureInfo.CurrentCulture, T("CurrencyCard.SavedSummary"), definition.Code, count),
+                FormatLocalized(T("CurrencyCard.SavedSummary"), definition.Code, count),
                 Title,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -396,10 +401,16 @@ public sealed class CurCard : BaseWin
     private void RefreshBaseCurrencyStatus(int pendingCount)
     {
         var baseCode = _baseCurrencyCode ?? "—";
-        var text = string.Format(CultureInfo.CurrentCulture, T("CurrencyCard.BaseCurrency"), baseCode);
+        var text = FormatLocalized(T("CurrencyCard.BaseCurrency"), baseCode);
         _lblBaseCurrency.Text = pendingCount > 0
-            ? $"{text}{Environment.NewLine}{string.Format(CultureInfo.CurrentCulture, T("CurrencyCard.PendingRates"), pendingCount)}"
+            ? $"{text}{Environment.NewLine}{FormatLocalized(T("CurrencyCard.PendingRates"), pendingCount)}"
             : text;
+    }
+
+    private static string FormatLocalized(string template, params object?[] arguments)
+    {
+        var format = FormatCache.GetOrAdd(template, static value => CompositeFormat.Parse(value));
+        return string.Format(CultureInfo.CurrentCulture, format, arguments);
     }
 
     private static void RefreshLocalizedContent(DependencyObject? parent)
