@@ -273,6 +273,146 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public async Task JournalRepository_ShouldPersistHeaderAndLineFieldsThroughReversal()
+        {
+            var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-journal-{Guid.NewGuid():N}.sqlite3");
+            var connectionString = $"Data Source={databasePath};";
+            var companyId = Guid.NewGuid();
+            const string companyCode = "JRN-ROUNDTRIP";
+            const string actor = "journal-roundtrip-test";
+
+            try
+            {
+                ApplySqliteMigrations(databasePath);
+
+                await using (var connection = new SqliteConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    using var insertCompany = connection.CreateCommand();
+                    insertCompany.CommandText = """
+                        INSERT INTO companies (company_id, company_code, company_name_ar, company_name_en)
+                        VALUES ($id, $code, 'شركة اختبار', 'Test Company');
+                        """;
+                    insertCompany.Parameters.AddWithValue("$id", companyId.ToString("D"));
+                    insertCompany.Parameters.AddWithValue("$code", companyCode);
+                    await insertCompany.ExecuteNonQueryAsync();
+                }
+
+                var structure = new ShouTech.Infrastructure.AccountingStructureRepository("SQLite", connectionString);
+                await structure.CreateFiscalYearAsync(companyId, 2026, actor);
+                var debitAccount = await structure.CreateAccountAsync(companyId, "1101", "Cash", "ASSET");
+                var creditAccount = await structure.CreateAccountAsync(companyId, "4101", "Sales", "REVENUE");
+
+                var repository = new ShouTech.Infrastructure.JournalRepository("SQLite", connectionString);
+                Assert.Equal(companyId, await repository.ResolveCompanyIdAsync(companyCode));
+                Assert.Equal(debitAccount, await repository.ResolveAccountIdAsync(companyId, "1101"));
+                var service = new JournalService(repository);
+
+                var journalId = await service.CreateDraftAsync(
+                    companyId,
+                    new DateOnly(2026, 10, 16),
+                    "Journal header round trip",
+                    actor,
+                    new[]
+                    {
+                        new JournalLineRequest(debitAccount, 12.5m, 0m, "Debit note", "CC-10"),
+                        new JournalLineRequest(creditAccount, 0m, 12.5m, "Credit note", "CC-20")
+                    },
+                    referenceNumber: "REF-001",
+                    currencyCode: "JOD",
+                    exchangeRate: 0.7095m,
+                    documentNumber: "JV-ROUNDTRIP-001");
+
+                await using (var verify = new SqliteConnection(connectionString))
+                {
+                    await verify.OpenAsync();
+                    using var header = verify.CreateCommand();
+                    header.CommandText = """
+                        SELECT reference_number, currency_code, exchange_rate, document_number, status
+                        FROM journal_entries WHERE journal_entry_id = $id;
+                        """;
+                    header.Parameters.AddWithValue("$id", journalId.ToString("D"));
+                    using var reader = await header.ExecuteReaderAsync();
+                    Assert.True(await reader.ReadAsync());
+                    Assert.Equal("REF-001", reader.GetString(0));
+                    Assert.Equal("JOD", reader.GetString(1));
+                    Assert.Equal(0.7095m, Convert.ToDecimal(reader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal("JV-ROUNDTRIP-001", reader.GetString(3));
+                    Assert.Equal((int)JournalEntryStatus.Draft, reader.GetInt32(4));
+                    await reader.DisposeAsync();
+
+                    using var lines = verify.CreateCommand();
+                    lines.CommandText = """
+                        SELECT cost_center, note, debit, credit
+                        FROM journal_entry_lines WHERE journal_entry_id = $id ORDER BY line_number;
+                        """;
+                    lines.Parameters.AddWithValue("$id", journalId.ToString("D"));
+                    using var lineReader = await lines.ExecuteReaderAsync();
+                    Assert.True(await lineReader.ReadAsync());
+                    Assert.Equal("CC-10", lineReader.GetString(0));
+                    Assert.Equal("Debit note", lineReader.GetString(1));
+                    Assert.Equal(12.5m, Convert.ToDecimal(lineReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(0m, Convert.ToDecimal(lineReader.GetValue(3), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.True(await lineReader.ReadAsync());
+                    Assert.Equal("CC-20", lineReader.GetString(0));
+                    Assert.Equal("Credit note", lineReader.GetString(1));
+                }
+
+                await service.PostAsync(journalId, actor);
+                var reversalId = await service.ReverseAsync(journalId, actor, "round-trip test reversal");
+
+                await using (var verify = new SqliteConnection(connectionString))
+                {
+                    await verify.OpenAsync();
+                    using var originalStatus = verify.CreateCommand();
+                    originalStatus.CommandText = "SELECT status FROM journal_entries WHERE journal_entry_id=$id;";
+                    originalStatus.Parameters.AddWithValue("$id", journalId.ToString("D"));
+                    Assert.Equal((int)JournalEntryStatus.Reversed,
+                        Convert.ToInt32(await originalStatus.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture));
+
+                    using var reversal = verify.CreateCommand();
+                    reversal.CommandText = """
+                        SELECT reference_number, currency_code, exchange_rate, document_number, status
+                        FROM journal_entries WHERE journal_entry_id=$id;
+                        """;
+                    reversal.Parameters.AddWithValue("$id", reversalId.ToString("D"));
+                    using var reversalReader = await reversal.ExecuteReaderAsync();
+                    Assert.True(await reversalReader.ReadAsync());
+                    Assert.Equal("REF-001", reversalReader.GetString(0));
+                    Assert.Equal("JOD", reversalReader.GetString(1));
+                    Assert.Equal(0.7095m, Convert.ToDecimal(reversalReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.StartsWith("REV-", reversalReader.GetString(3));
+                    Assert.Equal((int)JournalEntryStatus.Posted, reversalReader.GetInt32(4));
+                    await reversalReader.DisposeAsync();
+
+                    using var reversedLines = verify.CreateCommand();
+                    reversedLines.CommandText = """
+                        SELECT cost_center, debit, credit
+                        FROM journal_entry_lines WHERE journal_entry_id=$id ORDER BY line_number;
+                        """;
+                    reversedLines.Parameters.AddWithValue("$id", reversalId.ToString("D"));
+                    using var reversedLineReader = await reversedLines.ExecuteReaderAsync();
+                    Assert.True(await reversedLineReader.ReadAsync());
+                    Assert.Equal("CC-10", reversedLineReader.GetString(0));
+                    Assert.Equal(0m, Convert.ToDecimal(reversedLineReader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(12.5m, Convert.ToDecimal(reversedLineReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                }
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                if (File.Exists(databasePath))
+                    File.Delete(databasePath);
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    var sidecar = databasePath + suffix;
+                    if (File.Exists(sidecar))
+                        File.Delete(sidecar);
+                }
+            }
+        }
+
+        [Fact]
         public async Task JournalService_ShouldPersistOnlyBalancedDrafts()
         {
             var repository = new InMemoryJournalRepository();
