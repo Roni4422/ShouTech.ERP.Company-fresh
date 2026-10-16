@@ -291,6 +291,219 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public async Task CashVoucherRepository_ShouldPersistReloadPostAndReverseReceiptAtomically()
+        {
+            var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-cash-voucher-{Guid.NewGuid():N}.sqlite3");
+            var connectionString = $"Data Source={databasePath};";
+            var companyId = Guid.NewGuid();
+            const string companyCode = "CASH-ROUNDTRIP";
+            const string actor = "cash-voucher-roundtrip-test";
+            const string voucherNumber = "RCV-ROUNDTRIP-001";
+
+            try
+            {
+                ApplySqliteMigrations(databasePath);
+
+                await using (var connection = new SqliteConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    using var insertCompany = connection.CreateCommand();
+                    insertCompany.CommandText = """
+                        INSERT INTO companies (company_id, company_code, company_name_ar, company_name_en)
+                        VALUES ($id, $code, 'شركة اختبار السندات', 'Cash Voucher Test Company');
+                        """;
+                    insertCompany.Parameters.AddWithValue("$id", companyId.ToString("D"));
+                    insertCompany.Parameters.AddWithValue("$code", companyCode);
+                    await insertCompany.ExecuteNonQueryAsync();
+                }
+
+                var structure = new ShouTech.Infrastructure.AccountingStructureRepository("SQLite", connectionString);
+                await structure.CreateFiscalYearAsync(companyId, 2026, actor);
+                var treasuryId = await structure.CreateAccountAsync(companyId, "1010", "Cash Treasury", "ASSET");
+                var receivableId = await structure.CreateAccountAsync(companyId, "1200", "Accounts Receivable", "ASSET");
+                var otherReceivableId = await structure.CreateAccountAsync(companyId, "1210", "Other Receivables", "ASSET");
+
+                var repository = new ShouTech.Infrastructure.CashVoucherRepository("SQLite", connectionString);
+                var service = new CashVoucherService(repository);
+                Assert.Equal(companyId, await service.ResolveCompanyIdAsync(companyCode));
+                Assert.Equal(treasuryId, await service.ResolveAccountIdAsync(companyId, "1010"));
+                Assert.Equal("Cash Treasury", await service.ResolveAccountNameAsync(companyId, "1010"));
+
+                var voucher = new CashVoucher(
+                    CashVoucherKind.Receipt,
+                    new DateOnly(2026, 10, 16),
+                    voucherNumber,
+                    treasuryId,
+                    "Round-trip customer",
+                    100m,
+                    "JOD",
+                    0.7095m,
+                    new[]
+                    {
+                        new CashVoucherLine(receivableId, 25.125m, "CC-AR", "INV-100", "First allocation"),
+                        new CashVoucherLine(otherReceivableId, 74.875m, "CC-OTHER", "INV-101", "Second allocation")
+                    },
+                    referenceNumber: "REF-CASH-001",
+                    costCenter: "CC-HEADER",
+                    memo: "Receipt round trip");
+
+                var voucherId = await service.CreateDraftAsync(companyId, voucher, actor);
+
+                var loaded = await service.FindByDocumentNumberAsync(companyId, CashVoucherKind.Receipt, voucherNumber);
+                Assert.NotNull(loaded);
+                Assert.Equal(voucherId, loaded!.Id);
+                Assert.Equal(companyId, loaded.CompanyId);
+                Assert.Equal(CashVoucherKind.Receipt, loaded.Kind);
+                Assert.Equal(new DateOnly(2026, 10, 16), loaded.VoucherDate);
+                Assert.Equal("1010", loaded.TreasuryAccountCode);
+                Assert.Equal("Cash Treasury", loaded.TreasuryAccountName);
+                Assert.Equal("Round-trip customer", loaded.PartyName);
+                Assert.Equal(100m, loaded.TotalAmount);
+                Assert.Equal("JOD", loaded.CurrencyCode);
+                Assert.Equal(0.7095m, loaded.ExchangeRate);
+                Assert.Equal("REF-CASH-001", loaded.ReferenceNumber);
+                Assert.Equal("CC-HEADER", loaded.CostCenter);
+                Assert.Equal("Receipt round trip", loaded.Memo);
+                Assert.Equal(CashVoucherStatus.Draft, loaded.Status);
+                Assert.Collection(loaded.Lines,
+                    line =>
+                    {
+                        Assert.Equal("1200", line.AccountCode);
+                        Assert.Equal("Accounts Receivable", line.AccountName);
+                        Assert.Equal(25.125m, line.Amount);
+                        Assert.Equal("CC-AR", line.CostCenter);
+                        Assert.Equal("INV-100", line.InvoiceReference);
+                        Assert.Equal("First allocation", line.Note);
+                    },
+                    line =>
+                    {
+                        Assert.Equal("1210", line.AccountCode);
+                        Assert.Equal("Other Receivables", line.AccountName);
+                        Assert.Equal(74.875m, line.Amount);
+                        Assert.Equal("CC-OTHER", line.CostCenter);
+                        Assert.Equal("INV-101", line.InvoiceReference);
+                        Assert.Equal("Second allocation", line.Note);
+                    });
+
+                var duplicate = new CashVoucher(
+                    CashVoucherKind.Receipt,
+                    new DateOnly(2026, 10, 16),
+                    voucherNumber,
+                    treasuryId,
+                    "Duplicate",
+                    1m,
+                    "JOD",
+                    1m,
+                    new[] { new CashVoucherLine(receivableId, 1m) });
+                await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    service.CreateDraftAsync(companyId, duplicate, actor));
+
+                var journalId = await service.PostAsync(companyId, CashVoucherKind.Receipt, voucherId, actor);
+                Assert.NotEqual(Guid.Empty, journalId);
+
+                await using (var verify = new SqliteConnection(connectionString))
+                {
+                    await verify.OpenAsync();
+                    using var header = verify.CreateCommand();
+                    header.CommandText = """
+                        SELECT status, journal_entry_id
+                        FROM cash_vouchers WHERE cash_voucher_id=$id;
+                        """;
+                    header.Parameters.AddWithValue("$id", voucherId.ToString("D"));
+                    using var reader = await header.ExecuteReaderAsync();
+                    Assert.True(await reader.ReadAsync());
+                    Assert.Equal((int)CashVoucherStatus.Posted, reader.GetInt32(0));
+                    Assert.Equal(journalId.ToString("D"), reader.GetString(1));
+                    await reader.DisposeAsync();
+
+                    using var journal = verify.CreateCommand();
+                    journal.CommandText = """
+                        SELECT status, reference_number, currency_code, exchange_rate, document_number
+                        FROM journal_entries WHERE journal_entry_id=$id;
+                        """;
+                    journal.Parameters.AddWithValue("$id", journalId.ToString("D"));
+                    using var journalReader = await journal.ExecuteReaderAsync();
+                    Assert.True(await journalReader.ReadAsync());
+                    Assert.Equal((int)JournalEntryStatus.Posted, journalReader.GetInt32(0));
+                    Assert.Equal("REF-CASH-001", journalReader.GetString(1));
+                    Assert.Equal("JOD", journalReader.GetString(2));
+                    Assert.Equal(0.7095m, Convert.ToDecimal(journalReader.GetValue(3), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.StartsWith("CV-R-", journalReader.GetString(4));
+                    await journalReader.DisposeAsync();
+
+                    using var balances = verify.CreateCommand();
+                    balances.CommandText = """
+                        SELECT COUNT(*), SUM(debit), SUM(credit)
+                        FROM journal_entry_lines WHERE journal_entry_id=$id;
+                        """;
+                    balances.Parameters.AddWithValue("$id", journalId.ToString("D"));
+                    using var balanceReader = await balances.ExecuteReaderAsync();
+                    Assert.True(await balanceReader.ReadAsync());
+                    Assert.Equal(3L, Convert.ToInt64(balanceReader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(100m, Convert.ToDecimal(balanceReader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(100m, Convert.ToDecimal(balanceReader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture));
+                    await balanceReader.DisposeAsync();
+
+                    using var audit = verify.CreateCommand();
+                    audit.CommandText = "SELECT COUNT(*) FROM cash_voucher_audit_events WHERE cash_voucher_id=$id";
+                    audit.Parameters.AddWithValue("$id", voucherId.ToString("D"));
+                    Assert.Equal(2L, Convert.ToInt64(await audit.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture));
+                }
+
+                var reversalId = await service.ReverseAsync(
+                    companyId, CashVoucherKind.Receipt, voucherId, actor, "Customer receipt entered twice");
+                Assert.NotEqual(Guid.Empty, reversalId);
+
+                var reversed = await service.FindByDocumentNumberAsync(companyId, CashVoucherKind.Receipt, voucherNumber);
+                Assert.NotNull(reversed);
+                Assert.Equal(CashVoucherStatus.Reversed, reversed!.Status);
+                Assert.Equal(journalId, reversed.JournalEntryId);
+                Assert.Equal(reversalId, reversed.ReversalJournalEntryId);
+                Assert.Equal("CC-AR", reversed.Lines[0].CostCenter);
+                Assert.Equal("CC-OTHER", reversed.Lines[1].CostCenter);
+
+                await using (var verify = new SqliteConnection(connectionString))
+                {
+                    await verify.OpenAsync();
+                    using var statuses = verify.CreateCommand();
+                    statuses.CommandText = """
+                        SELECT
+                            (SELECT status FROM journal_entries WHERE journal_entry_id=$source),
+                            (SELECT status FROM journal_entries WHERE journal_entry_id=$reversal),
+                            (SELECT COUNT(*) FROM journal_audit_events WHERE journal_entry_id=$source),
+                            (SELECT COUNT(*) FROM journal_audit_events WHERE journal_entry_id=$reversal),
+                            (SELECT COUNT(*) FROM cash_voucher_audit_events WHERE cash_voucher_id=$voucher);
+                        """;
+                    statuses.Parameters.AddWithValue("$source", journalId.ToString("D"));
+                    statuses.Parameters.AddWithValue("$reversal", reversalId.ToString("D"));
+                    statuses.Parameters.AddWithValue("$voucher", voucherId.ToString("D"));
+                    using var reader = await statuses.ExecuteReaderAsync();
+                    Assert.True(await reader.ReadAsync());
+                    Assert.Equal((int)JournalEntryStatus.Reversed, Convert.ToInt32(reader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal((int)JournalEntryStatus.Posted, Convert.ToInt32(reader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.True(Convert.ToInt64(reader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture) >= 2);
+                    Assert.True(Convert.ToInt64(reader.GetValue(3), System.Globalization.CultureInfo.InvariantCulture) >= 1);
+                    Assert.Equal(3L, Convert.ToInt64(reader.GetValue(4), System.Globalization.CultureInfo.InvariantCulture));
+                }
+
+                await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    service.ReverseAsync(companyId, CashVoucherKind.Receipt, voucherId, actor, "Second reversal"));
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                if (File.Exists(databasePath))
+                    File.Delete(databasePath);
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    var sidecar = databasePath + suffix;
+                    if (File.Exists(sidecar))
+                        File.Delete(sidecar);
+                }
+            }
+        }
+
+        [Fact]
         public async Task JournalRepository_ShouldPersistHeaderAndLineFieldsThroughReversal()
         {
             var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-journal-{Guid.NewGuid():N}.sqlite3");
