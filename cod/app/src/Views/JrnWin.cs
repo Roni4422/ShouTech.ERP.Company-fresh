@@ -16,6 +16,31 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class JrnWin : BaseWin
 {
+    /// <summary>Prevents false success until journal persistence is implemented.</summary>
+    private void ShowPersistenceUnavailable()
+    {
+        const string errorCode = "APP-2010";
+        const string context = "This window has no database persistence implementation.";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var exception = new NotSupportedException(context);
+
+        AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "PersistenceUnavailable",
+            $"Code={definition.Code} | Window={GetType().Name}");
+
+        MessageBox.Show(
+            this,
+            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
+            "العملية غير متاحة",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
     private readonly DatePicker _dtDate = new() { Width = 120, Height = 26, SelectedDate = DateTime.Today };
     private readonly TextBox _txtRefNo = new() { Width = 110, Height = 26 };
@@ -253,30 +278,12 @@ public sealed class JrnWin : BaseWin
 
     private void SaveVoucher()
     {
-        if (_lines.All(l => l.Debit == 0 && l.Credit == 0))
-        {
-            MessageBox.Show(this, T("Vouchers.NeedLines"), T("Common.Warning"), MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-        MessageBox.Show(this, T("Vouchers.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowPersistenceUnavailable();
     }
 
     private void PostVoucher()
     {
-        var diff = Math.Abs(_lines.Sum(l => l.Debit) - _lines.Sum(l => l.Credit));
-        if (diff >= 0.001m)
-        {
-            MessageBox.Show(this, T("Vouchers.MustBalance"), T("Common.Error"), MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
-
-        if (MessageBox.Show(this, T("Vouchers.ConfirmPost"), T("Vouchers.Post"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-            return;
-
-        _btnSave.IsEnabled = false;
-        _btnPost.IsEnabled = false;
-        _grid.IsReadOnly = true;
-        MessageBox.Show(this, T("Vouchers.Posted"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowPersistenceUnavailable();
     }
 
     protected override void ApplyLocalizedText()
