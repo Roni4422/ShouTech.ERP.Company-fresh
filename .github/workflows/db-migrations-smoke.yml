@@ -71,7 +71,8 @@ jobs:
         env:
           PG_CONN: Host=localhost;Port=5432;Database=shoutest;Username=shoutest;Password=shoutest
         run: |
-          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -c "CREATE TABLE schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());"
-          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
-          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN"
+          PGPASSWORD=shoutest createdb -h localhost -U shoutest shoutest_existing_history
+          PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest_existing_history -v ON_ERROR_STOP=1 -c "CREATE TABLE schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());"
+          PG_HISTORY_CONN="${PG_CONN/Database=shoutest/Database=shoutest_existing_history}"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_HISTORY_CONN"
+          dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_HISTORY_CONN"
