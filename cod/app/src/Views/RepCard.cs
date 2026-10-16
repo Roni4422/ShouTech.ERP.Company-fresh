@@ -2,11 +2,13 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using ShouTech.Domain.Entities;
 
 namespace ShouTech.App.Views;
 
@@ -85,8 +87,8 @@ public sealed class RepCard : BaseWin
         StyleButton(_btnDelete, "Common.Delete");
 
         _btnNew.Click += (_, _) => ResetCard();
-        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
-        _btnDelete.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnSave.Click += async (_, _) => await SaveRepAsync().ConfigureAwait(true);
+        _btnDelete.Click += async (_, _) => await DeleteRepAsync().ConfigureAwait(true);
 
         foreach (var b in new[] { _btnNew, _btnSave, _btnDelete })
             toolbar.Children.Add(b);
@@ -252,5 +254,146 @@ public sealed class RepCard : BaseWin
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private async Task SaveRepAsync()
+    {
+        if (_busy) return;
+        _busy = true;
+        _btnSave.IsEnabled = false;
+
+        try
+        {
+            var code = _txtCode.Text.Trim();
+            var name = _txtName.Text.Trim();
+            var phone = _txtPhone.Text.Trim();
+            var commText = _txtComm.Text.Trim();
+            var targetText = _txtTarget.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(code))
+                throw new InvalidOperationException("\u0631\u0642\u0645 \u0627\u0644\u0631\u062e\u0627\u0645 \u064a\u062c\u0628 \u0623\u0644\u062a\u062d\u0627\u0644.");
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("\u0625\u0633\u0645 \u0627\u0644\u0631\u062e\u0627\u0645 \u064a\u062c\u0628 \u0623\u0644\u062a\u0641\u0631\u0627\u0644\u0627\u0644\u064a.");
+
+            if (!decimal.TryParse(commText, NumberStyles.Any, CultureInfo.InvariantCulture, out var commissionRate))
+                throw new InvalidOperationException("\u0646\u0633\u0628\u0629 \u0627\u0644\u062f\u0648\u0639\u064a\u0629 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0645\u0639\u0644\u0648\u0645\u0629.");
+            if (commissionRate < 0 || commissionRate > 100)
+                throw new InvalidOperationException("\u0646\u0633\u0628\u0629 \u0627\u0644\u062f\u0648\u0639\u064a\u0629 \u064a\u062c\u0628 \u0623\u0644\u0640 \u0628\u064a\u0646 0 \u0627\u0644\u0649 100.");
+
+            var user = ShouTech.App.Services.UsrSession.Current;
+            var companyCode = user?.CompanyId;
+            var actor = !string.IsNullOrWhiteSpace(user?.Id)
+                ? user.Id
+                : ShouTech.App.Services.AppHost.Session.CurrentUser;
+
+            if (string.IsNullOrWhiteSpace(companyCode))
+                throw new InvalidOperationException("\u0644\u0627 \u062a\u0648\u062c\u062f \u0634\u0631\u0643\u0629 \u0646\u0634\u0637\u0629 \u0641\u064a \u062c\u0644\u0633\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645.");
+            if (string.IsNullOrWhiteSpace(actor))
+                throw new InvalidOperationException("\u062a\u0639\u0630\u0631 \u062a\u062d\u0641\u064a\u062f \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u062d\u0627\u0644\u064a \u0644\u062d\u0641\u0638 \u0627\u0644\u0639\u0645\u0644\u0629.");
+
+            var repository = ShouTech.App.Services.AppHost.RepStore
+                ?? throw new InvalidOperationException("\u062e\u062f\u0645\u0629 \u0633\u0644\u0627\u0645\u0627\u0629 \u0648\u0623\u0633\u0648\u0631 \u0627\u0644\u0628\u064e\u064a\u0627\u0646\u0627\u062a \u0645\u0640\u0646 \u0645\u0647\u064e\u0627\u0629.");
+
+            var companyId = await repository.ResolveCompanyIdAsync(companyCode).ConfigureAwait(true);
+
+            var rep = new SalesRepresentative(
+                companyId,
+                code,
+                name,
+                null,
+                commissionRate,
+                string.IsNullOrWhiteSpace(phone) ? null : phone);
+
+            var repId = await repository.SaveAsync(rep, actor).ConfigureAwait(true);
+            _currentRepId = repId;
+
+            MessageBox.Show(
+                this,
+                T("SalesRepCard.SavedSuccessfully"),
+                Title,
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ReportPersistenceFailure("Save", ex);
+        }
+        finally
+        {
+            _busy = false;
+            _btnSave.IsEnabled = true;
+        }
+    }
+
+    private async Task DeleteRepAsync()
+    {
+        if (_busy) return;
+        if (!_currentRepId.HasValue)
+        {
+            MessageBox.Show(
+                this,
+                T("SalesRepCard.NoRepSelected"),
+                Title,
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            this,
+            T("SalesRepCard.ConfirmDelete"),
+            Title,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        _busy = true;
+        _btnDelete.IsEnabled = false;
+
+        try
+        {
+            var user = ShouTech.App.Services.UsrSession.Current;
+            var actor = !string.IsNullOrWhiteSpace(user?.Id)
+                ? user.Id
+                : ShouTech.App.Services.AppHost.Session.CurrentUser;
+
+            if (string.IsNullOrWhiteSpace(actor))
+                throw new InvalidOperationException("\u062a\u0639\u0630\u0631 \u062a\u062d\u0641\u064a\u062f \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u062d\u0627\u0644\u064a \u0644\u062d\u0641\u0638 \u0627\u0644\u0639\u0645\u0644\u0629.");
+
+            var repository = ShouTech.App.Services.AppHost.RepStore
+                ?? throw new InvalidOperationException("\u062e\u062f\u0645\u0629 \u0633\u0644\u0627\u0645\u0627\u0629 \u0648\u0623\u0633\u0648\u0631 \u0627\u0644\u0628\u064e\u064a\u0627\u0646\u0627\u062a \u0645\u0640\u0646 \u0645\u0647\u064e\u0627\u0629.");
+
+            var deleted = await repository.DeleteAsync(_currentRepId.Value, actor, "Deleted via UI").ConfigureAwait(true);
+            if (deleted)
+            {
+                ResetCard();
+                _currentRepId = null;
+                MessageBox.Show(
+                    this,
+                    T("SalesRepCard.DeletedSuccessfully"),
+                    Title,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show(
+                    this,
+                    T("SalesRepCard.DeleteFailed"),
+                    Title,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportPersistenceFailure("Delete", ex);
+        }
+        finally
+        {
+            _busy = false;
+            _btnDelete.IsEnabled = true;
+        }
     }
 }

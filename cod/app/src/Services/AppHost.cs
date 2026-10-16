@@ -36,6 +36,7 @@ namespace ShouTech.App.Services
         public static CashVoucherRepository? CashVoucherStore { get; private set; }
         public static CurrencyService? Currencies { get; private set; }
         public static CurrencyRepository? CurrencyStore { get; private set; }
+        public static SalesRepresentativeRepository? RepStore { get; private set; }
         public static AccountingStructureRepository? AccountingStructure { get; private set; }
         public static IDatabaseHealth? DatabaseHealth { get; private set; }
 
@@ -82,6 +83,7 @@ namespace ShouTech.App.Services
             Journal = CreateJournalService();
             CashVouchers = CreateCashVoucherService();
             Currencies = CreateCurrencyService();
+            RepStore = CreateSalesRepresentativeRepository();
             AccountingStructure = CreateAccountingStructureRepository();
             DatabaseHealth = CreateDatabaseHealth();
 
@@ -296,6 +298,38 @@ namespace ShouTech.App.Services
         }
     }
 
+
+
+        private static SalesRepresentativeRepository? CreateSalesRepresentativeRepository()
+        {
+            var connection = ResolveDatabaseConnection();
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                connection = AppCfgSvc.Current.ConnectionStrings?
+                    .Values
+                    .FirstOrDefault()?
+                    .ConnectionString;
+            }
+
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                Logging.LogWarning("AppHost", "Sales representative persistence is unavailable: no database connection configured.");
+                return null;
+            }
+
+            var provider = AppCfgSvc.Current.ConnectionStrings?
+                .FirstOrDefault(item => item.Key.Equals("Default", System.StringComparison.OrdinalIgnoreCase))
+                .Value?.Provider ?? AppCfgSvc.Current.Database?.DefaultProvider ?? "SQLite";
+            try
+            {
+                return new SalesRepresentativeRepository(provider, connection);
+            }
+            catch (System.Exception ex)
+            {
+                Logging.LogWarning("AppHost", $"Sales representative persistence could not be initialized: {ex.Message}");
+                return null;
+            }
+        }
     public static class AppServiceHost
     {
         public static ILogServ Logging => AppHost.Logging;
@@ -316,6 +350,7 @@ namespace ShouTech.App.Services
         public static JournalService? Journal => AppHost.Journal;
         public static CashVoucherService? CashVouchers => AppHost.CashVouchers;
         public static CurrencyService? Currencies => AppHost.Currencies;
+        public static SalesRepresentativeRepository? RepStore => AppHost.RepStore;
         public static AccountingStructureRepository? AccountingStructure => AppHost.AccountingStructure;
         public static IDatabaseHealth? DatabaseHealth => AppHost.DatabaseHealth;
         public static ILocSvc Localization => AppHost.Localization;
