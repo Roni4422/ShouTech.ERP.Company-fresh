@@ -293,10 +293,10 @@ public static class RecycleBinSvc
             var columns = await GetColumnNamesAsync(connection, item.TableName, cancellationToken)
                 .ConfigureAwait(false);
             var softDeleteColumn = FindColumn(columns, "is_deleted");
-            if (softDeleteColumn is null)
+            if (string.IsNullOrWhiteSpace(softDeleteColumn))
                 return Failed(item, "Permanent deletion is allowed only for a soft-deleted row in the recycle bin.");
             var companyColumn = FindColumn(columns, "company_id") ?? FindColumn(columns, "companyid");
-            var softDeleteIsBoolean = softDeleteColumn is not null && await IsBooleanColumnAsync(connection, item.TableName, softDeleteColumn, cancellationToken).ConfigureAwait(false);
+            var softDeleteIsBoolean = await IsBooleanColumnAsync(connection, item.TableName, softDeleteColumn, cancellationToken).ConfigureAwait(false);
             var definition = Catalog.FirstOrDefault(entry => entry.TableName.Equals(item.TableName, StringComparison.OrdinalIgnoreCase))
                 ?? new BinTableDefinition(item.TableName, HumanizeTableName(item.TableName), [], [item.PrimaryKeyColumn],
                     CompanyIdIsCode: item.TableName.Equals("sales_documents", StringComparison.OrdinalIgnoreCase)
