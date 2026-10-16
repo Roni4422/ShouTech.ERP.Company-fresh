@@ -32,6 +32,8 @@ namespace ShouTech.App.Services
         public static IAuditService Audit { get; private set; } = null!;
         public static JournalService? Journal { get; private set; }
         public static JournalRepository? JournalStore { get; private set; }
+        public static CashVoucherService? CashVouchers { get; private set; }
+        public static CashVoucherRepository? CashVoucherStore { get; private set; }
         public static AccountingStructureRepository? AccountingStructure { get; private set; }
         public static IDatabaseHealth? DatabaseHealth { get; private set; }
 
@@ -76,6 +78,7 @@ namespace ShouTech.App.Services
             Permissions = new PermServ();
 
             Journal = CreateJournalService();
+            CashVouchers = CreateCashVoucherService();
             AccountingStructure = CreateAccountingStructureRepository();
             DatabaseHealth = CreateDatabaseHealth();
 
@@ -174,6 +177,38 @@ namespace ShouTech.App.Services
             }
         }
 
+        private static CashVoucherService? CreateCashVoucherService()
+        {
+            var connection = ResolveDatabaseConnection();
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                connection = AppCfgSvc.Current.ConnectionStrings?
+                    .Values
+                    .FirstOrDefault()?
+                    .ConnectionString;
+            }
+
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                Logging.LogWarning("AppHost", "Cash voucher persistence is unavailable: no database connection configured.");
+                return null;
+            }
+
+            var provider = AppCfgSvc.Current.ConnectionStrings?
+                .FirstOrDefault(item => item.Key.Equals("Default", System.StringComparison.OrdinalIgnoreCase))
+                .Value?.Provider ?? AppCfgSvc.Current.Database?.DefaultProvider ?? "SQLite";
+            try
+            {
+                CashVoucherStore = new CashVoucherRepository(provider, connection);
+                return new CashVoucherService(CashVoucherStore);
+            }
+            catch (System.Exception ex)
+            {
+                Logging.LogWarning("AppHost", $"Cash voucher persistence could not be initialized: {ex.Message}");
+                return null;
+            }
+        }
+
         private static AccountingStructureRepository? CreateAccountingStructureRepository()
         {
             var connection = ResolveDatabaseConnection();
@@ -244,6 +279,7 @@ namespace ShouTech.App.Services
         public static ISessionManager Session => AppHost.Session;
         public static IAuditService Audit => AppHost.Audit;
         public static JournalService? Journal => AppHost.Journal;
+        public static CashVoucherService? CashVouchers => AppHost.CashVouchers;
         public static AccountingStructureRepository? AccountingStructure => AppHost.AccountingStructure;
         public static IDatabaseHealth? DatabaseHealth => AppHost.DatabaseHealth;
         public static ILocSvc Localization => AppHost.Localization;
