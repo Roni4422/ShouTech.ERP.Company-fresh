@@ -97,7 +97,7 @@ public sealed class JournalRepository : IJournalRepository
             }
 
             await using (var command = CreateCommand(connection, transaction,
-                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id, reference_number, currency_code, exchange_rate) VALUES (@id, @company, @date, @description, @status, @actor, @period, @reference, @currency, @rate)"))
+                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id, reference_number, currency_code, exchange_rate, document_number) VALUES (@id, @company, @date, @description, @status, @actor, @period, @reference, @currency, @rate, @documentNumber)"))
             {
                 Add(command, "@id", FormatGuid(entry.Id));
                 Add(command, "@company", FormatGuid(companyId));
@@ -109,6 +109,7 @@ public sealed class JournalRepository : IJournalRepository
                 Add(command, "@reference", (object?)entry.ReferenceNumber ?? DBNull.Value);
                 Add(command, "@currency", entry.CurrencyCode);
                 Add(command, "@rate", entry.ExchangeRate);
+                Add(command, "@documentNumber", (object?)entry.DocumentNumber ?? DBNull.Value);
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
@@ -194,11 +195,12 @@ public sealed class JournalRepository : IJournalRepository
             string description;
             string periodId;
             string? referenceNumber;
+            string? documentNumber;
             string currencyCode;
             decimal exchangeRate;
             int status;
             await using (var header = CreateCommand(connection, transaction,
-                "SELECT company_id, entry_date, description, status, fiscal_period_id, reference_number, currency_code, exchange_rate FROM journal_entries WHERE journal_entry_id = @id"))
+                "SELECT company_id, entry_date, description, status, fiscal_period_id, reference_number, currency_code, exchange_rate, document_number FROM journal_entries WHERE journal_entry_id = @id"))
             {
                 Add(header, "@id", FormatGuid(journalEntryId));
                 await using var reader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -214,6 +216,7 @@ public sealed class JournalRepository : IJournalRepository
                 referenceNumber = reader.IsDBNull(5) ? null : reader.GetString(5);
                 currencyCode = reader.GetString(6);
                 exchangeRate = Convert.ToDecimal(reader.GetValue(7), CultureInfo.InvariantCulture);
+                documentNumber = reader.IsDBNull(8) ? null : reader.GetString(8);
             }
             if (status != (int)JournalEntryStatus.Posted)
                 throw new InvalidOperationException("Only an existing posted journal entry can be reversed.");
@@ -251,7 +254,7 @@ public sealed class JournalRepository : IJournalRepository
             var reversalDescription = $"Reversal: {description}";
             if (reversalDescription.Length > 500) reversalDescription = reversalDescription[..500];
             await using (var insert = CreateCommand(connection, transaction,
-                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, reversal_of_entry_id, fiscal_period_id, reference_number, currency_code, exchange_rate) VALUES (@id, @company, @date, @description, @draft, @actor, @source, @period, @reference, @currency, @rate)"))
+                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, reversal_of_entry_id, fiscal_period_id, reference_number, currency_code, exchange_rate, document_number) VALUES (@id, @company, @date, @description, @draft, @actor, @source, @period, @reference, @currency, @rate, @documentNumber)"))
             {
                 Add(insert, "@id", FormatGuid(reversalId));
                 Add(insert, "@company", _provider == "PostgreSQL" ? (object)Guid.Parse(companyId) : companyId);
@@ -264,6 +267,7 @@ public sealed class JournalRepository : IJournalRepository
                 Add(insert, "@reference", (object?)referenceNumber ?? DBNull.Value);
                 Add(insert, "@currency", currencyCode);
                 Add(insert, "@rate", exchangeRate);
+                Add(insert, "@documentNumber", $"REV-{reversalId.ToString("N")[..12]}");
                 await insert.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
