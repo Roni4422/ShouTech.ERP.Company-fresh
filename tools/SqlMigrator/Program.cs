@@ -111,10 +111,15 @@ internal static class Program
                     {
                         command.Transaction = transaction;
                         command.CommandTimeout = 600;
-                        command.CommandText = provider == "sqlite"
-                            ? await PrepareSqliteConditionalStatementsAsync(connection, migration.Sql, transaction)
-                            : migration.Sql;
-                        await command.ExecuteNonQueryAsync();
+                        if (provider == "sqlite")
+                        {
+                            await ApplySqliteMigrationAsync(connection, migration.Sql, transaction);
+                        }
+                        else
+                        {
+                            command.CommandText = migration.Sql;
+                            await command.ExecuteNonQueryAsync();
+                        }
                     }
                     await RecordMigrationAsync(connection, migration, provider, transaction);
                     await transaction.CommitAsync();
@@ -137,22 +142,25 @@ internal static class Program
         }
     }
 
-    private static async Task<string> PrepareSqliteConditionalStatementsAsync(
+    private static async Task ApplySqliteMigrationAsync(
         DbConnection connection, string sql, DbTransaction transaction)
     {
         // A small migration directive keeps SQLite ADD COLUMN operations idempotent
         // without embedding schema mutation logic in application services.
         var lines = sql.Replace("\r\n", "\n").Split('\n');
-        var output = new System.Text.StringBuilder();
+        var pending = new System.Text.StringBuilder();
         for (var i = 0; i < lines.Length; i++)
         {
             var trimmed = lines[i].Trim();
             const string directive = "-- @if-column-missing ";
             if (!trimmed.StartsWith(directive, StringComparison.OrdinalIgnoreCase))
             {
-                output.AppendLine(lines[i]);
+                pending.AppendLine(lines[i]);
                 continue;
             }
+
+            await ExecuteSqliteBatchAsync(connection, pending.ToString(), transaction);
+            pending.Clear();
 
             var target = trimmed[directive.Length..].Trim();
             var parts = target.Split('.', StringSplitOptions.TrimEntries);
@@ -175,9 +183,22 @@ internal static class Program
             check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{parts[0]}') WHERE name = '{parts[1]}';";
             var exists = Convert.ToInt32(await check.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
             if (!exists)
-                output.Append(statement);
+                await ExecuteSqliteBatchAsync(connection, statement.ToString(), transaction);
         }
-        return output.ToString();
+        await ExecuteSqliteBatchAsync(connection, pending.ToString(), transaction);
+    }
+
+    private static async Task ExecuteSqliteBatchAsync(
+        DbConnection connection, string sql, DbTransaction transaction)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            return;
+
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandTimeout = 600;
+        command.CommandText = sql;
+        await command.ExecuteNonQueryAsync();
     }
 
     private static DbConnection CreateConnection(string provider, string connectionString) => provider switch
