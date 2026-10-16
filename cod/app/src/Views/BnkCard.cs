@@ -22,11 +22,11 @@ public sealed class BnkCard : BaseWin
         var exception = new NotSupportedException(context);
 
         // Errors are routed to errors.log; the operational trace goes to log.log.
-        AppHost.Logging?.LogError(
+        ShouTech.App.Services.AppHost.Logging?.LogError(
             "WindowPersistence",
             $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
             exception);
-        AppHost.Logging?.LogOperation(
+        ShouTech.App.Services.AppHost.Logging?.LogOperation(
             "WindowPersistence",
             "PersistenceUnavailable",
             $"Code={definition.Code} | Window={GetType().Name}");
