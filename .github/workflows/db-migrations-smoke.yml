@@ -50,7 +50,21 @@ jobs:
           missing_columns = sorted(required_columns - voucher_columns)
           if missing_columns:
               raise SystemExit(f"SQLite cash_vouchers columns are missing: {missing_columns}")
-          print("SQLite journal and cash voucher schema verified.")
+          currency_tables = {"currencies", "currency_rates", "currency_audit_events"}
+          missing_currency_tables = sorted(currency_tables - tables)
+          if missing_currency_tables:
+              raise SystemExit(f"SQLite currency tables are missing: {missing_currency_tables}")
+          currency_columns = {row[1] for row in con.execute("PRAGMA table_info(currencies)")}
+          required_currency_columns = {"currency_code", "currency_name_ar", "currency_name_en", "symbol", "fraction_name", "decimal_places", "is_active"}
+          missing_currency_columns = sorted(required_currency_columns - currency_columns)
+          if missing_currency_columns:
+              raise SystemExit(f"SQLite currency columns are missing: {missing_currency_columns}")
+          rate_columns = {row[1] for row in con.execute("PRAGMA table_info(currency_rates)")}
+          required_rate_columns = {"company_id", "from_currency", "to_currency", "rate", "buy_rate", "sell_rate", "min_rate", "max_rate", "effective_date", "created_by"}
+          missing_rate_columns = sorted(required_rate_columns - rate_columns)
+          if missing_rate_columns:
+              raise SystemExit(f"SQLite currency_rates columns are missing: {missing_rate_columns}")
+          print("SQLite journal, cash voucher, and currency schemas verified.")
           PY
       - name: Test existing SQLite migration-history table
         run: |
@@ -113,7 +127,15 @@ jobs:
           test "$voucher_column_count" = "10" || { echo "Expected ten cash_vouchers columns, found $voucher_column_count"; exit 1; }
           voucher_unique_index=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='cash_vouchers' AND indexname='cash_vouchers_company_id_voucher_kind_voucher_number_key'")
           test "$voucher_unique_index" = "1" || { echo "PostgreSQL cash voucher uniqueness constraint is missing"; exit 1; }
-          echo "PostgreSQL journal and cash voucher schema verified."
+          currency_table_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('currencies','currency_rates','currency_audit_events')")
+          test "$currency_table_count" = "3" || { echo "Expected three currency tables, found $currency_table_count"; exit 1; }
+          currency_column_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='currencies' AND column_name IN ('currency_code','currency_name_ar','currency_name_en','symbol','fraction_name','decimal_places','is_active')")
+          test "$currency_column_count" = "7" || { echo "Expected seven currency definition columns, found $currency_column_count"; exit 1; }
+          rate_column_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='currency_rates' AND column_name IN ('company_id','from_currency','to_currency','rate','buy_rate','sell_rate','min_rate','max_rate','effective_date','created_by')")
+          test "$rate_column_count" = "10" || { echo "Expected ten currency rate columns, found $rate_column_count"; exit 1; }
+          rate_unique_index=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='currency_rates' AND indexname='uq_currency_rates_company_pair_date'")
+          test "$rate_unique_index" = "1" || { echo "PostgreSQL unique rate-history constraint is missing"; exit 1; }
+          echo "PostgreSQL journal, cash voucher, and currency schemas verified."
       - name: Test existing PostgreSQL migration-history table
         env:
           PG_CONN_HISTORY: Host=localhost;Port=5432;Database=shoutest_existing_history;Username=shoutest;Password=shoutest
