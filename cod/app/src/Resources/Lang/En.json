@@ -1168,6 +1168,7 @@
   },
   "Vouchers": {
     "JournalTitle": "Journal Voucher",
+    "Load": "Load Journal",
     "ReceiptTitle": "Receipt Voucher",
     "PaymentTitle": "Payment Voucher",
     "ChequeTitle": "Securities and Cheques",
