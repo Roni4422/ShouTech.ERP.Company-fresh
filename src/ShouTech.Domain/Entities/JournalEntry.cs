@@ -7,16 +7,26 @@ public sealed class JournalEntry
     public Guid Id { get; } = Guid.NewGuid();
     public DateOnly EntryDate { get; }
     public string Description { get; }
+    public string? ReferenceNumber { get; }
+    public string CurrencyCode { get; }
+    public decimal ExchangeRate { get; }
     public JournalEntryStatus Status { get; private set; } = JournalEntryStatus.Draft;
     public IReadOnlyCollection<JournalLine> Lines => _lines.AsReadOnly();
 
-    public JournalEntry(DateOnly entryDate, string description)
+    public JournalEntry(DateOnly entryDate, string description, string? referenceNumber = null, string currencyCode = "SAR", decimal exchangeRate = 1m)
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new ArgumentException("Description is required.", nameof(description));
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Trim().Length is < 3 or > 3)
+            throw new ArgumentException("Currency code must be a three-letter ISO code.", nameof(currencyCode));
+        if (exchangeRate <= 0)
+            throw new ArgumentOutOfRangeException(nameof(exchangeRate), "Exchange rate must be greater than zero.");
 
         EntryDate = entryDate;
         Description = description.Trim();
+        ReferenceNumber = string.IsNullOrWhiteSpace(referenceNumber) ? null : referenceNumber.Trim();
+        CurrencyCode = currencyCode.Trim().ToUpperInvariant();
+        ExchangeRate = exchangeRate;
     }
 
     public void AddLine(Guid accountId, decimal debit, decimal credit, string? note = null, string? costCenter = null)
