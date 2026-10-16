@@ -306,6 +306,7 @@ namespace Kern.Tests
                 var repository = new ShouTech.Infrastructure.JournalRepository("SQLite", connectionString);
                 Assert.Equal(companyId, await repository.ResolveCompanyIdAsync(companyCode));
                 Assert.Equal(debitAccount, await repository.ResolveAccountIdAsync(companyId, "1101"));
+                Assert.Equal("Cash", await repository.ResolveAccountNameAsync(companyId, "1101"));
                 var service = new JournalService(repository);
 
                 var journalId = await service.CreateDraftAsync(
