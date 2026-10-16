@@ -15,6 +15,19 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class MfgWin : BaseWin
 {
+
+    /// <summary>Reports that persistence is not implemented instead of claiming success.</summary>
+    private void ShowPersistenceUnavailable()
+    {
+        MessageBox.Show(
+            this,
+            "لم تُنفّذ عملية قاعدة البيانات لهذه النافذة بعد. لم يتم حفظ أو ترحيل أي بيانات.",
+            "العملية غير متاحة",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly TextBox _txtDocNo = new() { Width = 110, Height = 26 };
     private readonly DatePicker _dtDate = new() { Width = 120, Height = 26, SelectedDate = DateTime.Today };
     private readonly TextBox _txtItem = new() { Width = 130, Height = 26 };
@@ -64,15 +77,9 @@ public sealed class MfgWin : BaseWin
         StyleButton(_btnPrint, "Invoice.Print");
 
         _btnNew.Click += (_, _) => ResetOrder();
-        _btnSave.Click += (_, _) => MessageBox.Show(this, T("MfgOrder.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
-        _btnPost.Click += (_, _) =>
-        {
-            _btnSave.IsEnabled = false;
-            _btnPost.IsEnabled = false;
-            _grid.IsReadOnly = true;
-            MessageBox.Show(this, T("MfgOrder.Posted"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
-        };
-        _btnPrint.Click += (_, _) => MessageBox.Show(this, T("Common.Done"), T("Invoice.Print"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnPost.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnPrint.Click += (_, _) => ShowPersistenceUnavailable();
 
         _btnAddItem.Click += (_, _) =>
         {
