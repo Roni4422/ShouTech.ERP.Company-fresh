@@ -89,6 +89,8 @@ public sealed class JrnWin : BaseWin
 
     private readonly DataGrid _grid = new();
     private readonly ObservableCollection<JrnLineVm> _lines = new();
+    private Guid? _currentJournalId;
+    private bool _journalPosted;
 
     public JrnWin()
     {
@@ -118,8 +120,8 @@ public sealed class JrnWin : BaseWin
         StyleButton(_btnAutoBal, "Vouchers.AutoBalance");
 
         _btnNew.Click += (_, _) => ResetVoucher();
-        _btnSave.Click += (_, _) => SaveVoucher();
-        _btnPost.Click += (_, _) => PostVoucher();
+        _btnSave.Click += async (_, _) => await SaveVoucherAsync();
+        _btnPost.Click += async (_, _) => await PostVoucherAsync();
         _btnPrint.Click += (_, _) => ShowOperationUnavailable("Print");
         _btnAddLine.Click += (_, _) =>
         {
@@ -237,7 +239,9 @@ public sealed class JrnWin : BaseWin
 
     private void ResetVoucher()
     {
-        _txtDocNo.Text = "JV-" + DateTime.Now.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
+        _txtDocNo.Text = "JV-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        _currentJournalId = null;
+        _journalPosted = false;
         _dtDate.SelectedDate = DateTime.Today;
         _txtRefNo.Text = string.Empty;
         _txtCc.Text = string.Empty;
@@ -301,14 +305,138 @@ public sealed class JrnWin : BaseWin
         RefreshBalances();
     }
 
-    private void SaveVoucher()
+    private async Task SaveVoucherAsync()
     {
-        ShowPersistenceUnavailable();
+        if (_currentJournalId.HasValue)
+        {
+            MessageBox.Show(this, "هذا القيد محفوظ بالفعل. لا تُنشأ نسخة مكررة؛ افتح قيدًا جديدًا لإدخال قيد آخر.", "القيد محفوظ", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            _grid.CommitEdit(DataGridEditingUnit.Cell, true);
+            _grid.CommitEdit(DataGridEditingUnit.Row, true);
+
+            var user = ShouTech.App.Services.UsrSession.Current;
+            var companyCode = user?.CompanyId;
+            var actor = !string.IsNullOrWhiteSpace(user?.Id) ? user.Id : ShouTech.App.Services.AppHost.Session.CurrentUser;
+            if (string.IsNullOrWhiteSpace(companyCode))
+                throw new InvalidOperationException("لا توجد شركة نشطة في جلسة المستخدم.");
+            if (string.IsNullOrWhiteSpace(actor))
+                throw new InvalidOperationException("تعذر تحديد المستخدم الحالي لحفظ القيد.");
+            if (ShouTech.App.Services.AppHost.JournalStore is not { } store ||
+                ShouTech.App.Services.AppHost.Journal is not { } journal)
+                throw new InvalidOperationException("خدمة حفظ القيود غير مهيأة؛ تحقق من اتصال قاعدة البيانات وإعداداتها.");
+
+            if (_dtDate.SelectedDate is not DateTime selectedDate)
+                throw new InvalidOperationException("تاريخ القيد مطلوب.");
+            if (string.IsNullOrWhiteSpace(_txtDocNo.Text))
+                throw new InvalidOperationException("رقم القيد مطلوب.");
+            if (string.IsNullOrWhiteSpace(_txtMemo.Text))
+                throw new InvalidOperationException("بيان القيد مطلوب.");
+
+            var currency = _txtCur.Text.Trim().ToUpperInvariant();
+            if (currency.Length != 3 || !currency.All(char.IsAsciiLetter))
+                throw new InvalidOperationException("رمز العملة يجب أن يتكون من ثلاثة أحرف لاتينية.");
+            if (!decimal.TryParse(_txtRate.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var rate) &&
+                !decimal.TryParse(_txtRate.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out rate))
+                throw new InvalidOperationException("سعر الصرف غير صالح.");
+            if (rate <= 0)
+                throw new InvalidOperationException("سعر الصرف يجب أن يكون أكبر من صفر.");
+            if (_lines.Count < 2)
+                throw new InvalidOperationException("القيد يتطلب سطرين على الأقل.");
+
+            var companyId = await store.ResolveCompanyIdAsync(companyCode);
+            var requests = new List<ShouTech.Application.Services.JournalLineRequest>();
+            foreach (var line in _lines)
+            {
+                if (string.IsNullOrWhiteSpace(line.AccountCode))
+                    throw new InvalidOperationException($"رمز الحساب مطلوب في السطر {line.LineNo}.");
+                if (line.Debit < 0 || line.Credit < 0 || (line.Debit > 0 && line.Credit > 0) ||
+                    (line.Debit == 0 && line.Credit == 0))
+                    throw new InvalidOperationException($"يجب إدخال مدين أو دائن واحد فقط بمبلغ موجب في السطر {line.LineNo}.");
+
+                var accountId = await store.ResolveAccountIdAsync(companyId, line.AccountCode);
+                var costCenter = string.IsNullOrWhiteSpace(line.CostCenter) ? _txtCc.Text : line.CostCenter;
+                requests.Add(new ShouTech.Application.Services.JournalLineRequest(
+                    accountId, line.Debit, line.Credit, line.Memo, costCenter));
+            }
+
+            var id = await journal.CreateDraftAsync(
+                companyId,
+                DateOnly.FromDateTime(selectedDate),
+                _txtMemo.Text.Trim(),
+                actor,
+                requests,
+                referenceNumber: _txtRefNo.Text,
+                currencyCode: currency,
+                exchangeRate: rate,
+                documentNumber: _txtDocNo.Text);
+            _currentJournalId = id;
+            _btnSave.IsEnabled = false;
+            _btnPost.IsEnabled = true;
+            MessageBox.Show(this, $"تم حفظ مسودة القيد في قاعدة البيانات.\nالمعرف: {id:D}", "تم الحفظ", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ReportPersistenceFailure("SaveDraft", ex);
+        }
     }
 
-    private void PostVoucher()
+    private async Task PostVoucherAsync()
     {
-        ShowPersistenceUnavailable();
+        if (_journalPosted)
+            return;
+
+        try
+        {
+            if (!_currentJournalId.HasValue)
+            {
+                await SaveVoucherAsync();
+                if (!_currentJournalId.HasValue)
+                    return;
+            }
+
+            var user = ShouTech.App.Services.UsrSession.Current;
+            var actor = !string.IsNullOrWhiteSpace(user?.Id) ? user.Id : ShouTech.App.Services.AppHost.Session.CurrentUser;
+            if (string.IsNullOrWhiteSpace(actor))
+                throw new InvalidOperationException("تعذر تحديد المستخدم الحالي لترحيل القيد.");
+            if (ShouTech.App.Services.AppHost.Journal is not { } journal)
+                throw new InvalidOperationException("خدمة ترحيل القيود غير مهيأة.");
+
+            await journal.PostAsync(_currentJournalId.Value, actor);
+            _journalPosted = true;
+            _btnSave.IsEnabled = false;
+            _btnPost.IsEnabled = false;
+            _grid.IsReadOnly = true;
+            MessageBox.Show(this, "تم ترحيل القيد فعليًا في قاعدة البيانات.", "تم الترحيل", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ReportPersistenceFailure("Post", ex);
+        }
+    }
+
+    private void ReportPersistenceFailure(string operation, Exception exception)
+    {
+        const string errorCode = "APP-2010";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var context = $"Operation={operation}; Window={GetType().Name}; Company={ShouTech.App.Services.UsrSession.Current?.CompanyId ?? "(none)"}";
+        ShouTech.App.Services.AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | {context} | {exception.Message}",
+            exception);
+        ShouTech.App.Services.AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "DatabaseOperationFailed",
+            $"Code={definition.Code}; {context}; Error={exception.Message}");
+        MessageBox.Show(
+            this,
+            $"لم تنجح العملية ولم تُعرض كنجاح.\n[{definition.Code}] {exception.Message}",
+            "فشل حفظ القيد",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
     }
 
     protected override void ApplyLocalizedText()
