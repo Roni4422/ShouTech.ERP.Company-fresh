@@ -116,9 +116,6 @@ public sealed class CurrencyRepository : ICurrencyRepository
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(newRates);
         if (string.IsNullOrWhiteSpace(actor)) throw new ArgumentException("Actor is required.", nameof(actor));
-        if (newRates.Count > 0 && string.Equals(definition.Code, definition.Code, StringComparison.OrdinalIgnoreCase) is false)
-            throw new InvalidOperationException("Currency code normalization failed.");
-
         var duplicateDates = newRates.GroupBy(rate => rate.EffectiveDate).Where(group => group.Count() > 1).Select(group => group.Key).ToArray();
         if (duplicateDates.Length > 0)
             throw new InvalidOperationException($"Only one exchange-rate observation per currency and date is permitted. Duplicate date: {duplicateDates[0]:yyyy-MM-dd}.");
