@@ -7,6 +7,11 @@ on:
       - 'dba/mig/**'
       - 'tools/SqlMigrator/**'
       - '.github/workflows/db-migrations-smoke.yml'
+  pull_request:
+    paths:
+      - 'dba/mig/**'
+      - 'tools/SqlMigrator/**'
+      - '.github/workflows/db-migrations-smoke.yml'
   workflow_dispatch:
 
 jobs:
