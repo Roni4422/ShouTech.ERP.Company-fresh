@@ -652,7 +652,12 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
         Add(command, "@company", FormatGuid(companyId));
         Add(command, "@account", FormatGuid(accountId));
         if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture) != 1)
-            throw new InvalidOperationException($"{role} account '{accountId:D}' is missing, inactive, deleted, not postable, or not an asset account for this company.");
+        {
+            var rule = requireAsset
+                ? "must be an active, non-deleted, postable asset account"
+                : "must be an active, non-deleted, postable account";
+            throw new InvalidOperationException($"{role} account '{accountId:D}' {rule} for this company.");
+        }
     }
 
     private async Task<Guid> GetOpenPeriodIdAsync(
