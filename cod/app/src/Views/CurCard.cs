@@ -111,7 +111,6 @@ public sealed class CurCard : BaseWin
 
         _lblBaseCurrency.Margin = new Thickness(0, 8, 0, 0);
         _lblBaseCurrency.TextWrapping = TextWrapping.Wrap;
-        _lblBaseCurrency.Tag = "CurrencyCard.BaseCurrency";
         cardPanel.Children.Add(_lblBaseCurrency);
 
         var leftCard = new Border
