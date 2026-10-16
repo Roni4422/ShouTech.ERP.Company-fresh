@@ -48,3 +48,31 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 - Include every DataGrid child row and add/remove/edit cases.
 - Verify company/tenant scope, transaction boundaries, and error logging.
 - Run SQLite and PostgreSQL tests where both providers are supported.
+
+
+## Additional windows checked (second pass)
+
+| Window | Observed data path | Static result | Round-trip |
+|---|---|---|---|
+| `CoaWin.xaml.cs` | `AccRepo.EnsureSchema`, `AccRepo.LoadAll`, `AccRepo.Save`, account import/export | Real account repository path; inspect every account property and import mapping | Not passed |
+| `PosWin.cs` | `MatRepo.LoadById` and inventory/unit lookups; final checkout delegated to invoice workflow | Sales workspace itself is not the final persistence boundary; checkout and payment metadata need tracing | Not passed |
+| `MatDirWin.xaml.cs` | `MatRepo.LoadAll`, `LoadGroups`, `SoftDelete` | Directory/search and delete use repository reads; verify delete confirmation/audit and all entry points | Not passed |
+| `BcdGenWin.cs` | `MatRepo.LoadAll`, `LoadById(includeChildren: true)`, `MatRepo.Save` | Barcode generation writes through material repository and reports saved/failed counts; needs a test proving generated barcode survives reload | Not passed |
+| `SerWin.xaml.cs` | `MatRepo.LoadAll`; saves search-window preferences separately | Search dialog payload is a selected material, not a business-record save form | Not applicable to material persistence; preference round-trip not tested |
+| `BkpWin.xaml.cs` / `RestoreCoWin.xaml.cs` | Backup/restore service workflow | These operate on backup packages/companies rather than ordinary form-row CRUD; require separate restore integrity tests | Not passed |
+| `BarWin.cs` / `BcdDesWin.cs` | Barcode printing/design; design is documented as local configuration | Printing is not DB persistence; template/config persistence must be distinguished from business data | Not passed |
+
+## Repository/schema cross-check observations
+
+- `Inventory.cs` exposes real `MatRepo.LoadAll`, `LoadById`, `Save`, `SoftDelete`, `SaveWarehouse`, and group operations. The presence of these methods does not by itself prove that every `MatRec` field and each child table (extra barcodes, price list, suppliers, stock-related rows, units) is fully mapped in both directions.
+- `InvRepo.cs` exposes `SaveDraft` and `Load`, with separate SQLite/PostgreSQL migration files for commercial documents. The invoice header and every line/tax/discount/payment-related field still need an explicit mapping comparison and database round-trip test.
+- `Accounting.cs` exposes `AccRepo.LoadAll`, `Save`, and `Delete`; account-card and chart import paths need tests for all account properties, parent/child renumbering, and provider parity.
+- The current PostgreSQL migration files `003_modules.sql` and `004_modules.sql` were fetched from `main` and have identical content (6,735 bytes and the same blob SHA). This is a migration-chain duplication risk that should be resolved only after checking the migration runner's applied-history compatibility; do not simply delete a migration that may already be recorded in deployed databases.
+- The historical `docs/SCHEMA_AUDIT_PHASE1.md` explicitly marks itself superseded. Its 540/120/55 counts are historical, not a fresh current count. A fresh `tools/schema_audit.py` run and the strict mode should be run in CI before claiming that no service DDL remains.
+
+## Next verification order
+
+1. Audit each repository record type against SQL columns and its write/read mappers: `MatRec`, `WarehouseRec`, `MatGroupRec`, `AccRec`, `InvDoc` and `InvLine`.
+2. Add automated integration tests using temporary SQLite databases for full create/read/update/re-read and child-row add/edit/remove; then run equivalent PostgreSQL tests.
+3. Build a machine-readable per-window field matrix from controls and repository mappings. Mark a field **PASS** only after the persisted value is read back and compared; mark unsupported fields **BLOCKED**, never assume success.
+4. Finish inventory of remaining `cod/app/src/Views/**` windows (reports, administration, import/export, company/user/security, configuration and document modules). Those windows are not certified by this partial report.
