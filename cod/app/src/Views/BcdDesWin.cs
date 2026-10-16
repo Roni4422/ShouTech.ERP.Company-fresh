@@ -171,7 +171,7 @@ public sealed class BcdDesWin : BaseWin
         return toolbar;
     }
 
-    private UIElement BuildSettings()
+    private StackPanel BuildSettings()
     {
         var panel = new StackPanel();
 
@@ -299,7 +299,7 @@ public sealed class BcdDesWin : BaseWin
         return panel;
     }
 
-    private UIElement BuildPreview()
+    private StackPanel BuildPreview()
     {
         var host = new StackPanel
         {
