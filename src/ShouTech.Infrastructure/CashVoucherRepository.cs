@@ -176,9 +176,9 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
         {
             command.CommandText = """
                 SELECT v.cash_voucher_id, v.company_id, v.voucher_kind, v.voucher_date, v.voucher_number,
-                       v.treasury_account_id, a.account_code, a.account_name, v.party_name, v.total_amount,
-                       v.currency_code, v.exchange_rate, v.reference_number, v.cost_center, v.memo,
-                       v.fiscal_period_id, v.journal_entry_id, v.reversal_journal_entry_id, v.status
+                       v.treasury_account_id, v.party_name, v.total_amount, v.currency_code, v.exchange_rate,
+                       v.reference_number, v.cost_center, v.memo, v.fiscal_period_id, v.journal_entry_id,
+                       v.reversal_journal_entry_id, v.status, a.account_code, a.account_name
                 FROM cash_vouchers v
                 LEFT JOIN chart_of_accounts a
                   ON a.account_id=v.treasury_account_id AND a.company_id=v.company_id
@@ -190,11 +190,11 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
             await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 return null;
-            if (reader.IsDBNull(6) || reader.IsDBNull(7))
+            if (reader.IsDBNull(17) || reader.IsDBNull(18))
                 throw new InvalidOperationException("The voucher treasury/bank account is missing from the company chart of accounts.");
             header = ReadHeader(reader);
-            treasuryCode = reader.GetString(6);
-            treasuryName = reader.GetString(7);
+            treasuryCode = reader.GetString(17);
+            treasuryName = reader.GetString(18);
             if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 throw new InvalidOperationException("Duplicate voucher numbers were found; voucher loading was stopped to protect data integrity.");
         }
