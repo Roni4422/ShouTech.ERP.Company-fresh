@@ -291,6 +291,112 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public async Task CurrencyRepository_ShouldPersistRateHistoryAndRejectHistoricalOverwrite()
+        {
+            var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-currency-{Guid.NewGuid():N}.sqlite3");
+            var connectionString = $"Data Source={databasePath};";
+            var companyId = Guid.NewGuid();
+            const string companyCode = "CURRENCY-ROUNDTRIP";
+            const string actor = "currency-roundtrip-test";
+            var effectiveDate = new DateOnly(2026, 10, 16);
+
+            try
+            {
+                ApplySqliteMigrations(databasePath);
+                await using (var connection = new SqliteConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    using var insertCompany = connection.CreateCommand();
+                    insertCompany.CommandText = """
+                        INSERT INTO companies (company_id, company_code, company_name_ar, company_name_en, currency_code)
+                        VALUES ($id, $code, 'شركة العملات', 'Currency Test Company', 'USD');
+                        """;
+                    insertCompany.Parameters.AddWithValue("$id", companyId.ToString("D"));
+                    insertCompany.Parameters.AddWithValue("$code", companyCode);
+                    await insertCompany.ExecuteNonQueryAsync();
+                }
+
+                var repository = new ShouTech.Infrastructure.CurrencyRepository("SQLite", connectionString);
+                var service = new CurrencyService(repository);
+                Assert.Equal(companyId, await service.ResolveCompanyIdAsync(companyCode));
+                Assert.Equal("USD", await service.GetCompanyBaseCurrencyCodeAsync(companyId));
+
+                var definition = new CurrencyDefinition("JOD", "الدينار الأردني", "Jordanian Dinar", "د.أ", "فلس", 3);
+                var rate = new CurrencyRateDraft(effectiveDate, 1.41m, 1.405m, 1.415m, 1.40m, 1.42m, "Daily treasury bulletin");
+                var insertedRates = await service.SaveAsync(companyId, definition, new[] { rate }, actor);
+                Assert.Equal(1, insertedRates);
+
+                var loaded = await service.LoadAsync(companyId, "JOD");
+                Assert.NotNull(loaded);
+                Assert.Equal("JOD", loaded!.Definition.Code);
+                Assert.Equal("الدينار الأردني", loaded.Definition.NameArabic);
+                Assert.Equal("Jordanian Dinar", loaded.Definition.NameEnglish);
+                Assert.Equal("د.أ", loaded.Definition.Symbol);
+                Assert.Equal("فلس", loaded.Definition.FractionName);
+                Assert.Equal(3, loaded.Definition.DecimalPlaces);
+                Assert.Equal("USD", loaded.CompanyBaseCurrencyCode);
+                Assert.Collection(loaded.Rates,
+                    saved =>
+                    {
+                        Assert.True(saved.RateId > 0);
+                        Assert.Equal(effectiveDate, saved.EffectiveDate);
+                        Assert.Equal(1.41m, saved.Rate);
+                        Assert.Equal(1.405m, saved.BuyRate);
+                        Assert.Equal(1.415m, saved.SellRate);
+                        Assert.Equal(1.40m, saved.MinRate);
+                        Assert.Equal(1.42m, saved.MaxRate);
+                        Assert.Equal("Daily treasury bulletin", saved.Notes);
+                        Assert.Equal(actor, saved.CreatedBy);
+                    });
+
+                await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    service.SaveAsync(companyId, definition,
+                        new[] { new CurrencyRateDraft(effectiveDate, 1.42m, 1.41m, 1.43m, 1.40m, 1.44m, "Attempted overwrite") },
+                        actor));
+
+                await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    service.SaveAsync(companyId,
+                        new CurrencyDefinition("USD", "US Dollar", "US Dollar", "$", "Cent", 2),
+                        new[] { new CurrencyRateDraft(effectiveDate, 1m, 1m, 1m, 1m, 1m, "Base currency must not have self-rate") },
+                        actor));
+
+                var reloaded = await service.LoadAsync(companyId, "JOD");
+                Assert.NotNull(reloaded);
+                Assert.Single(reloaded!.Rates);
+                Assert.Equal(1.41m, reloaded.Rates[0].Rate);
+                Assert.Equal("Daily treasury bulletin", reloaded.Rates[0].Notes);
+
+                await using (var verify = new SqliteConnection(connectionString))
+                {
+                    await verify.OpenAsync();
+                    using var counts = verify.CreateCommand();
+                    counts.CommandText = """
+                        SELECT
+                            (SELECT COUNT(*) FROM currency_rates WHERE company_id=$company AND from_currency='JOD' AND to_currency='USD'),
+                            (SELECT COUNT(*) FROM currency_audit_events WHERE currency_code='JOD');
+                        """;
+                    counts.Parameters.AddWithValue("$company", companyId.ToString("D"));
+                    using var reader = await counts.ExecuteReaderAsync();
+                    Assert.True(await reader.ReadAsync());
+                    Assert.Equal(1L, Convert.ToInt64(reader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture));
+                    Assert.Equal(2L, Convert.ToInt64(reader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture));
+                }
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                if (File.Exists(databasePath))
+                    File.Delete(databasePath);
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    var sidecar = databasePath + suffix;
+                    if (File.Exists(sidecar))
+                        File.Delete(sidecar);
+                }
+            }
+        }
+
+        [Fact]
         public void CashVoucher_ShouldRejectInvalidTotalsAndTreasuryAllocations()
         {
             var treasury = Guid.NewGuid();
