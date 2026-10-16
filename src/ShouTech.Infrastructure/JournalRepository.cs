@@ -22,6 +22,42 @@ public sealed class JournalRepository : IJournalRepository
         _connectionString = connectionString;
     }
 
+    public async Task<Guid> ResolveCompanyIdAsync(string companyCode, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(companyCode))
+            throw new ArgumentException("Company code is required.", nameof(companyCode));
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT company_id FROM companies WHERE company_code=@code AND is_active=" + (_provider == "PostgreSQL" ? "true" : "1") + " AND is_deleted=" + (_provider == "PostgreSQL" ? "false" : "0");
+        Add(command, "@code", companyCode.Trim());
+        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (value is null or DBNull || !Guid.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out var companyId) || companyId == Guid.Empty)
+            throw new InvalidOperationException($"Active company '{companyCode.Trim()}' could not be resolved to a valid database company ID.");
+        return companyId;
+    }
+
+    public async Task<Guid> ResolveAccountIdAsync(Guid companyId, string accountCode, CancellationToken cancellationToken = default)
+    {
+        if (companyId == Guid.Empty) throw new ArgumentException("Company is required.", nameof(companyId));
+        if (string.IsNullOrWhiteSpace(accountCode)) throw new ArgumentException("Account code is required.", nameof(accountCode));
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        var activePredicate = _provider == "PostgreSQL"
+            ? "is_active=true AND is_deleted=false AND is_postable=true"
+            : "is_active=1 AND is_deleted=0 AND is_postable=1";
+        command.CommandText = $"SELECT account_id FROM chart_of_accounts WHERE company_id=@company AND account_code=@code AND {activePredicate}";
+        Add(command, "@company", FormatGuid(companyId));
+        Add(command, "@code", accountCode.Trim());
+        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (value is null or DBNull || !Guid.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out var accountId) || accountId == Guid.Empty)
+            throw new InvalidOperationException($"Account code '{accountCode.Trim()}' is missing, inactive, deleted, or not postable for this company.");
+        return accountId;
+    }
+
     public async Task SaveDraftAsync(Guid companyId, JournalEntry entry, string userId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -61,7 +97,7 @@ public sealed class JournalRepository : IJournalRepository
             }
 
             await using (var command = CreateCommand(connection, transaction,
-                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id) VALUES (@id, @company, @date, @description, @status, @actor, @period)"))
+                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id, reference_number, currency_code, exchange_rate) VALUES (@id, @company, @date, @description, @status, @actor, @period, @reference, @currency, @rate)"))
             {
                 Add(command, "@id", FormatGuid(entry.Id));
                 Add(command, "@company", FormatGuid(companyId));
@@ -70,6 +106,9 @@ public sealed class JournalRepository : IJournalRepository
                 Add(command, "@status", (int)JournalEntryStatus.Draft);
                 Add(command, "@actor", userId.Trim());
                 Add(command, "@period", _provider == "PostgreSQL" ? (object)Guid.Parse(periodId) : periodId);
+                Add(command, "@reference", (object?)entry.ReferenceNumber ?? DBNull.Value);
+                Add(command, "@currency", entry.CurrencyCode);
+                Add(command, "@rate", entry.ExchangeRate);
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
@@ -154,9 +193,12 @@ public sealed class JournalRepository : IJournalRepository
             DateOnly entryDate;
             string description;
             string periodId;
+            string? referenceNumber;
+            string currencyCode;
+            decimal exchangeRate;
             int status;
             await using (var header = CreateCommand(connection, transaction,
-                "SELECT company_id, entry_date, description, status, fiscal_period_id FROM journal_entries WHERE journal_entry_id = @id"))
+                "SELECT company_id, entry_date, description, status, fiscal_period_id, reference_number, currency_code, exchange_rate FROM journal_entries WHERE journal_entry_id = @id"))
             {
                 Add(header, "@id", FormatGuid(journalEntryId));
                 await using var reader = await header.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -169,6 +211,9 @@ public sealed class JournalRepository : IJournalRepository
                 description = reader.GetString(2);
                 status = Convert.ToInt32(reader.GetValue(3), CultureInfo.InvariantCulture);
                 periodId = reader.IsDBNull(4) ? string.Empty : Convert.ToString(reader.GetValue(4), CultureInfo.InvariantCulture)!;
+                referenceNumber = reader.IsDBNull(5) ? null : reader.GetString(5);
+                currencyCode = reader.GetString(6);
+                exchangeRate = Convert.ToDecimal(reader.GetValue(7), CultureInfo.InvariantCulture);
             }
             if (status != (int)JournalEntryStatus.Posted)
                 throw new InvalidOperationException("Only an existing posted journal entry can be reversed.");
@@ -206,7 +251,7 @@ public sealed class JournalRepository : IJournalRepository
             var reversalDescription = $"Reversal: {description}";
             if (reversalDescription.Length > 500) reversalDescription = reversalDescription[..500];
             await using (var insert = CreateCommand(connection, transaction,
-                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, reversal_of_entry_id, fiscal_period_id) VALUES (@id, @company, @date, @description, @draft, @actor, @source, @period)"))
+                "INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, reversal_of_entry_id, fiscal_period_id, reference_number, currency_code, exchange_rate) VALUES (@id, @company, @date, @description, @draft, @actor, @source, @period, @reference, @currency, @rate)"))
             {
                 Add(insert, "@id", FormatGuid(reversalId));
                 Add(insert, "@company", _provider == "PostgreSQL" ? (object)Guid.Parse(companyId) : companyId);
@@ -216,6 +261,9 @@ public sealed class JournalRepository : IJournalRepository
                 Add(insert, "@actor", userId.Trim());
                 Add(insert, "@source", FormatGuid(journalEntryId));
                 Add(insert, "@period", _provider == "PostgreSQL" ? (object)Guid.Parse(periodId) : periodId);
+                Add(insert, "@reference", (object?)referenceNumber ?? DBNull.Value);
+                Add(insert, "@currency", currencyCode);
+                Add(insert, "@rate", exchangeRate);
                 await insert.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
