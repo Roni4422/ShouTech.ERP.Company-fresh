@@ -1,9 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -490,18 +488,7 @@ public sealed class CurCard : BaseWin
             Width = width
         };
 
-    private static bool TryParseDecimal(string? value, out decimal amount)
-    {
-        const NumberStyles styles =
-            NumberStyles.AllowLeadingSign |
-            NumberStyles.AllowDecimalPoint |
-            NumberStyles.AllowLeadingWhite |
-            NumberStyles.AllowTrailingWhite;
-        return decimal.TryParse(value, styles, CultureInfo.CurrentCulture, out amount) ||
-               decimal.TryParse(value, styles, CultureInfo.InvariantCulture, out amount);
-    }
-
-    private sealed class RateHistoryVm : INotifyPropertyChanged
+    private sealed class RateHistoryVm
     {
         public long RateId { get; init; }
         public bool IsPending { get; set; }
@@ -544,8 +531,5 @@ public sealed class CurCard : BaseWin
             Notes = snapshot.Notes;
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
