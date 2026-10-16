@@ -239,7 +239,7 @@ public sealed class CashVoucherRepository : ICashVoucherRepository
             var header = await ReadVoucherHeaderAsync(connection, transaction, companyId, kind, voucherId, forUpdate: true, cancellationToken).ConfigureAwait(false);
             if (header.Status != CashVoucherStatus.Draft || header.JournalEntryId.HasValue)
                 throw new InvalidOperationException("Only an unposted draft voucher can be posted.");
-            var lines = await ReadVoucherLinesAsync(connection, transaction, voucherId, companyId, cancellationToken).ConfigureAwait(false);
+            var lines = await ReadVoucherLinesForPostingAsync(connection, transaction, voucherId, cancellationToken).ConfigureAwait(false);
             ValidateStoredVoucher(header, lines);
             await EnsureOpenPeriodAsync(connection, transaction, companyId, header.FiscalPeriodId, header.VoucherDate, cancellationToken).ConfigureAwait(false);
             await EnsurePostableAccountAsync(connection, transaction, companyId, header.TreasuryAccountId, "Treasury/bank", cancellationToken).ConfigureAwait(false);
