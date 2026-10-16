@@ -14,6 +14,22 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class CurCard : BaseWin
 {
+
+    /// <summary>
+    /// Prevents a false success message when this screen has no database persistence wired.
+    /// This intentionally does not claim to save any values.
+    /// </summary>
+    private void ShowPersistenceUnavailable()
+    {
+        MessageBox.Show(
+            this,
+            "لم تُنفّذ عملية الحفظ في قاعدة البيانات لهذه النافذة بعد. لم يتم حفظ أي بيانات.",
+            "الحفظ غير متاح",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+
     private readonly TextBox _txtCode = new() { Width = 90, Height = 26, Text = "USD" };
     private readonly TextBox _txtNameAr = new() { Width = 150, Height = 26 };
     private readonly TextBox _txtNameEn = new() { Width = 150, Height = 26 };
@@ -54,7 +70,7 @@ public sealed class CurCard : BaseWin
         StyleButton(_btnAddRate, "Invoice.AddLine");
 
         _btnNew.Click += (_, _) => ResetCard();
-        _btnSave.Click += (_, _) => MessageBox.Show(this, T("CurrencyCard.Saved"), T("Common.Done"), MessageBoxButton.OK, MessageBoxImage.Information);
+        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
         _btnAddRate.Click += (_, _) =>
         {
             var r = new RateHistoryVm { Date = DateTime.Today, Rate = 3.75m };
