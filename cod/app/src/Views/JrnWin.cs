@@ -216,7 +216,7 @@ public sealed class JrnWin : BaseWin
         _grid.ItemsSource = _lines;
         _grid.Columns.Add(TextCol(nameof(JrnLineVm.LineNo), 45, readOnly: true));
         _grid.Columns.Add(TextCol(nameof(JrnLineVm.AccountCode), 110));
-        _grid.Columns.Add(TextCol(nameof(JrnLineVm.AccountName), 220));
+        _grid.Columns.Add(TextCol(nameof(JrnLineVm.AccountName), 220, readOnly: true));
         _grid.Columns.Add(TextCol(nameof(JrnLineVm.DebitText), 100));
         _grid.Columns.Add(TextCol(nameof(JrnLineVm.CreditText), 100));
         _grid.Columns.Add(TextCol(nameof(JrnLineVm.CostCenter), 110));
@@ -358,6 +358,7 @@ public sealed class JrnWin : BaseWin
                     throw new InvalidOperationException($"يجب إدخال مدين أو دائن واحد فقط بمبلغ موجب في السطر {line.LineNo}.");
 
                 var accountId = await store.ResolveAccountIdAsync(companyId, line.AccountCode);
+                line.AccountName = await store.ResolveAccountNameAsync(companyId, line.AccountCode);
                 var costCenter = string.IsNullOrWhiteSpace(line.CostCenter) ? _txtCc.Text : line.CostCenter;
                 requests.Add(new ShouTech.Application.Services.JournalLineRequest(
                     accountId, line.Debit, line.Credit, line.Memo, costCenter));
