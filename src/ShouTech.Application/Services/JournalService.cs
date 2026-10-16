@@ -20,11 +20,14 @@ public sealed class JournalService
         string description,
         string userId,
         IEnumerable<JournalLineRequest> lines,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? referenceNumber = null,
+        string currencyCode = "SAR",
+        decimal exchangeRate = 1m)
     {
         ArgumentNullException.ThrowIfNull(lines);
 
-        var entry = new JournalEntry(entryDate, description);
+        var entry = new JournalEntry(entryDate, description, referenceNumber, currencyCode, exchangeRate);
         foreach (var line in lines)
             entry.AddLine(line.AccountId, line.Debit, line.Credit, line.Note, line.CostCenter);
 
