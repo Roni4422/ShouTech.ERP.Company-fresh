@@ -22,7 +22,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 | `CshWin.cs` | Receipt/payment voucher + allocation lines | No voucher repository call in window | **Blocked**; save/post report unavailable | Not passed; header and every allocation row pending |
 | `JrnWin.cs` | Journal voucher + journal lines | No journal repository call in window | **Blocked**; save/post report unavailable | Not passed; header and every debit/credit line pending |
 | `ChqWin.cs` | Cheque batch + cheque rows | No cheque repository call in window | **Blocked**; save reports unavailable | Not passed; batch and every cheque row pending |
-| `OrdWin.cs` | Sales/purchase order + item rows | No order repository call in window | **Blocked**; save reports unavailable; conversion opens an invoice window but does not prove order persistence | Not passed |
+| `OrdWin.cs` | Sales/purchase order + item rows | No order repository call in window | **Blocked**; save is rejected and conversion now explicitly reports unavailable instead of opening an empty invoice (commit `ace64e2`) | Not passed |
 | `MfgWin.cs` | Manufacturing order + item rows | No manufacturing repository call in window | **Blocked**; save/post report unavailable | Not passed |
 | `InvoiceWin.cs` | Sales/purchase invoices and returns | `InvRepo.SaveDraft`, `InvRepo.Load`, `InvRepo.Post`, reversal path; material lookup via `MatRepo` | Real persistence path exists | Not proven for every header field and line field; round-trip pending |
 | `PosCheckoutWin.cs` | POS sale | `InvRepo.SaveDraft`, `InvRepo.Post` | Real invoice persistence path exists | Tender/payment metadata and all invoice rows need verification |
@@ -82,3 +82,5 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 
 - `BcdGenWin.SaveGenerated()` previously showed `Messages.SaveSuccess` even when `saved == 0` and all selected writes failed. Fixed on `main` in commit `85d9e69d47c74cede31e8075e2225cda73699983`: the dialog now shows the actual saved/failed summary and uses warning/error icons for partial/total failure; individual persistence exceptions are sent to `AppHost.Logging.LogError` with the material ID.
 - This is a source-level correction only. It has **not** been runtime-tested here; barcode persistence must still be proven by reloading each changed material from the database. This audit remains partial and does not certify all windows or fields.
+
+- `OrdWin.ConvertToInvoice()` was also corrected in commit `ace64e241bc38a65ff4cf26b883b7e7df20b1015`: the previous handler opened a blank invoice without transferring or persisting the order. It now reports the operation as unavailable, avoiding a misleading conversion workflow. Actual order persistence and conversion remain unimplemented.
