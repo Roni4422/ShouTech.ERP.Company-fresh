@@ -77,12 +77,13 @@ public sealed class JournalRepository : IJournalRepository
             foreach (var line in entry.Lines)
             {
                 await using var command = CreateCommand(connection, transaction,
-                    "INSERT INTO journal_entry_lines (journal_entry_id, line_number, account_id, debit, credit, note) VALUES (@id, @line, @account, @debit, @credit, @note)");
+                    "INSERT INTO journal_entry_lines (journal_entry_id, line_number, account_id, debit, credit, cost_center, note) VALUES (@id, @line, @account, @debit, @credit, @costCenter, @note)");
                 Add(command, "@id", FormatGuid(entry.Id));
                 Add(command, "@line", ++lineNumber);
                 Add(command, "@account", FormatGuid(line.AccountId));
                 Add(command, "@debit", line.Debit);
                 Add(command, "@credit", line.Credit);
+                Add(command, "@costCenter", (object?)line.CostCenter ?? DBNull.Value);
                 Add(command, "@note", (object?)line.Note ?? DBNull.Value);
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -183,9 +184,9 @@ public sealed class JournalRepository : IJournalRepository
                     throw new InvalidOperationException("The original fiscal period is closed. Reversal in a closed period is blocked; use an approved open-period adjustment workflow.");
             }
 
-            var sourceLines = new List<(string AccountId, decimal Debit, decimal Credit, string? Note)>();
+            var sourceLines = new List<(string AccountId, decimal Debit, decimal Credit, string? CostCenter, string? Note)>();
             await using (var lines = CreateCommand(connection, transaction,
-                "SELECT account_id, debit, credit, note FROM journal_entry_lines WHERE journal_entry_id = @id ORDER BY line_number"))
+                "SELECT account_id, debit, credit, cost_center, note FROM journal_entry_lines WHERE journal_entry_id = @id ORDER BY line_number"))
             {
                 Add(lines, "@id", FormatGuid(journalEntryId));
                 await using var reader = await lines.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -194,7 +195,8 @@ public sealed class JournalRepository : IJournalRepository
                     sourceLines.Add((Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture)!,
                         Convert.ToDecimal(reader.GetValue(1), CultureInfo.InvariantCulture),
                         Convert.ToDecimal(reader.GetValue(2), CultureInfo.InvariantCulture),
-                        reader.IsDBNull(3) ? null : reader.GetString(3)));
+                        reader.IsDBNull(3) ? null : reader.GetString(3),
+                        reader.IsDBNull(4) ? null : reader.GetString(4)));
                 }
             }
             if (sourceLines.Count < 2 || sourceLines.Sum(x => x.Debit) <= 0 || sourceLines.Sum(x => x.Debit) != sourceLines.Sum(x => x.Credit))
@@ -221,12 +223,13 @@ public sealed class JournalRepository : IJournalRepository
             foreach (var line in sourceLines)
             {
                 await using var insertLine = CreateCommand(connection, transaction,
-                    "INSERT INTO journal_entry_lines (journal_entry_id, line_number, account_id, debit, credit, note) VALUES (@id, @line, @account, @debit, @credit, @note)");
+                    "INSERT INTO journal_entry_lines (journal_entry_id, line_number, account_id, debit, credit, cost_center, note) VALUES (@id, @line, @account, @debit, @credit, @costCenter, @note)");
                 Add(insertLine, "@id", FormatGuid(reversalId));
                 Add(insertLine, "@line", ++lineNumber);
                 Add(insertLine, "@account", _provider == "PostgreSQL" ? (object)Guid.Parse(line.AccountId) : line.AccountId);
                 Add(insertLine, "@debit", line.Credit);
                 Add(insertLine, "@credit", line.Debit);
+                Add(insertLine, "@costCenter", (object?)line.CostCenter ?? DBNull.Value);
                 Add(insertLine, "@note", (object?)line.Note ?? DBNull.Value);
                 await insertLine.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
