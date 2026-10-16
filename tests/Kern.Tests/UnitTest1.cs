@@ -291,6 +291,54 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public void CashVoucher_ShouldRejectInvalidTotalsAndTreasuryAllocations()
+        {
+            var treasury = Guid.NewGuid();
+            var allocation = Guid.NewGuid();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new CashVoucherLine(allocation, 1.00001m));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new CashVoucherLine(allocation, 1_000_000_000_000_000m));
+
+            Assert.Throws<InvalidOperationException>(() =>
+                new CashVoucher(
+                    CashVoucherKind.Receipt,
+                    new DateOnly(2026, 10, 16),
+                    "RCV-TOTAL-MISMATCH",
+                    treasury,
+                    "Customer",
+                    11m,
+                    "JOD",
+                    1m,
+                    new[] { new CashVoucherLine(allocation, 10m) }));
+
+            Assert.Throws<InvalidOperationException>(() =>
+                new CashVoucher(
+                    CashVoucherKind.Payment,
+                    new DateOnly(2026, 10, 16),
+                    "PAY-TREASURY-LINE",
+                    treasury,
+                    "Supplier",
+                    10m,
+                    "JOD",
+                    1m,
+                    new[] { new CashVoucherLine(treasury, 10m) }));
+
+            Assert.Throws<ArgumentException>(() =>
+                new CashVoucher(
+                    CashVoucherKind.Receipt,
+                    new DateOnly(2026, 10, 16),
+                    "RCV-INVALID-CURRENCY",
+                    treasury,
+                    "Customer",
+                    10m,
+                    "1$D",
+                    1m,
+                    new[] { new CashVoucherLine(allocation, 10m) }));
+        }
+
+        [Fact]
         public async Task CashVoucherRepository_ShouldPersistReloadPostAndReverseReceiptAtomically()
         {
             var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-cash-voucher-{Guid.NewGuid():N}.sqlite3");
