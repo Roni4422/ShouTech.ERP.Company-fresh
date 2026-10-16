@@ -2,7 +2,7 @@
 -- These lookup tables are DBA-owned and must not be bootstrapped by Data.cs.
 CREATE TABLE IF NOT EXISTS product_categories (
     category_id TEXT PRIMARY KEY,
-    company_id TEXT NOT NULL,
+    company_id UUID NOT NULL,
     parent_category_id TEXT,
     category_code TEXT NOT NULL,
     category_name_ar TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS product_categories (
 
 CREATE TABLE IF NOT EXISTS brands (
     brand_id TEXT PRIMARY KEY,
-    company_id TEXT NOT NULL,
+    company_id UUID NOT NULL,
     brand_code TEXT NOT NULL,
     brand_name_ar TEXT NOT NULL,
     brand_name_en TEXT,

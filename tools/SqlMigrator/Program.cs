@@ -111,10 +111,15 @@ internal static class Program
                     {
                         command.Transaction = transaction;
                         command.CommandTimeout = 600;
-                        command.CommandText = provider == "sqlite"
-                            ? await PrepareSqliteConditionalStatementsAsync(connection, migration.Sql, transaction)
-                            : migration.Sql;
-                        await command.ExecuteNonQueryAsync();
+                        if (provider == "sqlite")
+                        {
+                            await ExecuteSqliteMigrationAsync(connection, migration.Sql, transaction);
+                        }
+                        else
+                        {
+                            command.CommandText = migration.Sql;
+                            await command.ExecuteNonQueryAsync();
+                        }
                     }
                     await RecordMigrationAsync(connection, migration, provider, transaction);
                     await transaction.CommitAsync();
@@ -137,22 +142,40 @@ internal static class Program
         }
     }
 
-    private static async Task<string> PrepareSqliteConditionalStatementsAsync(
+    private static async Task ExecuteSqliteMigrationAsync(
         DbConnection connection, string sql, DbTransaction transaction)
     {
-        // A small migration directive keeps SQLite ADD COLUMN operations idempotent
-        // without embedding schema mutation logic in application services.
+        // Execute preceding DDL before evaluating a conditional ADD COLUMN directive.
+        // Otherwise a fresh database appears to lack columns declared earlier in the
+        // same CREATE TABLE statement, causing the following ALTER TABLE to duplicate them.
         var lines = sql.Replace("\r\n", "\n").Split('\n');
-        var output = new System.Text.StringBuilder();
+        var pending = new StringBuilder();
+
+        async Task FlushPendingAsync()
+        {
+            var batch = pending.ToString();
+            pending.Clear();
+            if (string.IsNullOrWhiteSpace(batch))
+                return;
+
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandTimeout = 600;
+            command.CommandText = batch;
+            await command.ExecuteNonQueryAsync();
+        }
+
         for (var i = 0; i < lines.Length; i++)
         {
             var trimmed = lines[i].Trim();
             const string directive = "-- @if-column-missing ";
             if (!trimmed.StartsWith(directive, StringComparison.OrdinalIgnoreCase))
             {
-                output.AppendLine(lines[i]);
+                pending.AppendLine(lines[i]);
                 continue;
             }
+
+            await FlushPendingAsync();
 
             var target = trimmed[directive.Length..].Trim();
             var parts = target.Split('.', StringSplitOptions.TrimEntries);
@@ -161,23 +184,41 @@ internal static class Program
                 || !System.Text.RegularExpressions.Regex.IsMatch(parts[1], "^[A-Za-z_][A-Za-z0-9_]*$"))
                 throw new InvalidOperationException($"Invalid SQLite conditional-column directive: {target}");
 
-            var statement = new System.Text.StringBuilder();
-            while (i + 1 < lines.Length && !lines[i + 1].TrimStart().StartsWith("-- @if-column-missing ", StringComparison.OrdinalIgnoreCase))
+            var statement = new StringBuilder();
+            var terminated = false;
+            while (i + 1 < lines.Length
+                && !lines[i + 1].TrimStart().StartsWith(directive, StringComparison.OrdinalIgnoreCase))
             {
                 i++;
                 statement.AppendLine(lines[i]);
                 if (lines[i].Contains(';'))
+                {
+                    terminated = true;
                     break;
+                }
             }
+
+            if (!terminated)
+                throw new InvalidOperationException($"Conditional SQLite migration statement for {target} is missing a semicolon.");
 
             await using var check = connection.CreateCommand();
             check.Transaction = transaction;
             check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{parts[0]}') WHERE name = '{parts[1]}';";
-            var exists = Convert.ToInt32(await check.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+            var exists = Convert.ToInt32(
+                await check.ExecuteScalarAsync(),
+                System.Globalization.CultureInfo.InvariantCulture) > 0;
+
             if (!exists)
-                output.Append(statement);
+            {
+                await using var alter = connection.CreateCommand();
+                alter.Transaction = transaction;
+                alter.CommandTimeout = 600;
+                alter.CommandText = statement.ToString();
+                await alter.ExecuteNonQueryAsync();
+            }
         }
-        return output.ToString();
+
+        await FlushPendingAsync();
     }
 
     private static DbConnection CreateConnection(string provider, string connectionString) => provider switch
