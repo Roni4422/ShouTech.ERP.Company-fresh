@@ -40,7 +40,17 @@ jobs:
               raise SystemExit(f"SQLite journal_entries is missing columns: {missing}")
           if "ux_journal_entries_company_document_number" not in indexes:
               raise SystemExit("SQLite journal document-number uniqueness index is missing")
-          print("SQLite journal header schema and unique index verified.")
+          tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required_tables = {"cash_vouchers", "cash_voucher_lines", "cash_voucher_audit_events"}
+          missing_tables = sorted(required_tables - tables)
+          if missing_tables:
+              raise SystemExit(f"SQLite cash voucher tables are missing: {missing_tables}")
+          voucher_columns = {row[1] for row in con.execute("PRAGMA table_info(cash_vouchers)")}
+          required_columns = {"company_id", "voucher_kind", "voucher_number", "treasury_account_id", "total_amount", "exchange_rate", "fiscal_period_id", "journal_entry_id", "reversal_journal_entry_id", "status"}
+          missing_columns = sorted(required_columns - voucher_columns)
+          if missing_columns:
+              raise SystemExit(f"SQLite cash_vouchers columns are missing: {missing_columns}")
+          print("SQLite journal and cash voucher schema verified.")
           PY
       - name: Test existing SQLite migration-history table
         run: |
@@ -97,7 +107,13 @@ jobs:
           test "$count" = "5" || { echo "Expected five journal header columns, found $count"; exit 1; }
           index_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='journal_entries' AND indexname='ux_journal_entries_company_document_number'")
           test "$index_count" = "1" || { echo "PostgreSQL journal document-number uniqueness index is missing"; exit 1; }
-          echo "PostgreSQL journal header schema and unique index verified."
+          voucher_table_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('cash_vouchers','cash_voucher_lines','cash_voucher_audit_events')")
+          test "$voucher_table_count" = "3" || { echo "Expected three cash voucher tables, found $voucher_table_count"; exit 1; }
+          voucher_column_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='cash_vouchers' AND column_name IN ('company_id','voucher_kind','voucher_number','treasury_account_id','total_amount','exchange_rate','fiscal_period_id','journal_entry_id','reversal_journal_entry_id','status')")
+          test "$voucher_column_count" = "10" || { echo "Expected ten cash_vouchers columns, found $voucher_column_count"; exit 1; }
+          voucher_unique_index=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='cash_vouchers' AND indexname='cash_vouchers_company_id_voucher_kind_voucher_number_key'")
+          test "$voucher_unique_index" = "1" || { echo "PostgreSQL cash voucher uniqueness constraint is missing"; exit 1; }
+          echo "PostgreSQL journal and cash voucher schema verified."
       - name: Test existing PostgreSQL migration-history table
         env:
           PG_CONN_HISTORY: Host=localhost;Port=5432;Database=shoutest_existing_history;Username=shoutest;Password=shoutest
