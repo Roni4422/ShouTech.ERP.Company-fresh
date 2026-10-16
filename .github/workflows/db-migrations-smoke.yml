@@ -33,11 +33,14 @@ jobs:
           path = os.path.join(os.environ["RUNNER_TEMP"], "shoutech-fresh.db")
           with sqlite3.connect(path) as con:
               columns = {row[1] for row in con.execute("PRAGMA table_info(journal_entries)")}
+              indexes = {row[1] for row in con.execute("PRAGMA index_list('journal_entries')")}
           required = {"reference_number", "currency_code", "exchange_rate", "document_number", "fiscal_period_id"}
           missing = sorted(required - columns)
           if missing:
               raise SystemExit(f"SQLite journal_entries is missing columns: {missing}")
-          print("SQLite journal header schema verified.")
+          if "ux_journal_entries_company_document_number" not in indexes:
+              raise SystemExit("SQLite journal document-number uniqueness index is missing")
+          print("SQLite journal header schema and unique index verified.")
           PY
       - name: Test existing SQLite migration-history table
         run: |
@@ -92,7 +95,9 @@ jobs:
         run: |
           count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='journal_entries' AND column_name IN ('reference_number','currency_code','exchange_rate','document_number','fiscal_period_id')")
           test "$count" = "5" || { echo "Expected five journal header columns, found $count"; exit 1; }
-          echo "PostgreSQL journal header schema verified."
+          index_count=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='journal_entries' AND indexname='ux_journal_entries_company_document_number'")
+          test "$index_count" = "1" || { echo "PostgreSQL journal document-number uniqueness index is missing"; exit 1; }
+          echo "PostgreSQL journal header schema and unique index verified."
       - name: Test existing PostgreSQL migration-history table
         env:
           PG_CONN_HISTORY: Host=localhost;Port=5432;Database=shoutest_existing_history;Username=shoutest;Password=shoutest
