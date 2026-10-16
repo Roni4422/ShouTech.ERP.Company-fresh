@@ -240,10 +240,17 @@ public sealed class JrnWin : BaseWin
         var totalCredit = _lines.Sum(l => l.Credit);
         var diff = totalDebit - totalCredit;
 
-        _lblTotDr.Text = $"{T("Vouchers.TotalDebit")}: {totalDebit:N2} {_txtCur.Text}";
-        _lblTotCr.Text = $"{T("Vouchers.TotalCredit")}: {totalCredit:N2} {_txtCur.Text}";
+        _lblTotDr.Text = $"{T("Vouchers.TotalDebit")}: {totalDebit:N4} {_txtCur.Text}";
+        _lblTotCr.Text = $"{T("Vouchers.TotalCredit")}: {totalCredit:N4} {_txtCur.Text}";
 
-        if (Math.Abs(diff) < 0.001m && (totalDebit > 0 || totalCredit > 0))
+        if (_lines.Any(line => !line.AmountsAreValid))
+        {
+            _badgeDiff.Background = new SolidColorBrush(Color.FromRgb(198, 40, 40));
+            _lblDiff.Text = T("Vouchers.InvalidAmount");
+            return;
+        }
+
+        if (diff == 0m && (totalDebit > 0 || totalCredit > 0))
         {
             _badgeDiff.Background = new SolidColorBrush(Color.FromRgb(46, 125, 50));
             _lblDiff.Text = $"{T("Vouchers.Balanced")} (0.00)";
@@ -251,7 +258,7 @@ public sealed class JrnWin : BaseWin
         else
         {
             _badgeDiff.Background = new SolidColorBrush(Color.FromRgb(198, 40, 40));
-            _lblDiff.Text = $"{T("Vouchers.Difference")}: {Math.Abs(diff):N2} {_txtCur.Text}";
+            _lblDiff.Text = $"{T("Vouchers.Difference")}: {Math.Abs(diff):N4} {_txtCur.Text}";
         }
     }
 
@@ -261,7 +268,7 @@ public sealed class JrnWin : BaseWin
         var totalCredit = _lines.Sum(l => l.Credit);
         var diff = totalDebit - totalCredit;
 
-        if (Math.Abs(diff) < 0.001m) return;
+        if (diff == 0m) return;
 
         var lastLine = _lines.LastOrDefault(l => l.Debit == 0 && l.Credit == 0);
         if (lastLine == null)
@@ -572,9 +579,18 @@ public sealed class JrnWin : BaseWin
 
     private sealed class JrnLineVm : INotifyPropertyChanged
     {
+        private const decimal MaximumAmount = 999_999_999_999_999.9999m;
+        private const NumberStyles AmountStyles =
+            NumberStyles.AllowLeadingSign |
+            NumberStyles.AllowDecimalPoint |
+            NumberStyles.AllowLeadingWhite |
+            NumberStyles.AllowTrailingWhite;
+
         private int _lineNo;
         private string _accCode = "", _accName = "", _costCenter = "", _memo = "";
+        private string _debitText = string.Empty, _creditText = string.Empty;
         private decimal _debit, _credit;
+        private bool _debitTextValid = true, _creditTextValid = true;
 
         public int LineNo { get => _lineNo; set { _lineNo = value; OnChanged(); } }
         public string AccountCode { get => _accCode; set { _accCode = value; OnChanged(); } }
@@ -582,20 +598,100 @@ public sealed class JrnWin : BaseWin
         public string CostCenter { get => _costCenter; set { _costCenter = value; OnChanged(); } }
         public string Memo { get => _memo; set { _memo = value; OnChanged(); } }
 
-        public decimal Debit { get => _debit; set { _debit = value; OnChanged(nameof(DebitText)); } }
-        public decimal Credit { get => _credit; set { _credit = value; OnChanged(nameof(CreditText)); } }
+        public decimal Debit
+        {
+            get => _debit;
+            set
+            {
+                _debit = value;
+                _debitText = value == 0 ? string.Empty : value.ToString("0.####", CultureInfo.CurrentCulture);
+                _debitTextValid = IsValidAmount(value);
+                OnChanged();
+                OnChanged(nameof(DebitText));
+                OnChanged(nameof(AmountsAreValid));
+            }
+        }
+
+        public decimal Credit
+        {
+            get => _credit;
+            set
+            {
+                _credit = value;
+                _creditText = value == 0 ? string.Empty : value.ToString("0.####", CultureInfo.CurrentCulture);
+                _creditTextValid = IsValidAmount(value);
+                OnChanged();
+                OnChanged(nameof(CreditText));
+                OnChanged(nameof(AmountsAreValid));
+            }
+        }
 
         public string DebitText
         {
-            get => _debit == 0 ? "" : _debit.ToString("0.##", CultureInfo.InvariantCulture);
-            set { if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) Debit = v; else Debit = 0; }
+            get => _debitText;
+            set
+            {
+                _debitText = value ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(_debitText))
+                {
+                    _debit = 0;
+                    _debitTextValid = true;
+                }
+                else if (TryParseAmount(_debitText, out var amount) && IsValidAmount(amount))
+                {
+                    _debit = amount;
+                    _debitTextValid = true;
+                }
+                else
+                {
+                    _debit = 0;
+                    _debitTextValid = false;
+                }
+
+                OnChanged(nameof(Debit));
+                OnChanged();
+                OnChanged(nameof(AmountsAreValid));
+            }
         }
 
         public string CreditText
         {
-            get => _credit == 0 ? "" : _credit.ToString("0.##", CultureInfo.InvariantCulture);
-            set { if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) Credit = v; else Credit = 0; }
+            get => _creditText;
+            set
+            {
+                _creditText = value ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(_creditText))
+                {
+                    _credit = 0;
+                    _creditTextValid = true;
+                }
+                else if (TryParseAmount(_creditText, out var amount) && IsValidAmount(amount))
+                {
+                    _credit = amount;
+                    _creditTextValid = true;
+                }
+                else
+                {
+                    _credit = 0;
+                    _creditTextValid = false;
+                }
+
+                OnChanged(nameof(Credit));
+                OnChanged();
+                OnChanged(nameof(AmountsAreValid));
+            }
         }
+
+        public bool AmountsAreValid => _debitTextValid && _creditTextValid;
+
+        private static bool TryParseAmount(string value, out decimal amount) =>
+            decimal.TryParse(value, AmountStyles, CultureInfo.CurrentCulture, out amount) ||
+            decimal.TryParse(value, AmountStyles, CultureInfo.InvariantCulture, out amount);
+
+        private static bool IsValidAmount(decimal amount) =>
+            amount >= 0 &&
+            amount <= MaximumAmount &&
+            decimal.Round(amount, 4) == amount;
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnChanged([CallerMemberName] string? name = null)
