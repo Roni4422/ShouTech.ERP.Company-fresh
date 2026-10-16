@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Xml.Linq;
 using System.Windows;
 using ShouTech.App.Converters;
@@ -326,6 +327,7 @@ namespace Kern.Tests
                 AppState.CurrentCompanyCode = company;
 
                 schemaReadyField.SetValue(null, false);
+                ApplySqliteMigrations(databasePath);
                 typeof(StkPost).Assembly
                     .GetType("ShouTech.App.Services.MatRepo")!
                     .GetMethod("EnsureSchema", BindingFlags.Public | BindingFlags.Static)!
@@ -439,6 +441,44 @@ namespace Kern.Tests
                         File.Delete(sidecar);
                 }
             }
+        }
+
+        private static void ApplySqliteMigrations(string databasePath)
+        {
+            var root = new DirectoryInfo(AppContext.BaseDirectory);
+            while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "dba", "mig")))
+                root = root.Parent;
+
+            Assert.NotNull(root);
+            var migrator = Path.Combine(root!.FullName, "tools", "SqlMigrator", "bin", "Release", "net8.0", "SqlMigrator.dll");
+            Assert.True(File.Exists(migrator), $"SQL migrator was not built: {migrator}");
+
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    WorkingDirectory = root.FullName,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            process.StartInfo.ArgumentList.Add(migrator);
+            process.StartInfo.ArgumentList.Add("--provider");
+            process.StartInfo.ArgumentList.Add("sqlite");
+            process.StartInfo.ArgumentList.Add("--connection");
+            process.StartInfo.ArgumentList.Add($"Data Source={databasePath};");
+
+            Assert.True(process.Start(), "Could not start the DBA SQL migrator.");
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            Assert.True(process.WaitForExit(120_000), "DBA SQL migrations timed out.");
+            var output = stdout.GetAwaiter().GetResult();
+            var errors = stderr.GetAwaiter().GetResult();
+            Assert.True(process.ExitCode == 0,
+                $"Applying SQLite DBA migrations failed (exit {process.ExitCode}).\\n{output}\\n{errors}");
         }
 
         private static void Execute(SqliteConnection connection, string sql)

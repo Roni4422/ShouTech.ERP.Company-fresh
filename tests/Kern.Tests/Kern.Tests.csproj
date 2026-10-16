@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\cod\app\src\MainApp.csproj" />
+    <ProjectReference Include="..\..\tools\SqlMigrator\SqlMigrator.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
