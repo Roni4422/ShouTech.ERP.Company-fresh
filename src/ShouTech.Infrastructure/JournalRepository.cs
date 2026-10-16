@@ -203,6 +203,19 @@ public sealed class JournalRepository : IJournalRepository
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (!string.IsNullOrWhiteSpace(entry.DocumentNumber))
+            {
+                await using var duplicateCheck = CreateCommand(connection, transaction,
+                    "SELECT COUNT(*) FROM journal_entries WHERE company_id=@company AND document_number=@documentNumber");
+                Add(duplicateCheck, "@company", FormatGuid(companyId));
+                Add(duplicateCheck, "@documentNumber", entry.DocumentNumber);
+                if (Convert.ToInt64(
+                    await duplicateCheck.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
+                    CultureInfo.InvariantCulture) != 0)
+                    throw new InvalidOperationException(
+                        $"Journal document number '{entry.DocumentNumber}' already exists for this company.");
+            }
+
             object entryDateValue = _provider == "PostgreSQL"
                 ? entry.EntryDate
                 : entry.EntryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
