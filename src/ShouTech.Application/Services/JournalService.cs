@@ -3,7 +3,7 @@ using ShouTech.Domain.Interfaces;
 
 namespace ShouTech.Application.Services;
 
-public sealed record JournalLineRequest(Guid AccountId, decimal Debit, decimal Credit, string? Note = null);
+public sealed record JournalLineRequest(Guid AccountId, decimal Debit, decimal Credit, string? Note = null, string? CostCenter = null);
 
 public sealed class JournalService
 {
@@ -26,7 +26,7 @@ public sealed class JournalService
 
         var entry = new JournalEntry(entryDate, description);
         foreach (var line in lines)
-            entry.AddLine(line.AccountId, line.Debit, line.Credit, line.Note);
+            entry.AddLine(line.AccountId, line.Debit, line.Credit, line.Note, line.CostCenter);
 
         entry.EnsureBalanced();
         await _repository.SaveDraftAsync(companyId, entry, userId, cancellationToken).ConfigureAwait(false);
