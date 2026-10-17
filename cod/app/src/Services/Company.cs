@@ -496,8 +496,12 @@ public static class CoLocalStore
                     return await cmd.ExecuteNonQueryAsync() > 0;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppHost.Logging?.LogError(
+                    "CompanyManagement",
+                    $"COM-DELETE-001: Database soft-delete failed for company '{companyCode}'.",
+                    ex);
                 return false;
             }
 
