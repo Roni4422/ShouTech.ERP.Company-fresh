@@ -134,7 +134,11 @@ public partial class AccCard : BaseWin
     private void GenerateNextCode(string parentCode)
     {
         try { TxtCode.Text = AccRepo.NextChildCode(parentCode); }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "ترقيم الحساب", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex)
+        {
+            ReportAccountFailure("GenerateChildCode", ex);
+            MessageBox.Show(this, FormatAccountError(), "Account Numbering", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void CmbRisk_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -284,8 +288,8 @@ public partial class AccCard : BaseWin
         }
         catch (Exception ex)
         {
-            AppHost.Logging?.LogError("AccountCard", $"Failed to save account | AccountCode={code}", ex);
-            MessageBox.Show(this, $"تعذر حفظ الحساب.\n{ex.Message}", "حفظ الحساب", MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportAccountFailure($"SaveAccount:{code}", ex);
+            MessageBox.Show(this, FormatAccountError(), "Save Account", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -323,7 +327,8 @@ public partial class AccCard : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"تعذر التحقق من حالة الحساب.\n{ex.Message}", "تعطيل الحساب", MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportAccountFailure("CheckAccountLifecycleForDisable", ex);
+            MessageBox.Show(this, FormatAccountError(), "Disable Account", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -353,8 +358,23 @@ public partial class AccCard : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"تعذر حذف الحساب.\n{ex.Message}", "حذف الحساب", MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportAccountFailure("DeleteAccount", ex);
+            MessageBox.Show(this, FormatAccountError(), "Delete Account", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private static string FormatAccountError()
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve("ACC-DB-001");
+        return $"[{definition.Code}] {definition.Message}{Environment.NewLine}Location: {definition.Location}";
+    }
+
+    private void ReportAccountFailure(string operation, Exception exception)
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve("ACC-DB-001");
+        var context = $"Operation={operation}; Window={GetType().Name}; User={UsrSession.Current?.Id ?? "(none)"}; Company={UsrSession.Current?.CompanyId ?? "(none)"}";
+        AppHost.Logging?.LogError("AccountCard", $"[{definition.Code}] {definition.Name} | {context}", exception);
+        AppHost.Logging?.LogOperation("AccountCard", "OperationFailed", $"Code={definition.Code} | {context}");
     }
 
     private void Statement_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this, "سيتم فتح كشف الحساب من هنا عند ربط حركة الأستاذ العام.", "كشف الحساب", MessageBoxButton.OK, MessageBoxImage.Information);
