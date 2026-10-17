@@ -155,8 +155,7 @@ public static class RptQuery
             ("$company", Company),
             ("$account", accountCode ?? string.Empty),
             ("$from", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            ("$search", string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim().ToLowerInvariant()}%"));
+            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
     }
 
     public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> JournalListAsync(
@@ -400,7 +399,8 @@ public static class RptQuery
         return await QueryAsync(sql, ct,
             ("$company", Company),
             ("$from", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            ("$search", string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim().ToLowerInvariant()}%"));
     }
 
     public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> PurchaseInvoiceListAsync(
@@ -435,7 +435,8 @@ public static class RptQuery
         return await QueryAsync(sql, ct,
             ("$company", Company),
             ("$from", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            ("$search", string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim().ToLowerInvariant()}%"));
     }
 
 
