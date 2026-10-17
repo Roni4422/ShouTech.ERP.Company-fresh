@@ -191,48 +191,6 @@ public abstract class BaseWin : Window
          + " / "
          + total.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-    /// <summary>
-    /// Registers the window content with the active database (SQLite or PostgreSQL).
-    /// This ensures window state and content can be persisted and restored.
-    /// </summary>
-    protected virtual async Task RegisterWindowWithDatabaseAsync()
-    {
-        try
-        {
-            var databaseProvider = CurrentDatabaseProvider;
-            var companyCode = CurrentCompanyCode;
-            var userId = CurrentUserId;
-            var windowType = PrefKey;
-            
-            if (string.IsNullOrWhiteSpace(companyCode) || string.IsNullOrWhiteSpace(userId))
-                return;
-
-            // Register window with database through the appropriate service
-            // This is a placeholder for actual database registration logic
-            // that should be implemented based on your database layer
-            
-            if (databaseProvider.Equals("sqlite", StringComparison.OrdinalIgnoreCase))
-            {
-                await RegisterWithSqliteAsync(windowType, companyCode, userId);
-            }
-            else if (databaseProvider.Equals("postgresql", StringComparison.OrdinalIgnoreCase))
-            {
-                await RegisterWithPostgreSqlAsync(windowType, companyCode, userId);
-            }
-        }
-        catch
-        {
-            // Window registration must never block the window from functioning
-        }
-    }
-
-    // These callbacks intentionally remain no-op until a DBA-owned window-registration
-    // schema and an auditable persistence contract are defined.
-    private static Task RegisterWithSqliteAsync(string windowType, string companyCode, string userId) =>
-        Task.CompletedTask;
-
-    private static Task RegisterWithPostgreSqlAsync(string windowType, string companyCode, string userId) =>
-        Task.CompletedTask;
 
 
 }
