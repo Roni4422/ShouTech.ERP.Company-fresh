@@ -35,6 +35,9 @@ namespace ShouTech.App.Localization
         public const string DataExchangeWorkbookPreviewFailed = "DEX-UI-002";
         public const string DataExchangeOperationFailed = "DEX-UI-003";
         public const string DataExchangeRowsFailed = "DEX-UI-004";
+        public const string DeletedCompanyLoadFailed = "RCO-LOAD-001";
+        public const string DeletedCompanyRestoreFailed = "RCO-RESTORE-001";
+        public const string DeletedCompanyRestoreRejected = "RCO-RESTORE-002";
     }
 
     public static class ErrorCatalog
