@@ -97,6 +97,8 @@ namespace ShouTech.App.Localization
         public const string CashDrawerPrinterNotConfigured = "POS-DRAWER-001";
         public const string CashDrawerOpenFailed = "POS-DRAWER-002";
         public const string PosSalePostingFailed = "POS-POST-001";
+        public const string InvoiceSaveFailed = "INV-SAVE-001";
+        public const string InvoicePostFailed = "INV-POST-001";
         public const string ApplicationSchemaBootstrapFailed = "APP-START-001";
         public const string UnhandledApplicationException = "APP-START-002";
         public const string ApplicationStartupFailed = "APP-START-003";
