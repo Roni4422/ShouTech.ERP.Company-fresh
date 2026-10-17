@@ -296,9 +296,6 @@ namespace ShouTech.App.Services
                     .ConnectionString
                 : connection;
         }
-    }
-
-
 
         private static SalesRepresentativeRepository? CreateSalesRepresentativeRepository()
         {
@@ -330,6 +327,8 @@ namespace ShouTech.App.Services
                 return null;
             }
         }
+    }
+
     public static class AppServiceHost
     {
         public static ILogServ Logging => AppHost.Logging;
