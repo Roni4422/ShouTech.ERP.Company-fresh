@@ -124,11 +124,11 @@ public static class InvRepo
                     INSERT INTO {headerTable}
                     (company_id, doc_kind, doc_no, doc_date, party_id, party_name, warehouse_id,
                      currency_code, exchange_rate, subtotal, discount_amount, tax_amount, grand_total,
-                     status, tax_code, tax_rate, notes, created_by, is_deleted)
+                     status, tax_code, tax_rate, notes, created_by{(isSales ? ", payment_method" : "")}, is_deleted)
                     VALUES
                     ($company, $kind, $no, $date, $party, $pname, $wh,
                      $cur, $fx, $sub, 0, $tax, $grand,
-                     'Draft', $tcode, $trate, $notes, $user, 0);
+                     'Draft', $tcode, $trate, $notes, $user{(isSales ? ", $payment" : "")}, 0);
                     SELECT last_insert_rowid();
                     """;
                 if (DatabaseRuntime.IsPostgreSql())
@@ -141,11 +141,11 @@ public static class InvRepo
                         VALUES
                         ($company, $kind, $no, $date, $party, $pname, $wh,
                          $cur, $fx, $sub, 0, $tax, $grand,
-                         'Draft', $tcode, $trate, $notes, $user, 0)
+                         'Draft', $tcode, $trate, $notes, $user{(isSales ? ", $payment" : "")}, 0)
                         RETURNING doc_id;
                         """;
                 }
-                BindHeader(cmd, doc);
+                BindHeader(cmd, doc, isSales);
                 docId = Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
             }
         }
@@ -158,7 +158,7 @@ public static class InvRepo
                     UPDATE {headerTable} SET
                       doc_date=$date, party_id=$party, party_name=$pname, warehouse_id=$wh,
                       currency_code=$cur, exchange_rate=$fx, subtotal=$sub, tax_amount=$tax,
-                      grand_total=$grand, tax_code=$tcode, tax_rate=$trate, notes=$notes
+                      grand_total=$grand, tax_code=$tcode, tax_rate=$trate, notes=$notes{(isSales ? ", payment_method=$payment" : "")}
                     WHERE doc_id=$id AND company_id=$company AND status='Draft' AND is_deleted=0;
                     """;
                 BindHeader(cmd, doc);
@@ -229,7 +229,7 @@ public static class InvRepo
             cmd.Transaction = tx;
             cmd.CommandText = $"""
                 SELECT doc_id, doc_kind, doc_no, doc_date, party_id, party_name, warehouse_id,
-                       currency_code, exchange_rate, subtotal, tax_amount, grand_total, status, tax_rate
+                       currency_code, exchange_rate, subtotal, tax_amount, grand_total, status, tax_rate{(isSales ? ", payment_method" : "")}
                 FROM {headerTable}
                 WHERE doc_id=$id AND company_id=$company AND is_deleted=0;
                 """;
@@ -250,6 +250,8 @@ public static class InvRepo
                 PartyName = reader.IsDBNull(reader.GetOrdinal("party_name")) ? "" : reader.GetString(reader.GetOrdinal("party_name")),
                 WarehouseId = reader.IsDBNull(reader.GetOrdinal("warehouse_id")) ? null : Convert.ToInt32(reader.GetValue(reader.GetOrdinal("warehouse_id")), CultureInfo.InvariantCulture),
                 CurrencyCode = reader.GetString(reader.GetOrdinal("currency_code")),
+                PaymentMethod = isSales && !reader.IsDBNull(reader.GetOrdinal("payment_method"))
+                    ? reader.GetString(reader.GetOrdinal("payment_method")) : "Cash",
             };
         }
 
@@ -366,7 +368,7 @@ public static class InvRepo
         {
             cmd.CommandText = $"""
                 SELECT doc_id, doc_kind, doc_no, doc_date, party_id, party_name, warehouse_id,
-                       currency_code, exchange_rate, status, tax_code, tax_rate, notes
+                       currency_code, exchange_rate, status, tax_code, tax_rate, notes{(isSales ? ", payment_method" : "")}
                 FROM {headerTable}
                 WHERE doc_id=$id AND company_id=$company AND is_deleted=0;
                 """;
@@ -390,6 +392,8 @@ public static class InvRepo
                 TaxCode = reader.IsDBNull(reader.GetOrdinal("tax_code")) ? null : reader.GetString(reader.GetOrdinal("tax_code")),
                 DefaultTaxRate = Convert.ToDecimal(reader.GetValue(reader.GetOrdinal("tax_rate")), CultureInfo.InvariantCulture),
                 Notes = reader.IsDBNull(reader.GetOrdinal("notes")) ? null : reader.GetString(reader.GetOrdinal("notes")),
+                PaymentMethod = isSales && !reader.IsDBNull(reader.GetOrdinal("payment_method"))
+                    ? reader.GetString(reader.GetOrdinal("payment_method")) : "Cash",
             };
         }
 
@@ -642,7 +646,7 @@ public static class InvRepo
             throw new InvalidOperationException("Reversal schema is missing. Apply the provider migrations under dba/mig.");
     }
 
-    private static void BindHeader(DbCommand cmd, InvDoc doc)
+    private static void BindHeader(DbCommand cmd, InvDoc doc, bool includePaymentMethod)
     {
         Add(cmd, "$company", Company);
         Add(cmd, "$kind", doc.KindCode);
@@ -660,6 +664,22 @@ public static class InvRepo
         Add(cmd, "$trate", doc.DefaultTaxRate);
         Add(cmd, "$notes", doc.Notes);
         Add(cmd, "$user", AppState.CurrentUser?.Username ?? Environment.UserName);
+        if (includePaymentMethod)
+            Add(cmd, "$payment", NormalizePaymentMethod(doc.PaymentMethod));
+    }
+
+    private static string NormalizePaymentMethod(string? method)
+    {
+        var value = method?.Trim();
+        return value switch
+        {
+            null or "" => "Cash",
+            "cash" => "Cash",
+            "credit" => "Credit",
+            "visa" => "Visa",
+            "k-net" or "knet" => "K-Net",
+            _ => throw new InvalidOperationException("Unsupported POS payment method.")
+        };
     }
 
     private static DbConnection Open(string connectionString)
