@@ -1963,5 +1963,77 @@
     "severity": "Warning",
     "catalogRef": "CUSTOMER.CUS-VAL-003",
     "location": "CUSTOMER.LOAD"
+  },
+  "BNK-DB-001": {
+    "type": "Database",
+    "name": "BankCompanyContextFailed",
+    "message": "The active company could not be verified in the connected database. No data was changed.",
+    "messageKey": "Errors.BNK-DB-001",
+    "severity": "Error",
+    "catalogRef": "BANK.BNK-DB-001",
+    "location": "BANK.CONTEXT"
+  },
+  "BNK-DB-002": {
+    "type": "Database",
+    "name": "BankSaveFailed",
+    "message": "The bank record could not be saved. Check the database log for details.",
+    "messageKey": "Errors.BNK-DB-002",
+    "severity": "Error",
+    "catalogRef": "BANK.BNK-DB-002",
+    "location": "BANK.SAVE"
+  },
+  "BNK-DB-003": {
+    "type": "Database",
+    "name": "BankLoadFailed",
+    "message": "The bank record could not be loaded. Check the database log for details.",
+    "messageKey": "Errors.BNK-DB-003",
+    "severity": "Error",
+    "catalogRef": "BANK.BNK-DB-003",
+    "location": "BANK.LOAD"
+  },
+  "BNK-DEL-001": {
+    "type": "Database",
+    "name": "BankSoftDeleteFailed",
+    "message": "The bank could not be moved to the Recycle Bin. No permanent deletion was attempted.",
+    "messageKey": "Errors.BNK-DEL-001",
+    "severity": "Error",
+    "catalogRef": "BANK.BNK-DEL-001",
+    "location": "BANK.DELETE"
+  },
+  "BNK-DEL-002": {
+    "type": "Validation",
+    "name": "BankDeleteTargetNotFound",
+    "message": "The bank was not found in the active company or has already been deleted.",
+    "messageKey": "Errors.BNK-DEL-002",
+    "severity": "Warning",
+    "catalogRef": "BANK.BNK-DEL-002",
+    "location": "BANK.DELETE"
+  },
+  "BNK-VAL-001": {
+    "type": "Validation",
+    "name": "BankCardInputInvalid",
+    "message": "One or more bank fields are invalid. Review the values and try again.",
+    "messageKey": "Errors.BNK-VAL-001",
+    "severity": "Warning",
+    "catalogRef": "BANK.BNK-VAL-001",
+    "location": "BANK.VALIDATION"
+  },
+  "BNK-VAL-002": {
+    "type": "Validation",
+    "name": "BankCodeRequiresRestore",
+    "message": "This bank code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.",
+    "messageKey": "Errors.BNK-VAL-002",
+    "severity": "Warning",
+    "catalogRef": "BANK.BNK-VAL-002",
+    "location": "BANK.RESTORE_REQUIRED"
+  },
+  "BNK-VAL-003": {
+    "type": "Validation",
+    "name": "BankRecordNotFound",
+    "message": "No active bank was found in the selected company for this code.",
+    "messageKey": "Errors.BNK-VAL-003",
+    "severity": "Warning",
+    "catalogRef": "BANK.BNK-VAL-003",
+    "location": "BANK.LOAD"
   }
 }
