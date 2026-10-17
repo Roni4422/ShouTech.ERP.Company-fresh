@@ -677,8 +677,10 @@ public static class CoLocalStore
                 return false;
 
             var dbOk = await TryUpdateInDatabaseAsync(profile);
+            if (!dbOk)
+                return false;
 
-            // Always persist metadata to local index for offline / registry views.
+            // Keep the local registry consistent with the authoritative database.
             var existingList = await CoLocalStore.LoadAsync();
             var existing = existingList.FirstOrDefault(c =>
                 string.Equals(c.Code, profile.Code, StringComparison.OrdinalIgnoreCase));
