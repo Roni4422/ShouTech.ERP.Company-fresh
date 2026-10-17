@@ -2304,5 +2304,21 @@
     "messageKey": "Errors.BIN-OP-001",
     "severity": "Error",
     "location": "RECYCLE_BIN.MUTATION"
+  },
+  "TAX-DB-001": {
+    "type": "System",
+    "name": "TaxConfigurationLoadFailed",
+    "message": "Tax configuration could not be loaded. The invoice was not initialized. Review the application error log for details.",
+    "messageKey": "Errors.TAX-DB-001",
+    "severity": "Error",
+    "location": "TAX.CONFIGURATION.LOAD"
+  },
+  "TAX-RATE-001": {
+    "type": "Validation",
+    "name": "TaxRateNotConfigured",
+    "message": "No default tax rate is configured for this company. Set a default tax code or configure the company country before creating tax-bearing documents.",
+    "messageKey": "Errors.TAX-RATE-001",
+    "severity": "Error",
+    "location": "TAX.RATE.DEFAULT"
   }
 }
