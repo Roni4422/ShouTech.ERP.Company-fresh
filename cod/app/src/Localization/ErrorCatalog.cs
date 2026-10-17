@@ -26,6 +26,14 @@ namespace ShouTech.App.Localization
         public const string BankValidationFailed = "BNK-VAL-001";
         public const string BankCodeRequiresRestore = "BNK-VAL-002";
         public const string BankNotFound = "BNK-VAL-003";
+        public const string CostCenterContextFailed = "CCTR-DB-001";
+        public const string CostCenterSaveFailed = "CCTR-DB-002";
+        public const string CostCenterLoadFailed = "CCTR-DB-003";
+        public const string CostCenterDeleteFailed = "CCTR-DEL-001";
+        public const string CostCenterDeleteRejected = "CCTR-DEL-002";
+        public const string CostCenterValidationFailed = "CCTR-VAL-001";
+        public const string CostCenterCodeRequiresRestore = "CCTR-VAL-002";
+        public const string CostCenterNotFound = "CCTR-VAL-003";
         public const string ReportSaveFailed = "RPT-SAVE-001";
         public const string ReportSaveAsFailed = "RPT-SAVE-002";
         public const string ReportFormulaCompileFailed = "RPT-FORMULA-001";
