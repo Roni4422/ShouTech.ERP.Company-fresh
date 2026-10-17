@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using ShouTech.App;
 using ShouTech.App.Configuration;
