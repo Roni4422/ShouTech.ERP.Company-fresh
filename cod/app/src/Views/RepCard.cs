@@ -394,7 +394,7 @@ public sealed class RepCard : BaseWin
             $"Code={definition.Code}; {context}; Error={exception.Message}");
         MessageBox.Show(
             this,
-            $"لم تنجح العملية ولم تُعرض كنجاح.\n[{definition.Code}] {exception.Message}",
+            $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}\nThe operation failed. No data was saved.",
             Title,
             MessageBoxButton.OK,
             MessageBoxImage.Error);
