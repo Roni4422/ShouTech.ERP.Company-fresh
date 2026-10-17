@@ -133,14 +133,30 @@ public sealed class CustomerCardPersistenceTests
             AppState.CurrentCompanyCode = oldCompany;
             AppState.CurrentUser = oldUser;
             SqliteConnection.ClearAllPools();
-            if (File.Exists(databasePath))
-                File.Delete(databasePath);
+            TryDeleteFile(databasePath);
             foreach (var suffix in new[] { "-wal", "-shm" })
             {
                 var sidecar = databasePath + suffix;
-                if (File.Exists(sidecar))
-                    File.Delete(sidecar);
+                TryDeleteFile(sidecar);
             }
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (IOException)
+        {
+            // A provider may retain a pooled handle until process shutdown. The DB is unique to
+            // this test and all assertions have already completed; cleanup must not mask test results.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Best-effort cleanup only; never turn a completed database assertion into a false failure.
         }
     }
 
