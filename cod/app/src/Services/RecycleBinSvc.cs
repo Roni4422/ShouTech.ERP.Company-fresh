@@ -110,6 +110,7 @@ public static class RecycleBinSvc
     {
         if (string.IsNullOrWhiteSpace(companyCode))
             return Array.Empty<RecycleBinItem>();
+        EnsureActiveCompanyScope(companyCode);
 
         await using var connection = CreateConnection();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -175,6 +176,8 @@ public static class RecycleBinSvc
     {
         ArgumentNullException.ThrowIfNull(item);
         ValidateCatalogItem(item);
+        if (!IsActiveCompany(item.CompanyCode))
+            return Failed(item, "The item does not belong to the active company; restore was blocked.");
 
         try
         {
@@ -286,6 +289,8 @@ public static class RecycleBinSvc
     {
         ArgumentNullException.ThrowIfNull(item);
         ValidateCatalogItem(item);
+        if (!IsActiveCompany(item.CompanyCode))
+            return Failed(item, "The item does not belong to the active company; permanent deletion was blocked.");
 
         try
         {
@@ -783,6 +788,21 @@ public static class RecycleBinSvc
             item.DatasetKey, item.DisplayLabel, item.DeletedAt, item.DeletedBy
         }));
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool IsActiveCompany(string? companyCode)
+    {
+        var activeCompany = AppState.CurrentCompanyCode?.Trim();
+        return !string.IsNullOrWhiteSpace(activeCompany)
+            && !string.IsNullOrWhiteSpace(companyCode)
+            && string.Equals(activeCompany, companyCode.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnsureActiveCompanyScope(string companyCode)
+    {
+        if (!IsActiveCompany(companyCode))
+            throw new UnauthorizedAccessException(
+                "Recycle-bin access is restricted to the active company.");
     }
 
     private static void ValidateCatalogItem(RecycleBinItem item)
