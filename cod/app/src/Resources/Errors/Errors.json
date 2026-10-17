@@ -1445,7 +1445,7 @@
   "COM-SAVE-001": {
     "type": "System",
     "name": "CompanyProfileSaveFailed",
-    "message": "Company profile could not be synchronized with the active database. Local index changes may have been saved; verify the database and retry.",
+    "message": "The company profile was not saved because the active database update failed. No local index changes were made. Check the application log and retry.",
     "messageKey": "Errors.COM-SAVE-001",
     "severity": "Error",
     "catalogRef": "COMPANY.PROFILE.SAVE.001",
