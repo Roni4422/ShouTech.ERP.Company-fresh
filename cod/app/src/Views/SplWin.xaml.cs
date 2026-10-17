@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using ShouTech.App.Configuration;
+using ShouTech.App.Localization;
 using ShouTech.App.Services;
 using WpfApp = System.Windows.Application;
 
@@ -45,7 +46,8 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                SetStatus($"Startup warning: {ex.Message}");
+                AppHost.Logging?.LogError("Startup", "SPL-START-001: Startup security pipeline failed.", ex);
+                SetStatus(ErrorCatalog.Get(ErrorCodes.StartupSecurityPipelineFailed));
                 await SafeDelay(200);
             }
 
@@ -58,8 +60,9 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                SetStatus($"Company check warning: {ex.Message}");
-                _hasCompaniesAtStartup = false;
+                AppHost.Logging?.LogError("Startup", "SPL-START-002: Company registry check failed.", ex);
+                SetStatus(ErrorCatalog.Get(ErrorCodes.StartupCompanyCheckFailed));
+                _hasCompaniesAtStartup = null;
             }
 
             // Honor remaining time up to the 4s ceiling (never exceed it).
@@ -76,8 +79,9 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("Startup", "SPL-START-003: Unable to open the company startup flow.", ex);
                 MessageBox.Show(
-                    $"Unable to open company selection:\n{ex.Message}",
+                    ErrorCatalog.Get(ErrorCodes.StartupCompanyFlowFailed),
                     "ShouTech ERP",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -121,8 +125,9 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                // Never abort the whole splash for a single check.
-                SetStatus($"{message} (warning: {Truncate(ex.Message, 60)})");
+                // Never abort the whole splash for a single non-critical check.
+                AppHost.Logging?.LogWarning("Startup", $"SPL-START-004: {message} check failed.", ex);
+                SetStatus(message);
                 await SafeDelay(80);
             }
 
