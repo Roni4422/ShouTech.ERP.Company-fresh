@@ -200,7 +200,7 @@ namespace ShouTech.App.Reporting
                 }
                 catch (FormulaException ex)
                 {
-                    StatusMessage = ErrorCatalog.Get("RPT-FORMULA-001");
+                    StatusMessage = ErrorCatalog.Get(ErrorCodes.ReportFormulaCompileFailed);
                     AppHost.Logging?.LogError(
                         "ReportDesigner",
                         $"RPT-FORMULA-001: Formula compilation failed for field '{col.FieldKey}'.",
@@ -311,7 +311,7 @@ namespace ShouTech.App.Reporting
         {
             if (!IsOwner)
             {
-                StatusMessage = ErrorCatalog.Get("RPT-OWNER-001");
+                StatusMessage = ErrorCatalog.Get(ErrorCodes.ReportEditNotAllowed);
                 return;
             }
 
@@ -327,7 +327,7 @@ namespace ShouTech.App.Reporting
             }
             catch (Exception ex)
             {
-                StatusMessage = ErrorCatalog.Get("RPT-SAVE-001");
+                StatusMessage = ErrorCatalog.Get(ErrorCodes.ReportSaveFailed);
                 AppHost.Logging?.LogError(
                     "ReportDesigner",
                     "RPT-SAVE-001: Saving the report definition failed.",
@@ -347,7 +347,7 @@ namespace ShouTech.App.Reporting
         {
             if (string.IsNullOrWhiteSpace(newName))
             {
-                StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-004");
+                StatusMessage = ErrorCatalog.Get(ErrorCodes.ReportNameRequired);
                 return;
             }
 
@@ -368,7 +368,7 @@ namespace ShouTech.App.Reporting
             }
             catch (Exception ex)
             {
-                StatusMessage = ErrorCatalog.Get("RPT-SAVE-002");
+                StatusMessage = ErrorCatalog.Get(ErrorCodes.ReportSaveAsFailed);
                 AppHost.Logging?.LogError(
                     "ReportDesigner",
                     "RPT-SAVE-002: Saving a copy of the report definition failed.",
@@ -391,7 +391,7 @@ namespace ShouTech.App.Reporting
                 .FirstOrDefault(g => g.Count() > 1);
             if (duplicate is not null)
             {
-                StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-001");
+                StatusMessage = ErrorCatalog.Get(ErrorCodes.DuplicateReportColumnKey);
                 return false;
             }
 
@@ -400,12 +400,12 @@ namespace ShouTech.App.Reporting
             {
                 if (string.IsNullOrWhiteSpace(col.FormulaText))
                 {
-                    StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-002");
+                    StatusMessage = ErrorCatalog.Get(ErrorCodes.EmptyReportFormula);
                     return false;
                 }
                 if (!CompiledFormula.TryCompile(col.FormulaText, out _))
                 {
-                    StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-003");
+                    StatusMessage = ErrorCatalog.Get(ErrorCodes.InvalidReportFormula);
                     return false;
                 }
             }
