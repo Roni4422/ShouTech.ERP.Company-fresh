@@ -371,7 +371,7 @@ namespace ShouTech.App
                 try
                 {
                     MessageBox.Show(
-                        "Failed to initialize database schema:\n\n" + ex.Message,
+                        ErrorCatalog.Get(ErrorCodes.ApplicationSchemaBootstrapFailed),
                         "ShouTech ERP",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
@@ -418,8 +418,8 @@ namespace ShouTech.App
                         ex.GetType().FullName ?? ex.GetType().Name);
 
                     MessageBox.Show(
-                        ex.Message,
-                        "Unexpected Error",
+                        ErrorCatalog.Get(ErrorCodes.UnhandledApplicationException),
+                        "ShouTech ERP",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
@@ -696,7 +696,7 @@ namespace ShouTech.App
                 try
                 {
                     MessageBox.Show(
-                        "Startup error: " + ex.Message,
+                        ErrorCatalog.Get(ErrorCodes.ApplicationStartupFailed),
                         "ShouTech ERP",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -734,7 +734,7 @@ namespace ShouTech.App
                 try
                 {
                     MessageBox.Show(
-                        "Splash failed: " + ex.Message,
+                        ErrorCatalog.Get(ErrorCodes.SplashInitializationFailed),
                         "ShouTech ERP",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -792,8 +792,9 @@ namespace ShouTech.App
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("App", "APP-DB-001: Company database schema initialization failed.", ex);
                 MessageBox.Show(
-                    "تعذّر تجهيز قاعدة بيانات الشركة:\n\n" + ex.Message,
+                    ErrorCatalog.Get(ErrorCodes.CompanySchemaInitializationFailed),
                     "ShouTech ERP",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -885,8 +886,9 @@ namespace ShouTech.App
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("App", "APP-DB-002: Database schema refresh failed.", ex);
                 MessageBox.Show(
-                    "تعذّر إعادة تهيئة المخطط:\n\n" + ex.Message,
+                    ErrorCatalog.Get(ErrorCodes.SchemaRefreshFailed),
                     "ShouTech ERP",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
