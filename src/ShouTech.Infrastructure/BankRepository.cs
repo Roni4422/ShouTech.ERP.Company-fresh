@@ -227,7 +227,7 @@ public sealed class BankRepository : IBankRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE bank_id = @id";
+                WHERE bank_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(bank.Id));
             Add(updateCmd, "@name", bank.Name);
@@ -447,7 +447,7 @@ public sealed class BankRepository : IBankRepository
             FROM banks
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (bank_code LIKE @search OR name LIKE @search OR account_number LIKE @search)
+            @" AND (bank_code LIKE @search OR name LIKE @search OR account_number LIKE @search)
             ORDER BY name
             LIMIT @limit";
 

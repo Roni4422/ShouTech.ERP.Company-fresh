@@ -246,7 +246,7 @@ public sealed class CustomerRepository : ICustomerRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE customer_id = @id";
+                WHERE customer_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(customer.Id));
             Add(updateCmd, "@nameAr", customer.NameAr);
@@ -475,7 +475,7 @@ public sealed class CustomerRepository : ICustomerRepository
             FROM customers
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (customer_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search OR phone LIKE @search OR mobile LIKE @search)
+            @" AND (customer_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search OR phone LIKE @search OR mobile LIKE @search)
             ORDER BY name_ar
             LIMIT @limit";
 

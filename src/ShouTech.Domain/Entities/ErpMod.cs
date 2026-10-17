@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace ShouTech.Domain.Entities;
 
-public sealed class Customer : EntBase
+public sealed class ErpCustomer : EntBase
 {
     public string Code { get; private set; } = string.Empty;
     public string Name { get; private set; } = string.Empty;
@@ -13,9 +13,9 @@ public sealed class Customer : EntBase
     public string CurrencyCode { get; private set; } = "SAR";
     public bool IsActive { get; private set; } = true;
 
-    private Customer() { }
+    private ErpCustomer() { }
 
-    public static Customer Create(string code, string name, string? phoneNumber = null, string? email = null, string currencyCode = "SAR")
+    public static ErpCustomer Create(string code, string name, string? phoneNumber = null, string? email = null, string currencyCode = "SAR")
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Customer code is required.", nameof(code));
@@ -24,7 +24,7 @@ public sealed class Customer : EntBase
         if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3)
             throw new ArgumentException("Currency code must be a valid 3-letter ISO code.", nameof(currencyCode));
 
-        return new Customer
+        return new ErpCustomer
         {
             Code = code.Trim(),
             Name = name.Trim(),

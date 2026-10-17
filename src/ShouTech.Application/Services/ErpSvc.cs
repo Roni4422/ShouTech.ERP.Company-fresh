@@ -7,19 +7,19 @@ namespace ShouTech.Application.Services;
 
 public sealed class ErpSvc
 {
-    private readonly List<Customer> _customers = new();
+    private readonly List<ErpCustomer> _customers = new();
     private readonly List<Vendor> _vendors = new();
     private readonly List<InventoryItem> _items = new();
     private readonly List<SalesInvoice> _invoices = new();
 
-    public IReadOnlyCollection<Customer> Customers => _customers.AsReadOnly();
+    public IReadOnlyCollection<ErpCustomer> Customers => _customers.AsReadOnly();
     public IReadOnlyCollection<Vendor> Vendors => _vendors.AsReadOnly();
     public IReadOnlyCollection<InventoryItem> Items => _items.AsReadOnly();
     public IReadOnlyCollection<SalesInvoice> Invoices => _invoices.AsReadOnly();
 
-    public Customer CreateCustomer(string code, string name, string? phoneNumber = null, string? email = null, string currencyCode = "SAR")
+    public ErpCustomer CreateCustomer(string code, string name, string? phoneNumber = null, string? email = null, string currencyCode = "SAR")
     {
-        var customer = Customer.Create(code, name, phoneNumber, email, currencyCode);
+        var customer = ErpCustomer.Create(code, name, phoneNumber, email, currencyCode);
         if (_customers.Any(x => string.Equals(x.Code, customer.Code, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException($"Customer '{customer.Code}' already exists.");
 

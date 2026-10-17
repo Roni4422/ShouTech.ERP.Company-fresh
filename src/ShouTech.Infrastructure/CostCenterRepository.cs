@@ -221,7 +221,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE cost_center_id = @id";
+                WHERE cost_center_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(costCenter.Id));
             Add(updateCmd, "@nameAr", costCenter.NameAr);
@@ -433,7 +433,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
             FROM cost_centers
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (cost_center_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search)
+            @" AND (cost_center_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search)
             ORDER BY name_ar
             LIMIT @limit";
 

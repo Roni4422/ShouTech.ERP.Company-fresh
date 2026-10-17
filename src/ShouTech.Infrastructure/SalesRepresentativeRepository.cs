@@ -223,7 +223,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE rep_id = @id";
+                WHERE rep_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(representative.Id));
             Add(updateCmd, "@name", representative.Name);
@@ -441,7 +441,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
             FROM sales_representatives
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (rep_code LIKE @search OR name LIKE @search OR area LIKE @search OR phone LIKE @search)
+            @" AND (rep_code LIKE @search OR name LIKE @search OR area LIKE @search OR phone LIKE @search)
             ORDER BY name
             LIMIT @limit";
 
