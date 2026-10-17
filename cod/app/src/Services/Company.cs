@@ -71,6 +71,8 @@ public sealed class NewCoReq
         public string CompanyNameAr { get; init; } = string.Empty;
         public bool SavedToDatabase { get; init; }
         public bool SavedLocally { get; init; }
+        public bool PartialFailure { get; init; }
+        public string ErrorCode { get; init; } = string.Empty;
     }
 
     public sealed class StoredCoRec
@@ -974,11 +976,38 @@ public sealed class CoCreateSvc : ICoCreateSvc
             var savedToDb = await TrySaveToDatabaseAsync(record, request);
             await CoLocalStore.SaveCompanyAsync(record);
 
+            var defaultWarehouseCreated = string.IsNullOrWhiteSpace(record.DbPath);
+            var defaultWarehouseError = string.Empty;
             if (!string.IsNullOrWhiteSpace(record.DbPath))
             {
-                try { await SeedDefaultWarehouseAsync(record); }
-                catch { /* لا يوقف إنشاء الشركة */ }
+                try
+                {
+                    await SeedDefaultWarehouseAsync(record);
+                    defaultWarehouseCreated = true;
+                }
+                catch (Exception ex)
+                {
+                    defaultWarehouseError = "CO-CREATE-WH-001";
+                    AppHost.Logging?.LogError(
+                        "CompanyCreation",
+                        $"CO-CREATE-WH-001: Company '{code}' was registered, but the default warehouse could not be initialized.",
+                        ex);
+                    AppHost.Logging?.LogOperation(
+                        "CompanyCreation",
+                        "DefaultWarehouseCreationFailed",
+                        $"CO-CREATE-WH-001; company={code}");
+                }
             }
+
+            var partialFailure = !savedToDb || !defaultWarehouseCreated;
+            var errorCode = !savedToDb
+                ? "COM-SAVE-001"
+                : defaultWarehouseError;
+            var message = !savedToDb
+                ? "The company was added to the local registry, but saving it to the active database failed. Verify the database before using this company."
+                : !defaultWarehouseCreated
+                    ? ErrorCatalog.Get(ErrorCodes.CompanyDefaultWarehouseFailed)
+                    : "Company and default warehouse created successfully.";
 
             return new CoCreateResult
             {
@@ -987,9 +1016,9 @@ public sealed class CoCreateSvc : ICoCreateSvc
                 CompanyNameAr = record.Name,
                 SavedToDatabase = savedToDb,
                 SavedLocally = true,
-                Message = savedToDb
-                    ? "تم إنشاء الشركة والمستودع الافتراضي."
-                    : "تم إنشاء الشركة وحفظها محلياً (قاعدة البيانات غير متاحة)."
+                PartialFailure = partialFailure,
+                ErrorCode = errorCode,
+                Message = message
             };
         }
 
