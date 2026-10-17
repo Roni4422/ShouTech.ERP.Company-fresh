@@ -1540,5 +1540,41 @@
     "severity": "Error",
     "catalogRef": "COMPANY.CREATE.001",
     "location": "COMPANY.CREATE"
+  },
+  "LBL-PRINT-001": {
+    "type": "System",
+    "name": "BarcodePrintDialogFailed",
+    "message": "The label print dialog could not be opened. Check the printer configuration and application log.",
+    "messageKey": "Errors.LBL-PRINT-001",
+    "severity": "Error",
+    "catalogRef": "BARCODE.PRINT.DIALOG.001",
+    "location": "BARCODE.PRINT.DIALOG"
+  },
+  "LBL-PRINT-002": {
+    "type": "System",
+    "name": "BarcodePrintFailed",
+    "message": "The barcode label could not be sent to the printer. Check the selected printer, paper settings, and application log.",
+    "messageKey": "Errors.LBL-PRINT-002",
+    "severity": "Error",
+    "catalogRef": "BARCODE.PRINT.002",
+    "location": "BARCODE.PRINT"
+  },
+  "POS-DRAWER-001": {
+    "type": "Validation",
+    "name": "CashDrawerPrinterNotConfigured",
+    "message": "No cash-drawer printer is configured. Open Tools > Options and select the printer connected to the cash drawer.",
+    "messageKey": "Errors.POS-DRAWER-001",
+    "severity": "Warning",
+    "catalogRef": "POS.CASH_DRAWER.CONFIG.001",
+    "location": "POS.CASH_DRAWER.CONFIG"
+  },
+  "POS-DRAWER-002": {
+    "type": "System",
+    "name": "CashDrawerOpenFailed",
+    "message": "The cash drawer command could not be sent. Check the printer connection and configuration, then retry.",
+    "messageKey": "Errors.POS-DRAWER-002",
+    "severity": "Error",
+    "catalogRef": "POS.CASH_DRAWER.OPEN.002",
+    "location": "POS.CASH_DRAWER.OPEN"
   }
 }
