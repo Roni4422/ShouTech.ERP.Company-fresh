@@ -381,7 +381,7 @@ public sealed class RepCard : BaseWin
     }
     private void ReportPersistenceFailure(string operation, Exception exception)
     {
-        const string errorCode = "APP-2010";
+        const string errorCode = "RPT-PER-001";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var context = $"Operation={operation}; Window={GetType().Name}; Company={ShouTech.App.Services.UsrSession.Current?.CompanyId ?? "(none)"}";
         ShouTech.App.Services.AppHost.Logging?.LogError(
