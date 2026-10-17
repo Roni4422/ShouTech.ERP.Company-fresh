@@ -378,8 +378,20 @@ public partial class AccCard : BaseWin
         AppHost.Logging?.LogOperation("AccountCard", "OperationFailed", $"Code={definition.Code} | {context}");
     }
 
-    private void Statement_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this, "سيتم فتح كشف الحساب من هنا عند ربط حركة الأستاذ العام.", "كشف الحساب", MessageBoxButton.OK, MessageBoxImage.Information);
-    private void Ledger_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this, "سيتم فتح دفتر الأستاذ من هنا عند ربط حركة الأستاذ العام.", "دفتر الأستاذ", MessageBoxButton.OK, MessageBoxImage.Information);
+    private void Statement_Click(object sender, RoutedEventArgs e) => ReportUnavailableFeature("AccountStatement");
+    private void Ledger_Click(object sender, RoutedEventArgs e) => ReportUnavailableFeature("GeneralLedger");
+
+    private void ReportUnavailableFeature(string feature)
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve("ACC-FEAT-001");
+        var context = $"Feature={feature}; Window={GetType().Name}; User={UsrSession.Current?.Id ?? "(none)"}; Company={UsrSession.Current?.CompanyId ?? "(none)"}";
+        AppHost.Logging?.LogError("AccountCard", $"[{definition.Code}] {definition.Name} | {context}",
+            new NotSupportedException($"The {feature} view is not implemented."));
+        AppHost.Logging?.LogOperation("AccountCard", "FeatureUnavailable", $"Code={definition.Code} | {context}");
+        MessageBox.Show(this,
+            $"[{definition.Code}] {definition.Message}{Environment.NewLine}Location: {definition.Location}",
+            "ShouTech ERP", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
     protected override void ApplyLocalizedText()
     {
