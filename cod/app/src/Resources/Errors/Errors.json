@@ -1630,5 +1630,32 @@
     "severity": "Error",
     "catalogRef": "APPLICATION.DATABASE.SCHEMA.002",
     "location": "APPLICATION.DATABASE.SCHEMA"
+  },
+  "MAT-DIR-001": {
+    "type": "System",
+    "name": "MaterialDirectoryLoadFailed",
+    "message": "The material directory could not be loaded. Check the database connection and application log.",
+    "messageKey": "Errors.MAT-DIR-001",
+    "severity": "Error",
+    "catalogRef": "MATERIAL.DIRECTORY.LOAD.001",
+    "location": "MATERIAL.DIRECTORY.LOAD"
+  },
+  "MAT-DIR-002": {
+    "type": "System",
+    "name": "MaterialDirectoryDeleteFailed",
+    "message": "The selected material could not be deleted. It may be referenced by transactions or the database may be unavailable. Check the application log.",
+    "messageKey": "Errors.MAT-DIR-002",
+    "severity": "Error",
+    "catalogRef": "MATERIAL.DIRECTORY.DELETE.002",
+    "location": "MATERIAL.DIRECTORY.DELETE"
+  },
+  "MAT-DIR-003": {
+    "type": "System",
+    "name": "MaterialDirectoryOpenCardFailed",
+    "message": "The material card could not be opened. Check the card configuration and application log.",
+    "messageKey": "Errors.MAT-DIR-003",
+    "severity": "Error",
+    "catalogRef": "MATERIAL.DIRECTORY.OPEN.003",
+    "location": "MATERIAL.DIRECTORY.OPEN"
   }
 }
