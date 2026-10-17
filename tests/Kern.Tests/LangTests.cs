@@ -21,6 +21,9 @@ public class LangTests
     [InlineData("Fr", "Enterprise")]
     [InlineData("Tr", "Enterprise")]
     [InlineData("Ar", "Lkp")]
+    [InlineData("Ar", "Qry")]
+    [InlineData("Fr", "Qry")]
+    [InlineData("Tr", "Qry")]
     [InlineData("Fr", "Lkp")]
     [InlineData("Tr", "Lkp")]
     public void NewKeys_ShouldExistInAllLanguages(string lang, string section)

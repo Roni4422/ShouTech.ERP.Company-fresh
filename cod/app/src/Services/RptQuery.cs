@@ -576,6 +576,16 @@ public static class RptQuery
         return list;
     }
 
+    /// <summary>Company-scoped read of a dba-owned report view (name must be a trusted constant).</summary>
+    public static Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> ViewAsync(
+        string view, string orderBy, CancellationToken ct)
+    {
+        DocSchema.Ensure();
+        return QueryAsync(
+            $"SELECT * FROM {view} WHERE CAST(company_id AS TEXT) = @company ORDER BY {orderBy};",
+            ct, ("@company", Company));
+    }
+
     private static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> QueryAsync(
         string sql, CancellationToken ct, params (string Name, object? Value)[] args)
     {

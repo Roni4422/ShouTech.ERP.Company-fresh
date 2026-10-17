@@ -182,7 +182,16 @@ public static class RptNav
                 Show(new CoaWin(), owner); return true;
             case "Tools.ActivityLog":
                 Show(new LogWin(), owner); return true;
+            case "Invoices.SearchInvoices":
+                OpenSalesInvoiceList(owner); return true;
+            case "Customers.CustomerDue":
+                OpenCustomerBalances(owner); return true;
             default:
+                if (Views.Reports.QryWin.TryResolve(actionKey.Trim(), out var qryKey))
+                {
+                    Show(new Views.Reports.QryWin(qryKey), owner);
+                    return true;
+                }
                 return false;
         }
     }

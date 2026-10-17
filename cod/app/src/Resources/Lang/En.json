@@ -1666,6 +1666,11 @@
     "Save": "Save",
     "Saved": "Settings saved successfully"
   },
+  "Qry": {
+    "Type": "Type",
+    "Amount": "Amount",
+    "DocCount": "Documents"
+  },
   "Lkp": {
     "Code": "Code",
     "NameAr": "Name (Arabic)",

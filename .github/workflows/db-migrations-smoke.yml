@@ -177,3 +177,10 @@ jobs:
         run: |
           n=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_trigger WHERE tgname LIKE 'trg_audit_hd_%'")
           test "$n" -ge 30 || { echo "Expected delete-audit triggers, found $n"; exit 1; }
+      - name: Assert report views exist in PostgreSQL
+        env:
+          PGPASSWORD: shoutest
+        run: |
+          for v in negative_stock stagnant_stock cash_journal profit_loss sales_by_party; do
+            psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM v_rpt_$v" >/dev/null
+          done

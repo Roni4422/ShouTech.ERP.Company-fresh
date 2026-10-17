@@ -1335,6 +1335,11 @@
     "Save": "Kaydet",
     "Saved": "Ayarlar başarıyla kaydedildi"
   },
+  "Qry": {
+    "Type": "Tür",
+    "Amount": "Tutar",
+    "DocCount": "Belge sayısı"
+  },
   "Lkp": {
     "Code": "Kod",
     "NameAr": "Ad (Arapça)",

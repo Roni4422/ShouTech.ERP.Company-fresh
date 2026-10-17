@@ -28,3 +28,6 @@ The Al-Ameen SQL files are archived reference material. Their inventory and post
 ## 023_company_features
 
 Adds `company_features` (per-company enterprise feature flags such as audit trail, multi-currency, multi-branch and approval workflow). Matching UI strings live under the `Enterprise` section of `Ar/En/Fr/Tr.json`.
+
+## 027 report views
+`027_report_views.sql` (SQLite + PostgreSQL) defines `v_rpt_negative_stock`, `v_rpt_stagnant_stock`, `v_rpt_cash_journal`, `v_rpt_profit_loss` and `v_rpt_sales_by_party`. They back `QryWin`, which `RptNav` opens from MWin ribbon keys `Inventory.NegativeOutput`, `Inventory.StagnantMaterials`, `Bonds.CashJournal`, `Accounts.ProfitLoss`, `Inventory.SalesReport` and `Customers.CustomerReports`. Add new ribbon reports by adding a view migration and one `QryWin` definition.

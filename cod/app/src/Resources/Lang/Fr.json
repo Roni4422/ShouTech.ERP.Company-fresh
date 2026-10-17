@@ -1335,6 +1335,11 @@
     "Save": "Enregistrer",
     "Saved": "Paramètres enregistrés avec succès"
   },
+  "Qry": {
+    "Type": "Type",
+    "Amount": "Montant",
+    "DocCount": "Documents"
+  },
   "Lkp": {
     "Code": "Code",
     "NameAr": "Nom (arabe)",
