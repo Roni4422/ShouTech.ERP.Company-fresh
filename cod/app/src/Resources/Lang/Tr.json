@@ -1340,6 +1340,9 @@
     "Amount": "Tutar",
     "CostCenter": "Maliyet merkezi",
     "MoveCount": "Hareket sayısı",
+    "Revenue": "Gelir",
+    "Cost": "Maliyet",
+    "Profit": "Kâr",
     "DocCount": "Belge sayısı"
   },
   "Lkp": {

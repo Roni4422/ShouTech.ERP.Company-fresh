@@ -1671,6 +1671,9 @@
     "Amount": "Amount",
     "CostCenter": "Cost center",
     "MoveCount": "Movements",
+    "Revenue": "Revenue",
+    "Cost": "Cost",
+    "Profit": "Profit",
     "DocCount": "Documents"
   },
   "Lkp": {

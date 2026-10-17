@@ -68,6 +68,25 @@ public sealed class QryWin : RptBase
             Txt("material_code", "Reports.Col.MaterialCode", 120), Txt("name", "Reports.Col.MaterialName", 260),
             Num("move_count", "Qry.MoveCount", "N0"), Num("qty_in", "Reports.Col.QtyIn"), Num("qty_out", "Reports.Col.QtyOut"),
         }),
+        ["Invoices.InvoiceProfits"] = new("v_rpt_invoice_profit", "doc_date DESC, doc_no DESC", "revenue", new[]
+        {
+            Txt("doc_date", "Reports.Col.Date", 100), Txt("doc_no", "Reports.Col.DocNo", 120),
+            Txt("party_name", "Reports.Col.PartyName", 240), Mny("revenue", "Qry.Revenue"),
+            Mny("cost", "Qry.Cost"), Mny("profit", "Qry.Profit"),
+        }),
+        ["Invoices.SearchQuotations"] = new("v_rpt_quotations", "doc_date DESC, doc_no DESC", "total", new[]
+        {
+            Txt("doc_date", "Reports.Col.Date", 100), Txt("doc_no", "Reports.Col.DocNo", 120),
+            Txt("party_name", "Reports.Col.PartyName", 240), Mny("total", "Reports.Col.Total"),
+            Txt("currency", "Reports.Col.Currency", 80), Txt("status", "Reports.Col.Status", 90),
+        }),
+        ["Invoices.PackingList"] = new("v_rpt_packing_list", "doc_date DESC, doc_no DESC", null, new[]
+        {
+            Txt("doc_date", "Reports.Col.Date", 100), Txt("doc_no", "Reports.Col.DocNo", 120),
+            Txt("party_name", "Reports.Col.PartyName", 200), Txt("material_code", "Reports.Col.MaterialCode", 110),
+            Txt("description", "Reports.Col.MaterialName", 240), Txt("unit", "Reports.Col.Unit", 70),
+            Num("qty", "Reports.Col.Qty"),
+        }),
     };
 
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.Ordinal)
@@ -118,6 +137,8 @@ public sealed class QryWin : RptBase
                 var a = Convert.ToString(r.GetValueOrDefault("name_ar"), CultureInfo.InvariantCulture);
                 d["name"] = ar || string.IsNullOrWhiteSpace(en) ? a : en;
             }
+            if (r.ContainsKey("revenue") && r.ContainsKey("cost"))
+                d["profit"] = Dec(r["revenue"]) - Dec(r["cost"]);
             foreach (var col in _def.Cols.Where(c => c.Type is RptColType.Money or RptColType.FractionalNumber))
                 d[col.Key] = Dec(d.GetValueOrDefault(col.Key));
             return (IReadOnlyDictionary<string, object?>)d;
@@ -128,6 +149,11 @@ public sealed class QryWin : RptBase
         {
             totals[_def.Cols[0].Key] = T("Reports.Totals");
             totals[sk] = rows.Sum(x => Dec(x.GetValueOrDefault(sk)));
+            if (_def.Cols.Any(c => c.Key == "profit"))
+            {
+                totals["cost"] = rows.Sum(x => Dec(x.GetValueOrDefault("cost")));
+                totals["profit"] = rows.Sum(x => Dec(x.GetValueOrDefault("profit")));
+            }
         }
         return new RptData { Columns = _def.Cols, Rows = rows, Totals = totals };
     }

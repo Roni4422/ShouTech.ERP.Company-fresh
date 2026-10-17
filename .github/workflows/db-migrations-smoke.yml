@@ -181,6 +181,6 @@ jobs:
         env:
           PGPASSWORD: shoutest
         run: |
-          for v in negative_stock stagnant_stock cash_journal profit_loss sales_by_party daily_journal dormant_accounts cost_center_balance active_materials; do
+          for v in invoice_profit quotations packing_list negative_stock stagnant_stock cash_journal profit_loss sales_by_party daily_journal dormant_accounts cost_center_balance active_materials; do
             psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM v_rpt_$v" >/dev/null
           done

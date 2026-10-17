@@ -1340,6 +1340,9 @@
     "Amount": "Montant",
     "CostCenter": "Centre de coûts",
     "MoveCount": "Mouvements",
+    "Revenue": "Revenus",
+    "Cost": "Coût",
+    "Profit": "Bénéfice",
     "DocCount": "Documents"
   },
   "Lkp": {
