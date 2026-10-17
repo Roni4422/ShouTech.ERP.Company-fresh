@@ -48,6 +48,7 @@ namespace ShouTech.App.Localization
         public const string CompanyListLoadFailed = "COM-LOAD-001";
         public const string CompanyLoginOpenFailed = "COM-LOGIN-001";
         public const string CompanyDefaultWarehouseFailed = "CO-CREATE-WH-001";
+        public const string CompanyDatabaseRegistrationFailed = "CO-CREATE-DB-001";
     }
 
     public static class ErrorCatalog
