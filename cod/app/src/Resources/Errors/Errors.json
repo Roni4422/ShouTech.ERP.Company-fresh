@@ -2296,5 +2296,13 @@
     "severity": "Error",
     "catalogRef": "INVOICE.POST.001",
     "location": "INVOICE.POST"
+  },
+  "BIN-OP-001": {
+    "type": "System",
+    "name": "RecycleBinMutationFailed",
+    "message": "One or more recycle-bin items could not be processed. Review the application error log for details.",
+    "messageKey": "Errors.BIN-OP-001",
+    "severity": "Error",
+    "location": "RECYCLE_BIN.MUTATION"
   }
 }
