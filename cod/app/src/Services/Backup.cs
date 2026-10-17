@@ -989,6 +989,14 @@ internal static class SteiSvc
             }
         }
 
+        private static string GetActiveCompanyCode()
+        {
+            var companyCode = ShouTech.App.Views.AppState.CurrentCompanyCode?.Trim();
+            if (string.IsNullOrWhiteSpace(companyCode))
+                throw new InvalidOperationException(ErrorCatalog.Get("BKP-CYCLE-001"));
+            return companyCode;
+        }
+
         public void PerformBackup()
         {
             _ = PerformBackupCoreAsync();
@@ -998,7 +1006,7 @@ internal static class SteiSvc
         {
             try
             {
-                await CreateBackupAsync("001").ConfigureAwait(false);
+                await CreateBackupAsync(GetActiveCompanyCode()).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -1010,7 +1018,7 @@ internal static class SteiSvc
         {
             try
             {
-                var task = CreateBackupAsync("001");
+                var task = CreateBackupAsync(GetActiveCompanyCode());
                 var path = task.GetAwaiter().GetResult();
                 return new BackupResult { Success = true, LocalPath = path };
             }
@@ -1029,7 +1037,7 @@ internal static class SteiSvc
                 if (!settings.Enabled || !settings.AutoBackup)
                     return false;
 
-                var root = AppPaths.CompanyBackup("001");
+                var root = AppPaths.CompanyBackup(GetActiveCompanyCode());
                 if (!Directory.Exists(root))
                     return true;
 
@@ -1080,7 +1088,7 @@ internal static class SteiSvc
         {
             try
             {
-                var path = await CreateBackupAsync("001", ct);
+                var path = await CreateBackupAsync(GetActiveCompanyCode(), ct);
                 return new BackupResult { Success = true, LocalPath = path, Uploaded = false };
             }
             catch (Exception ex)
