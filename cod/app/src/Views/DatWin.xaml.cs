@@ -626,11 +626,17 @@ public partial class DatWin : Window
                 ? L("Partial", "Completed with issues")
                 : L("Failed", "Operation failed");
 
+        if (result.Errors.Count > 0)
+        {
+            for (var i = 0; i < result.Errors.Count; i++)
+                LogError($"DEX-UI-004: Dataset exchange issue {i + 1}/{result.Errors.Count}: {result.Errors[i]}");
+        }
+
         var lines = new List<string>
         {
             export ? L("ExportResult", "Export result") : L("ImportResult", "Import result"),
             new string('─', 42),
-            $"{L("Message", "Message")}: {result.Message}",
+            $"{L("Message", "Message")}: {(result.Success && result.Errors.Count == 0 ? result.Message : ErrorCatalog.Get("DEX-UI-004"))}",
             $"{L("Rows", "Rows")}: {result.Rows.ToString("N0", CultureInfo.InvariantCulture)}",
             $"{L("FailedRows", "Failed rows")}: {result.FailedRows.ToString("N0", CultureInfo.InvariantCulture)}",
             $"{L("Tables", "Tables")}: {result.Tables.ToString(CultureInfo.InvariantCulture)}",
@@ -647,7 +653,7 @@ public partial class DatWin : Window
         {
             lines.Add(string.Empty);
             lines.Add(L("Errors", "Details"));
-            lines.AddRange(result.Errors.Take(20).Select((x, i) => $"{i + 1}. {x}"));
+            lines.Add(ErrorCatalog.Get("DEX-UI-004"));
             if (result.Errors.Count > 20) lines.Add($"... +{result.Errors.Count - 20} {L("More", "more")}");
         }
         ResultTextBox.Text = string.Join(Environment.NewLine, lines);
