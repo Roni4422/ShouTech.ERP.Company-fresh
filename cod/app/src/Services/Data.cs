@@ -26,10 +26,22 @@ namespace ShouTech.App.Services
     // ========== DataServ.cs ==========
 public sealed class DataServ : IDataServ
 {
-    public Task<int> GetTotalCustomersAsync() =>
-        ExecuteCountAsync("customers", DatabaseRuntime.IsPostgreSql()
-            ? "COALESCE(is_deleted, FALSE) = FALSE"
-            : "COALESCE(is_deleted, 0) = 0");
+    public Task<int> GetTotalCustomersAsync()
+    {
+        var companyCode = GetActiveCompanyId();
+        var activePredicate = DatabaseRuntime.IsPostgreSql()
+            ? "COALESCE(c.is_deleted, FALSE) = FALSE"
+            : "COALESCE(c.is_deleted, 0) = 0";
+        var sql = $"""
+            SELECT COUNT(*)
+            FROM customers AS c
+            WHERE c.company_id = (
+                SELECT company_id FROM companies WHERE company_code = @company
+            )
+              AND {activePredicate};
+            """;
+        return ExecuteScalarCountAsync(sql, companyCode);
+    }
 
     public Task<int> GetTotalProductsAsync() =>
         ExecuteCountAsync("materials", DatabaseRuntime.IsPostgreSql()
