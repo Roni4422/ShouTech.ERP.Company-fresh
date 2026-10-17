@@ -49,6 +49,26 @@ public sealed class GlPostingTests
         Assert.DoesNotContain(lines, l => l.AccountKey == GlPost.Receivables);
     }
 
+    [Theory]
+    [InlineData("Cash", "CASH")]
+    [InlineData("Credit", "RECEIVABLES")]
+    [InlineData("Visa", "BANK")]
+    [InlineData("K-Net", "BANK")]
+    public void BuildLines_PosSale_ShouldUseTenderSpecificAccount(string method, string accountKey)
+    {
+        var lines = GlPost.BuildLines(InvDocKind.PosSale, 100m, 0m, 0m, method);
+
+        Assert.Contains(lines, line => line.AccountKey == accountKey && line.Debit == 100m);
+        Assert.Equal(lines.Sum(line => line.Debit), lines.Sum(line => line.Credit));
+    }
+
+    [Fact]
+    public void BuildLines_PosSale_ShouldRejectUnknownTender()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            GlPost.BuildLines(InvDocKind.PosSale, 100m, 0m, 0m, "Unknown"));
+    }
+
     [Fact]
     public void BuildLines_PurchaseInvoice_WithoutTax_ShouldOmitTaxLine()
     {
