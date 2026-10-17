@@ -739,7 +739,7 @@ public sealed class PermServ : IPermServ
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(ct).ConfigureAwait(false);
         const string sql = """
-            SELECT r.role_code, p.permission_code, up.effect AS user_effect
+            SELECT r.role_code, p.permission_code, rp.permission_id AS role_permission_id, up.effect AS user_effect
             FROM public.users AS u
             LEFT JOIN public.user_roles AS ur ON ur.user_id = u.user_id
             LEFT JOIN public.roles AS r ON r.role_id = ur.role_id
@@ -772,10 +772,23 @@ public sealed class PermServ : IPermServ
             if (!reader.IsDBNull(1))
             {
                 var permission = reader.GetString(1);
-                if (reader.IsDBNull(2) || reader.GetBoolean(2))
+                // An explicit user override always wins. Without one, grant only
+                // permissions actually assigned to an active role.
+                if (!reader.IsDBNull(3))
+                {
+                    if (reader.GetBoolean(3))
+                        _perms.Add(permission);
+                    else
+                        _perms.Remove(permission);
+                }
+                else if (!reader.IsDBNull(2))
+                {
                     _perms.Add(permission);
+                }
                 else
+                {
                     _perms.Remove(permission);
+                }
             }
         }
 
@@ -801,7 +814,7 @@ public sealed class PermServ : IPermServ
         await using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync(ct).ConfigureAwait(false);
         await using var command = new SqliteCommand("""
-            SELECT r.role_code, p.permission_code, up.effect AS user_effect
+            SELECT r.role_code, p.permission_code, rp.permission_id AS role_permission_id, up.effect AS user_effect
             FROM users u
             LEFT JOIN user_roles ur ON ur.user_id=u.user_id
             LEFT JOIN roles r ON r.role_id=ur.role_id AND r.is_active=1 AND r.is_deleted=0
@@ -827,8 +840,20 @@ public sealed class PermServ : IPermServ
             if (!reader.IsDBNull(1))
             {
                 var permission = reader.GetString(1);
-                if (reader.IsDBNull(2) || reader.GetBoolean(2)) _perms.Add(permission);
-                else _perms.Remove(permission);
+                // Explicit user overrides take precedence over active role grants.
+                if (!reader.IsDBNull(3))
+                {
+                    if (reader.GetBoolean(3)) _perms.Add(permission);
+                    else _perms.Remove(permission);
+                }
+                else if (!reader.IsDBNull(2))
+                {
+                    _perms.Add(permission);
+                }
+                else
+                {
+                    _perms.Remove(permission);
+                }
             }
         }
         if (!found)
