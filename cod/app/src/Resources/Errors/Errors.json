@@ -1189,5 +1189,13 @@
     "severity": "Error",
     "catalogRef": "RECYCLE_BIN.DATABASE.001",
     "location": "RECYCLE_BIN.DATABASE.001"
+  },
+  "ACC-DB-001": {
+    "type": "System",
+    "name": "AccountCardOperationFailed",
+    "message": "The account operation failed. Review the application logs for details.",
+    "severity": "Error",
+    "catalogRef": "ACCOUNT_CARD.DATABASE.001",
+    "location": "ACCOUNT_CARD.DATABASE.001"
   }
 }
