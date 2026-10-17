@@ -39,15 +39,15 @@ public sealed class DataServ : IDataServ
     public Task<int> GetTotalPendingApprovalsAsync()
     {
         var companyId = GetActiveCompanyId();
-        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted = FALSE" : "is_deleted = 0";
+        var activePredicate = "is_deleted = 0";
         var sql = $"""
             SELECT COUNT(*) FROM (
                 SELECT doc_id FROM sales_documents
-                WHERE company_id = $company AND {activePredicate}
+                WHERE company_id = @company AND {activePredicate}
                   AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
                 UNION ALL
                 SELECT doc_id FROM purchase_documents
-                WHERE company_id = $company AND {activePredicate}
+                WHERE company_id = @company AND {activePredicate}
                   AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
             ) AS pending_docs;
             """;
@@ -66,22 +66,22 @@ public sealed class DataServ : IDataServ
             FROM (
                 SELECT doc_no, doc_kind, doc_date, party_name, grand_total, status, created_at
                 FROM sales_documents
-                WHERE company_id = $company AND {activePredicate}
+                WHERE company_id = @company AND {activePredicate}
                 UNION ALL
                 SELECT doc_no, doc_kind, doc_date, party_name, grand_total, status, created_at
                 FROM purchase_documents
-                WHERE company_id = $company AND {activePredicate}
+                WHERE company_id = @company AND {activePredicate}
             ) AS docs
             ORDER BY created_at DESC, doc_date DESC
-            LIMIT $limit;
+            LIMIT @limit;
             """;
 
         var results = new List<RecentDocument>();
         await using var connection = await OpenConnectionAsync().ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
-        AddParameter(command, "$company", companyId);
-        AddParameter(command, "$limit", count);
+        AddParameter(command, "@company", companyId);
+        AddParameter(command, "@limit", count);
         await using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         while (await reader.ReadAsync().ConfigureAwait(false))
         {
@@ -106,7 +106,7 @@ public sealed class DataServ : IDataServ
     private static async Task<int> ExecuteCountAsync(string table, string activePredicate)
     {
         var companyId = GetActiveCompanyId();
-        var sql = $"SELECT COUNT(*) FROM {table} WHERE company_id = $company AND {activePredicate};";
+        var sql = $"SELECT COUNT(*) FROM {table} WHERE company_id = @company AND {activePredicate};";
         return await ExecuteScalarCountAsync(sql, companyId).ConfigureAwait(false);
     }
 
@@ -115,7 +115,7 @@ public sealed class DataServ : IDataServ
         await using var connection = await OpenConnectionAsync().ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
-        AddParameter(command, "$company", companyId);
+        AddParameter(command, "@company", companyId);
         var value = await command.ExecuteScalarAsync().ConfigureAwait(false);
         return Convert.ToInt32(value ?? 0, System.Globalization.CultureInfo.InvariantCulture);
     }
