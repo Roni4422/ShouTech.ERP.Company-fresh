@@ -144,7 +144,7 @@ public static class ChequeBatchSvc
             var companyId = await ResolveCompanyIdAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             object? existingBatchId = null;
             bool isDeleted = false;
-            string status = "DRAFT";
+            string status = "Draft";
 
             await using (var find = connection.CreateCommand())
             {
@@ -160,14 +160,14 @@ public static class ChequeBatchSvc
                 {
                     existingBatchId = reader.GetValue(0);
                     isDeleted = Convert.ToBoolean(reader.GetValue(1), CultureInfo.InvariantCulture);
-                    status = ReadString(reader, 2, "DRAFT");
+                    status = ReadString(reader, 2, "Draft");
                 }
             }
 
             if (isDeleted)
                 throw new ChequeBatchException(ErrorCodes.ChequeCodeRequiresRestore,
                     "This batch code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.");
-            if (existingBatchId is not null && !string.Equals(status, "DRAFT", StringComparison.OrdinalIgnoreCase))
+            if (existingBatchId is not null && !string.Equals(status, "Draft", StringComparison.OrdinalIgnoreCase))
                 throw new ChequeBatchException(ErrorCodes.ChequePostedEditRejected,
                     "This cheque batch is no longer a draft and cannot be edited. Use the approved accounting reversal workflow.");
 
@@ -184,7 +184,7 @@ public static class ChequeBatchSvc
                      status, is_active, is_deleted, created_at, created_by, modified_at, modified_by)
                     VALUES
                     (@id, @company, @code, @batchDate, @cashBoxCode, @currencyCode, @memo,
-                     'DRAFT', @isActive, @isDeleted, @createdAt, @createdBy, NULL, NULL);
+                     'Draft', @isActive, @isDeleted, @createdAt, @createdBy, NULL, NULL);
                     """;
                 Add(insert, "@id", FormatId(batchId));
                 Add(insert, "@company", companyId);
@@ -206,7 +206,7 @@ public static class ChequeBatchSvc
                     UPDATE cheque_batches SET
                         batch_date=@batchDate, cash_box_code=@cashBoxCode, currency_code=@currencyCode,
                         memo=@memo, modified_at=@modifiedAt, modified_by=@modifiedBy
-                    WHERE company_id=@company AND batch_id=@id AND status='DRAFT' AND is_deleted={FalseLiteral};
+                    WHERE company_id=@company AND batch_id=@id AND status='Draft' AND is_deleted={FalseLiteral};
                     """;
                 Add(update, "@company", companyId);
                 Add(update, "@id", FormatId(batchId));
@@ -289,7 +289,7 @@ public static class ChequeBatchSvc
             command.CommandText = $"""
                 UPDATE cheque_batches SET is_deleted={TrueLiteral}, deleted_at=@deletedAt, deleted_by=@deletedBy,
                     modified_at=@modifiedAt, modified_by=@modifiedBy
-                WHERE company_id=@company AND batch_code=@code AND is_deleted={FalseLiteral} AND status='DRAFT';
+                WHERE company_id=@company AND batch_code=@code AND is_deleted={FalseLiteral} AND status='Draft';
                 """;
             Add(command, "@company", companyId);
             Add(command, "@code", code.Trim());
