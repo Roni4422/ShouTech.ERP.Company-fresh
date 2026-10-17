@@ -1253,7 +1253,9 @@
     "Debit": "Total Debit",
     "Credit": "Total Credit",
     "Balance": "Balance",
-    "Saved": "Cost center saved successfully"
+    "Saved": "Cost center saved successfully",
+    "DeleteConfirmation": "Move this cost center to the Recycle Bin? It cannot be removed while active child cost centers reference it.",
+    "Deleted": "Cost center moved to the Recycle Bin."
   },
   "CurrencyCard": {
     "Title": "Currency Card & Rates",
