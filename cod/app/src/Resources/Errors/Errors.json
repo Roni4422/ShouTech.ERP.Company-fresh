@@ -1301,5 +1301,13 @@
     "severity": "Error",
     "catalogRef": "REPORT.EXPORT.PRINT.001",
     "location": "REPORT.EXPORT.PRINT"
+  },
+  "BKP-KEY-001": {
+    "type": "Security",
+    "name": "BackupEncryptionKeyUnavailable",
+    "message": "The backup encryption key could not be recovered. The original key file was preserved; contact your administrator before retrying.",
+    "severity": "Critical",
+    "catalogRef": "BACKUP.SECURITY.KEY.001",
+    "location": "BACKUP.KEY_PROVIDER"
   }
 }
