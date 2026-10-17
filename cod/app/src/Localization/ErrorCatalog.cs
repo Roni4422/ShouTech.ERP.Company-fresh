@@ -27,6 +27,9 @@ namespace ShouTech.App.Localization
 
             [JsonPropertyName("catalogRef")]
             public string CatalogRef { get; set; } = string.Empty;
+
+            [JsonPropertyName("location")]
+            public string Location { get; set; } = string.Empty;
         }
 
         private static readonly Lazy<IReadOnlyDictionary<string, RawEntry>> Catalog = new(Load);
@@ -36,9 +39,10 @@ namespace ShouTech.App.Localization
             if (string.IsNullOrWhiteSpace(code))
                 return "Unknown application error.";
 
-            return Catalog.Value.TryGetValue(code, out var entry)
+            var normalizedCode = code.Trim();
+            return Catalog.Value.TryGetValue(normalizedCode, out var entry)
                 ? ResolveMessage(entry)
-                : code;
+                : $"An unregistered application error occurred. Error code: {normalizedCode}.";
         }
 
         public static ErrorDefinition Resolve(string code)
@@ -51,7 +55,8 @@ namespace ShouTech.App.Localization
                     "Unknown application error.",
                     "Critical",
                     "SYS.0000",
-                    false);
+                    false,
+                    "APPLICATION.GENERAL");
             }
 
             var normalizedCode = code.Trim();
@@ -64,7 +69,8 @@ namespace ShouTech.App.Localization
                     ResolveMessage(entry),
                     string.IsNullOrWhiteSpace(entry.Severity) ? "Error" : entry.Severity,
                     string.IsNullOrWhiteSpace(entry.CatalogRef) ? normalizedCode : entry.CatalogRef,
-                    string.Equals(entry.Type, "User", StringComparison.OrdinalIgnoreCase));
+                    string.Equals(entry.Type, "User", StringComparison.OrdinalIgnoreCase),
+                    string.IsNullOrWhiteSpace(entry.Location) ? InferLocation(normalizedCode, entry.CatalogRef) : entry.Location);
             }
 
             // Code not registered in Errors.json yet - fall back gracefully instead of
@@ -81,15 +87,25 @@ namespace ShouTech.App.Localization
                 "The error code is not registered in the error catalog.",
                 "Error",
                 "CAT.UNREGISTERED",
-                isUserError);
+                isUserError,
+                InferLocation(normalizedCode, string.Empty));
         }
 
 
-        private static string ResolveMessage(RawEntry entry)
+        // Error messages are operational diagnostics and remain English-only,
+        // regardless of the language selected for the application UI.
+        private static string ResolveMessage(RawEntry entry) =>
+            string.IsNullOrWhiteSpace(entry.Message)
+                ? $"An error occurred. Error code: {entry.Name}."
+                : entry.Message;
+
+        private static string InferLocation(string code, string catalogRef)
         {
-            if (!string.IsNullOrWhiteSpace(entry.MessageKey))
-                return Loc.Get(entry.MessageKey, entry.Message);
-            return entry.Message;
+            if (!string.IsNullOrWhiteSpace(catalogRef))
+                return catalogRef.Trim();
+
+            var separator = code.IndexOf('-');
+            return separator > 0 ? code[..separator] + ".GENERAL" : "APPLICATION.GENERAL";
         }
 
         private static Dictionary<string, RawEntry> Load()
@@ -125,6 +141,7 @@ namespace ShouTech.App.Localization
         public string Severity { get; }
         public string CatalogRef { get; }
         public bool IsUserError { get; }
+        public string Location { get; }
 
         public ErrorDefinition(
             string code,
@@ -132,7 +149,8 @@ namespace ShouTech.App.Localization
             string message,
             string severity,
             string catalogRef,
-            bool isUserError)
+            bool isUserError,
+            string location)
         {
             Code = code;
             Name = name;
@@ -140,6 +158,7 @@ namespace ShouTech.App.Localization
             Severity = severity;
             CatalogRef = catalogRef;
             IsUserError = isUserError;
+            Location = location;
         }
     }
 }
