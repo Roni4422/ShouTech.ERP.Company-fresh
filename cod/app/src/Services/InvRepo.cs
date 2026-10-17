@@ -17,6 +17,37 @@ public static class InvRepo
 {
     private static string Company => AppState.CurrentCompanyCode ?? string.Empty;
 
+    /// <summary>Returns the active company's configured base currency, with the central currency setting as a first-run fallback.</summary>
+    public static string GetCompanyCurrencyCode()
+    {
+        var fallback = ShouTech.App.Configuration.AppCfgSvc.Current?.Currency?.DefaultCode;
+        if (string.IsNullOrWhiteSpace(fallback))
+            fallback = "USD";
+
+        var company = Company.Trim();
+        var connectionString = DatabaseRuntime.GetConnectionString();
+        if (company.Length == 0 || string.IsNullOrWhiteSpace(connectionString))
+            return NormalizeCurrencyCode(fallback);
+
+        using var connection = Open(connectionString);
+        using var command = connection.CreateCommand();
+        var deletedPredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
+        command.CommandText = $"SELECT currency_code FROM companies WHERE company_code=$company AND {deletedPredicate} LIMIT 1;";
+        Add(command, "$company", company);
+        var value = command.ExecuteScalar();
+        var code = value is null or DBNull ? null : Convert.ToString(value, CultureInfo.InvariantCulture);
+        return NormalizeCurrencyCode(string.IsNullOrWhiteSpace(code) ? fallback : code);
+    }
+
+    private static string NormalizeCurrencyCode(string? code)
+    {
+        var normalized = code?.Trim().ToUpperInvariant();
+        if (normalized is { Length: 3 } && normalized.All(char.IsAsciiLetter))
+            return normalized;
+
+        throw new InvalidOperationException("The active company has no valid three-letter currency code.");
+    }
+
     public static string NextDocNo(InvDocKind kind)
     {
         DocSchema.Ensure();
