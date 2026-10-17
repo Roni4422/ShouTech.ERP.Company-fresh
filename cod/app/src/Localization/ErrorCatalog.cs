@@ -50,6 +50,10 @@ namespace ShouTech.App.Localization
         public const string CompanyDefaultWarehouseFailed = "CO-CREATE-WH-001";
         public const string CompanyDatabaseRegistrationFailed = "CO-CREATE-DB-001";
         public const string CompanyCreationFailed = "CO-CREATE-001";
+        public const string BarcodePrintDialogFailed = "LBL-PRINT-001";
+        public const string BarcodePrintFailed = "LBL-PRINT-002";
+        public const string CashDrawerPrinterNotConfigured = "POS-DRAWER-001";
+        public const string CashDrawerOpenFailed = "POS-DRAWER-002";
     }
 
     public static class ErrorCatalog
