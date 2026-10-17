@@ -1341,5 +1341,37 @@
     "severity": "Error",
     "catalogRef": "BACKUP.CYCLE.001",
     "location": "BACKUP.CYCLE"
+  },
+  "BKP-UI-001": {
+    "type": "IO",
+    "name": "BackupCreationUiFailed",
+    "message": "The backup could not be created or verified. Review the application logs before retrying.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.UI.CREATE.001",
+    "location": "BACKUP.WINDOW.CREATE"
+  },
+  "BKP-UI-002": {
+    "type": "Security",
+    "name": "BackupRestoreUiFailed",
+    "message": "The backup could not be validated or restored. Current company data was not replaced. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.UI.RESTORE.001",
+    "location": "BACKUP.WINDOW.RESTORE"
+  },
+  "BKP-UI-003": {
+    "type": "IO",
+    "name": "BackupFolderOpenFailed",
+    "message": "The backup folder could not be opened. Review the application logs and folder permissions.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.UI.FOLDER.001",
+    "location": "BACKUP.WINDOW.OPEN_FOLDER"
+  },
+  "BKP-UI-004": {
+    "type": "System",
+    "name": "RestoreLoginHandoffFailed",
+    "message": "The restored company could not be handed off to the login window. Keep the application open and review the logs.",
+    "severity": "Critical",
+    "catalogRef": "BACKUP.UI.LOGIN.001",
+    "location": "BACKUP.WINDOW.LOGIN_HANDOFF"
   }
 }
