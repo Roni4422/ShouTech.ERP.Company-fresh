@@ -69,6 +69,19 @@ namespace ShouTech.App.Localization
         public const string ChartOfAccountsEncryptedExportFailed = "COA-EXP-003";
         public const string ChartOfAccountsImportFailed = "COA-IMP-001";
         public const string ChartOfAccountsEncryptedImportFailed = "COA-IMP-002";
+        public const string CategoryCardSaveFailed = "CAT-001";
+        public const string CategoryCardDeleteFailed = "CAT-002";
+        public const string CategoryCardLoadFailed = "CAT-003";
+        public const string CategoryCardSearchFailed = "CAT-004";
+        public const string CategoryCardImageFailed = "CAT-005";
+        public const string CategoryCardRepositoryUnavailable = "CAT-006";
+        public const string CategoryCardCodeRequired = "CAT-007";
+        public const string CategoryCardNameRequired = "CAT-008";
+        public const string CategoryCardDuplicateCode = "CAT-009";
+        public const string CategoryCardNoCardToPrint = "CAT-010";
+        public const string CategoryCardSearchTextRequired = "CAT-011";
+        public const string CategoryCardSearchNotFound = "CAT-012";
+        public const string CategoryCardInitializationFailed = "CAT-013";
     }
 
     public static class ErrorCatalog
