@@ -420,7 +420,7 @@ public sealed class InvoiceWin : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, T("Common.Error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowInvoiceFailure(ShouTech.App.Localization.ErrorCodes.InvoiceSaveFailed, "SaveDraft", ex);
         }
     }
 
@@ -442,10 +442,31 @@ public sealed class InvoiceWin : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, T("Common.Error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowInvoiceFailure(ShouTech.App.Localization.ErrorCodes.InvoicePostFailed, "Post", ex);
         }
     }
 
+    private void ShowInvoiceFailure(string errorCode, string operation, Exception exception)
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var context = $"Operation={operation}; Document={_doc.DocNo}; Company={AppState.CurrentCompanyCode ?? "unknown"}; User={AppState.CurrentUser?.Username ?? "unknown"}.";
+
+        AppHost.Logging?.LogError(
+            "InvoiceOperation",
+            $"[{definition.Code}] {definition.Name} | {context}",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "Invoice",
+            operation + "Failed",
+            $"Code={definition.Code} | {context}");
+
+        MessageBox.Show(
+            this,
+            $"[{definition.Code}] {definition.Message}",
+            T("Common.Error"),
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+    }
 
     private void ReverseCurrentDocument()
     {
