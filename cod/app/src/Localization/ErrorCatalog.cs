@@ -38,6 +38,12 @@ namespace ShouTech.App.Localization
         public const string DeletedCompanyLoadFailed = "RCO-LOAD-001";
         public const string DeletedCompanyRestoreFailed = "RCO-RESTORE-001";
         public const string DeletedCompanyRestoreRejected = "RCO-RESTORE-002";
+        public const string CompanyEditLoadFailed = "COM-EDIT-001";
+        public const string CompanyProfileSaveFailed = "COM-SAVE-001";
+        public const string CompanyIndexRemovalFailed = "COM-INDEX-DELETE-001";
+        public const string CompanySoftDeleteFailed = "COM-DELETE-001";
+        public const string CompanyReindexFailed = "COM-REINDEX-001";
+        public const string CompanyDefaultUpdateFailed = "COM-DEFAULT-001";
     }
 
     public static class ErrorCatalog
