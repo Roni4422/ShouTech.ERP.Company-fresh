@@ -137,7 +137,7 @@ public static class InvRepo
                         INSERT INTO {headerTable}
                         (company_id, doc_kind, doc_no, doc_date, party_id, party_name, warehouse_id,
                          currency_code, exchange_rate, subtotal, discount_amount, tax_amount, grand_total,
-                         status, tax_code, tax_rate, notes, created_by, is_deleted)
+                         status, tax_code, tax_rate, notes, created_by{(isSales ? ", payment_method" : "")}, is_deleted)
                         VALUES
                         ($company, $kind, $no, $date, $party, $pname, $wh,
                          $cur, $fx, $sub, 0, $tax, $grand,
@@ -307,7 +307,9 @@ public static class InvRepo
         }
 
         // Party ledger: sales increase receivable (debit customer), purchases increase payable.
-        if (doc.PartyId is long partyId)
+        if (doc.PartyId is long partyId
+            && (doc.Kind != InvDocKind.PosSale
+                || doc.PaymentMethod.Equals("Credit", StringComparison.OrdinalIgnoreCase)))
         {
             using var led = connection.CreateCommand();
             led.Transaction = tx;
@@ -670,14 +672,13 @@ public static class InvRepo
 
     private static string NormalizePaymentMethod(string? method)
     {
-        var value = method?.Trim();
+        var value = method?.Trim().ToUpperInvariant();
         return value switch
         {
-            null or "" => "Cash",
-            "cash" => "Cash",
-            "credit" => "Credit",
-            "visa" => "Visa",
-            "k-net" or "knet" => "K-Net",
+            null or "" or "CASH" => "Cash",
+            "CREDIT" => "Credit",
+            "VISA" => "Visa",
+            "K-NET" or "KNET" => "K-Net",
             _ => throw new InvalidOperationException("Unsupported POS payment method.")
         };
     }
