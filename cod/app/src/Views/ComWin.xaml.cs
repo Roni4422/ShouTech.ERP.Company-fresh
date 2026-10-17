@@ -841,17 +841,17 @@ namespace ShouTech.App.Views
             var lang = ShouTech.App.App.CurrentLanguageCode ?? "en";
             var title = lang switch
             {
-                "tr" => "Kalıcı silme",
-                "fr" => "Suppression définitive",
-                "en" => "Permanent delete",
-                _ => "حذف نهائي"
+                "tr" => "Şirketi silinenlere taşı",
+                "fr" => "Déplacer vers les sociétés supprimées",
+                "en" => "Move company to deleted",
+                _ => "نقل الشركة إلى المحذوفات"
             };
             var msg = lang switch
             {
-                "tr" => $"«{SelectedCompany!.DisplayName}» kalıcı olarak silinecek.\nBu işlem geri alınamaz.\n\nDevam edilsin mi?",
-                "fr" => $"« {SelectedCompany!.DisplayName} » sera supprimée définitivement.\nCette action est irréversible.\n\nContinuer ?",
-                "en" => $"«{SelectedCompany!.DisplayName}» will be permanently deleted.\nThis cannot be undone.\n\nContinue?",
-                _ => $"سيتم حذف الشركة «{SelectedCompany!.DisplayName}» نهائياً من قاعدة البيانات والفهرس.\nلا يمكن استرجاعها.\n\nهل تريد المتابعة؟"
+                "tr" => $"«{SelectedCompany!.DisplayName}» etkin şirket listesinden kaldırılıp silinen şirketlere taşınacak.\nDaha sonra geri yüklenebilir.\n\nDevam edilsin mi?",
+                "fr" => $"« {SelectedCompany!.DisplayName} » sera retirée de la liste active et déplacée vers les sociétés supprimées.\nElle pourra être restaurée ultérieurement.\n\nContinuer ?",
+                "en" => $"«{SelectedCompany!.DisplayName}» will be removed from the active list and moved to deleted companies.\nIt can be restored later.\n\nContinue?",
+                _ => $"سيتم نقل الشركة «{SelectedCompany!.DisplayName}» من قائمة الشركات النشطة إلى الشركات المحذوفة.\nيمكن استعادتها لاحقاً.\n\nهل تريد المتابعة؟"
             };
 
             var confirm = MessageBox.Show(msg, title, MessageBoxButton.OKCancel, MessageBoxImage.Warning);
@@ -868,7 +868,7 @@ namespace ShouTech.App.Views
                     return;
                 }
 
-                ShowNotice("Company permanently deleted.", "تم حذف الشركة نهائياً.");
+                ShowNotice("Company moved to deleted companies.", "تم نقل الشركة إلى الشركات المحذوفة.");
                 await LoadCompaniesAsync();
             }
             catch (Exception ex)
