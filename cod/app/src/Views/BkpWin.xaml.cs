@@ -227,7 +227,7 @@ public partial class BkpWin : Window
                 "Backup creation failed.",
                 ex);
 
-            errorMessage = ErrorCatalog.Get("BKP-UI-001");
+            errorMessage = ErrorCatalog.Get(ErrorCodes.BackupCreationUiFailed);
             succeeded = false;
         }
         finally
@@ -341,7 +341,7 @@ public partial class BkpWin : Window
                 lstBackups.Items.Refresh();
                 LogBackup(
                     $"BKP-UI-002: Backup validation rejected file={row.FileName}; reason={detailed.FailureReason ?? "No validation detail was provided."}");
-                errorMessage = ErrorCatalog.Get("BKP-UI-002");
+                errorMessage = ErrorCatalog.Get(ErrorCodes.BackupRestoreUiFailed);
             }
             else
             {
@@ -362,7 +362,7 @@ public partial class BkpWin : Window
         {
             AppHost.Logging.LogOperation("Restore", "FAILED", ex.Message);
             LogBackupError("Backup restore failed.", ex);
-            errorMessage = ErrorCatalog.Get("BKP-UI-002");
+            errorMessage = ErrorCatalog.Get(ErrorCodes.BackupRestoreUiFailed);
             succeeded = false;
         }
         finally
@@ -633,7 +633,7 @@ public partial class BkpWin : Window
         {
             AppHost.Logging.LogOperation("Restore", "LOGIN_HANDOFF_FAILED", ex.Message);
             AppHost.Logging.LogError("BkpWin", "Failed to open login after restore.", ex);
-            MessageBox.Show(ErrorCatalog.Get("BKP-UI-004"), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(ErrorCatalog.Get(ErrorCodes.RestoreLoginHandoffFailed), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -655,7 +655,7 @@ public partial class BkpWin : Window
         catch (Exception ex)
         {
             AppHost.Logging.LogError("BkpWin", "Failed to open backup directory.", ex);
-            MessageBox.Show(ErrorCatalog.Get("BKP-UI-003"), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ErrorCatalog.Get(ErrorCodes.BackupFolderOpenFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
