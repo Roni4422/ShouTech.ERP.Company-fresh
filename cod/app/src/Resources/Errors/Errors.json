@@ -1576,5 +1576,59 @@
     "severity": "Error",
     "catalogRef": "POS.CASH_DRAWER.OPEN.002",
     "location": "POS.CASH_DRAWER.OPEN"
+  },
+  "APP-START-001": {
+    "type": "System",
+    "name": "ApplicationSchemaBootstrapFailed",
+    "message": "The application could not initialize its database schema. Check the application log and verify database connectivity before retrying.",
+    "messageKey": "Errors.APP-START-001",
+    "severity": "Critical",
+    "catalogRef": "APPLICATION.START.SCHEMA.001",
+    "location": "APPLICATION.START.SCHEMA"
+  },
+  "APP-START-002": {
+    "type": "System",
+    "name": "UnhandledApplicationException",
+    "message": "An unexpected application error occurred. Diagnostic details were recorded. Save your work if possible and restart the application.",
+    "messageKey": "Errors.APP-START-002",
+    "severity": "Critical",
+    "catalogRef": "APPLICATION.START.UNHANDLED.002",
+    "location": "APPLICATION.START.UNHANDLED"
+  },
+  "APP-START-003": {
+    "type": "System",
+    "name": "ApplicationStartupFailed",
+    "message": "The application could not complete startup. Check the application log for details.",
+    "messageKey": "Errors.APP-START-003",
+    "severity": "Error",
+    "catalogRef": "APPLICATION.START.003",
+    "location": "APPLICATION.START"
+  },
+  "APP-START-004": {
+    "type": "System",
+    "name": "SplashInitializationFailed",
+    "message": "The startup screen could not be initialized. The application will attempt to continue without it.",
+    "messageKey": "Errors.APP-START-004",
+    "severity": "Warning",
+    "catalogRef": "APPLICATION.START.SPLASH.004",
+    "location": "APPLICATION.START.SPLASH"
+  },
+  "APP-DB-001": {
+    "type": "System",
+    "name": "CompanySchemaInitializationFailed",
+    "message": "The company database schema could not be initialized. Check the active database connection and application log.",
+    "messageKey": "Errors.APP-DB-001",
+    "severity": "Error",
+    "catalogRef": "APPLICATION.DATABASE.SCHEMA.001",
+    "location": "APPLICATION.DATABASE.SCHEMA"
+  },
+  "APP-DB-002": {
+    "type": "System",
+    "name": "SchemaRefreshFailed",
+    "message": "The database schema refresh failed. No further schema changes should be attempted until the cause is reviewed in the application log.",
+    "messageKey": "Errors.APP-DB-002",
+    "severity": "Error",
+    "catalogRef": "APPLICATION.DATABASE.SCHEMA.002",
+    "location": "APPLICATION.DATABASE.SCHEMA"
   }
 }
