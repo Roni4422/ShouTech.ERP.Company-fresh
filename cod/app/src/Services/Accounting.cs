@@ -741,7 +741,7 @@ internal static class AccRepo
         VALUES($company,$code,$parent,$ar,$en,$posting,$status,$risk,$cc,$reconcile,$taxable,$foreign,$costreq,$budget,$default,$tax,$desc,$balance,$debit,$credit);
         """;
 
-    private static string UpdateSql() => """
+    private static string UpdateSql() => $"""
         UPDATE accounts SET account_code=$code,parent_code=$parent,name_ar=$ar,name_en=$en,posting_mode=$posting,
             status=$status,risk=$risk,cost_center=$cc,allow_reconcile=$reconcile,taxable=$taxable,
             foreign_currency=$foreign,cost_required=$costreq,budget=$budget,is_default=$default,tax_rate=$tax,
