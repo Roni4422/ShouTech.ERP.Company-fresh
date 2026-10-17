@@ -129,9 +129,15 @@ public static class TaxSvc
             return (Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture),
                     Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture) ?? "");
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(
+                ShouTech.App.Localization.ErrorCodes.TaxLookupFailed);
+            AppHost.Logging?.LogError(
+                "TaxService",
+                $"[{definition.Code}] {definition.Name} | Operation=ResolveParty | Company={AppState.CurrentCompanyCode ?? "(none)"}",
+                ex);
+            throw new InvalidOperationException($"[{definition.Code}] {definition.Message}", ex);
         }
     }
 
@@ -192,10 +198,15 @@ public static class TaxSvc
                 Convert.ToString(reader.GetValue(3), CultureInfo.InvariantCulture) ?? "",
                 effectiveTaxRate);
         }
+        catch (InvalidOperationException ex) when (
+            ex.Message.Contains("TAX-RATE-001", StringComparison.Ordinal))
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(
-                ShouTech.App.Localization.ErrorCodes.TaxConfigurationLoadFailed);
+                ShouTech.App.Localization.ErrorCodes.TaxLookupFailed);
             AppHost.Logging?.LogError(
                 "TaxService",
                 $"[{definition.Code}] {definition.Name} | Operation=ResolveMaterial | Company={AppState.CurrentCompanyCode ?? "(none)"}",
