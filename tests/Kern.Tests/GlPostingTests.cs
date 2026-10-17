@@ -80,6 +80,8 @@ public sealed class GlPostingTests
 
             Assert.Equal(1L, ScalarLong(connection,
                 "SELECT COUNT(*) FROM pragma_table_info('sales_documents') WHERE name='payment_method';"));
+            Assert.Equal(1L, ScalarLong(connection,
+                "SELECT COUNT(*) FROM pragma_table_info('companies') WHERE name='country';"));
 
             Execute(connection, """
                 INSERT INTO companies(company_id, company_code, company_name_ar, company_name_en)
