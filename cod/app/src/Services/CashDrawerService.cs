@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Printing;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Services;
 
@@ -50,7 +51,8 @@ public static class CashDrawerService
         var printer = SelectedPrinterName;
         if (string.IsNullOrWhiteSpace(printer))
         {
-            message = "No cash drawer printer is selected. Open Tools > Options and select the printer connected to the cash drawer.";
+            message = ErrorCatalog.Get(ErrorCodes.CashDrawerPrinterNotConfigured);
+            AppHost.Logging?.LogOperation("CashDrawer", "ValidationFailed", "POS-DRAWER-001; no printer selected.");
             return false;
         }
 
@@ -77,7 +79,12 @@ public static class CashDrawerService
             message = $"Cash-drawer open command sent to '{printer}'.";
             return true;
         }
-        catch (Exception ex) { message = $"Unable to open cash drawer: {ex.Message}"; return false; }
+        catch (Exception ex)
+        {
+            AppHost.Logging?.LogError("CashDrawer", "POS-DRAWER-002: Failed to send the cash-drawer command to the selected printer.", ex);
+            message = ErrorCatalog.Get(ErrorCodes.CashDrawerOpenFailed);
+            return false;
+        }
         finally { if (handle != IntPtr.Zero) ClosePrinter(handle); }
     }
 
