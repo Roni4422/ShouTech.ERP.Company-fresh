@@ -1891,5 +1891,77 @@
     "severity": "Warning",
     "catalogRef": "STARTUP.OPTIONAL.CHECK.004",
     "location": "STARTUP.OPTIONAL.CHECK"
+  },
+  "CUS-DB-001": {
+    "type": "Database",
+    "name": "CustomerCompanyContextFailed",
+    "message": "The active company could not be verified in the connected database. No data was changed.",
+    "messageKey": "Errors.CUS-DB-001",
+    "severity": "Error",
+    "catalogRef": "CUSTOMER.CUS-DB-001",
+    "location": "CUSTOMER.CONTEXT"
+  },
+  "CUS-DB-002": {
+    "type": "Database",
+    "name": "CustomerSaveFailed",
+    "message": "The customer record could not be saved. Check the database log for details.",
+    "messageKey": "Errors.CUS-DB-002",
+    "severity": "Error",
+    "catalogRef": "CUSTOMER.CUS-DB-002",
+    "location": "CUSTOMER.SAVE"
+  },
+  "CUS-DB-003": {
+    "type": "Database",
+    "name": "CustomerLoadFailed",
+    "message": "The customer record could not be loaded. Check the database log for details.",
+    "messageKey": "Errors.CUS-DB-003",
+    "severity": "Error",
+    "catalogRef": "CUSTOMER.CUS-DB-003",
+    "location": "CUSTOMER.LOAD"
+  },
+  "CUS-DEL-001": {
+    "type": "Database",
+    "name": "CustomerSoftDeleteFailed",
+    "message": "The customer could not be moved to the Recycle Bin. No permanent deletion was attempted.",
+    "messageKey": "Errors.CUS-DEL-001",
+    "severity": "Error",
+    "catalogRef": "CUSTOMER.CUS-DEL-001",
+    "location": "CUSTOMER.DELETE"
+  },
+  "CUS-DEL-002": {
+    "type": "Validation",
+    "name": "CustomerDeleteTargetNotFound",
+    "message": "The customer was not found in the active company or has already been deleted.",
+    "messageKey": "Errors.CUS-DEL-002",
+    "severity": "Warning",
+    "catalogRef": "CUSTOMER.CUS-DEL-002",
+    "location": "CUSTOMER.DELETE"
+  },
+  "CUS-VAL-001": {
+    "type": "Validation",
+    "name": "CustomerCardInputInvalid",
+    "message": "One or more customer fields are invalid. Review the values and try again.",
+    "messageKey": "Errors.CUS-VAL-001",
+    "severity": "Warning",
+    "catalogRef": "CUSTOMER.CUS-VAL-001",
+    "location": "CUSTOMER.VALIDATION"
+  },
+  "CUS-VAL-002": {
+    "type": "Validation",
+    "name": "CustomerCodeRequiresRestore",
+    "message": "This customer code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.",
+    "messageKey": "Errors.CUS-VAL-002",
+    "severity": "Warning",
+    "catalogRef": "CUSTOMER.CUS-VAL-002",
+    "location": "CUSTOMER.RESTORE_REQUIRED"
+  },
+  "CUS-VAL-003": {
+    "type": "Validation",
+    "name": "CustomerRecordNotFound",
+    "message": "No active customer was found in the selected company for this code.",
+    "messageKey": "Errors.CUS-VAL-003",
+    "severity": "Warning",
+    "catalogRef": "CUSTOMER.CUS-VAL-003",
+    "location": "CUSTOMER.LOAD"
   }
 }
