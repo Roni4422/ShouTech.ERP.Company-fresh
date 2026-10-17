@@ -11,6 +11,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using ShouTech.App.Common;
+using ShouTech.App.Localization;
 using ShouTech.App.Services;
 
 namespace ShouTech.App.Views;
@@ -194,7 +195,8 @@ public sealed class BcdGenWin : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            AppHost.Logging?.LogError("BarcodeGeneration", "BCG-LOAD-001: Failed to load materials for barcode generation.", ex);
+            MessageBox.Show(this, ErrorCatalog.Get(ErrorCodes.BarcodeGenerationLoadFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -448,7 +450,8 @@ public sealed class BcdGenWin : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            AppHost.Logging?.LogError("BarcodeGeneration", "BCG-PRINT-001: Barcode labels could not be printed.", ex);
+            MessageBox.Show(this, ErrorCatalog.Get(ErrorCodes.BarcodeLabelPrintFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
