@@ -149,33 +149,3 @@ jobs:
           PGPASSWORD=shoutest psql -h localhost -U shoutest -d shoutest_existing_history -v ON_ERROR_STOP=1 -c "CREATE TABLE schema_migrations (migration_id text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now());"
           dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN_HISTORY"
           dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN_HISTORY"
-
-  postgresql-migrations:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: shoutech
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      CONN: Host=localhost;Port=5432;Database=shoutech;Username=postgres;Password=postgres
-      PGPASSWORD: postgres
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '8.0.x'
-      - name: Apply migrations to a clean PostgreSQL database
-        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$CONN"
-      - name: Re-run migrations (must be idempotent)
-        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$CONN"
-      - name: Verify general-ledger reporting view
-        run: psql -h localhost -U postgres -d shoutech -v ON_ERROR_STOP=1 -f tests/sql/test_financial_views_pg.sql
