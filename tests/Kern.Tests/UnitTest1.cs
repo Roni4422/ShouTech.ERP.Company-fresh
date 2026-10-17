@@ -54,6 +54,78 @@ namespace Kern.Tests
         }
 
         [Fact]
+        public async Task PermServ_ShouldMergeActiveRoleGrantsAndRespectExplicitUserDenials()
+        {
+            var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-permissions-{Guid.NewGuid():N}.sqlite3");
+            var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var oldSettings = settingsField.GetValue(null);
+            try
+            {
+                settingsField.SetValue(null, new AppSetng
+                {
+                    Database = new DatabaseSettings { DefaultProvider = "Sqlite" },
+                    ConnectionStrings = new Dictionary<string, ConnectionStringSettings>
+                    {
+                        ["Default"] = new()
+                        {
+                            Provider = "Sqlite",
+                            ConnectionString = $"Data Source={databasePath};"
+                        }
+                    }
+                });
+
+                ApplySqliteMigrations(databasePath);
+                using (var connection = new SqliteConnection($"Data Source={databasePath};"))
+                {
+                    connection.Open();
+                    Execute(connection, """
+                        INSERT INTO companies(company_id,company_code,company_name_ar,company_name_en)
+                        VALUES ('TEST-PERM','TEST-PERM','Test company','Test company');
+                        INSERT INTO users(user_id,company_id,username,password_hash,password_salt,full_name,full_name_ar,full_name_en)
+                        VALUES ('user-001','TEST-PERM','testuser','hash','salt','Test User','مستخدم','Test User');
+                        INSERT INTO roles(company_id,role_code,role_name)
+                        VALUES ('TEST-PERM','TEST_ROLE_A','Role A'),('TEST-PERM','TEST_ROLE_B','Role B');
+                        INSERT INTO permissions(permission_code,permission_name,is_active)
+                        VALUES ('TEST.MULTI.GRANTED','Granted',1),
+                               ('TEST.MULTI.DENIED','Denied',1),
+                               ('TEST.MULTI.OVERRIDE','Override',1);
+                        INSERT INTO user_roles(user_id,role_id)
+                        SELECT 'user-001',role_id FROM roles
+                        WHERE role_code IN ('TEST_ROLE_A','TEST_ROLE_B');
+                        INSERT INTO role_permissions(role_id,permission_id)
+                        SELECT r.role_id,p.permission_id
+                        FROM roles r CROSS JOIN permissions p
+                        WHERE r.role_code='TEST_ROLE_A'
+                          AND p.permission_code IN ('TEST.MULTI.GRANTED','TEST.MULTI.OVERRIDE');
+                        INSERT INTO user_permissions(user_id,permission_id,effect)
+                        SELECT 'user-001',permission_id,0 FROM permissions
+                        WHERE permission_code='TEST.MULTI.OVERRIDE';
+                        """);
+                }
+
+                var service = new PermServ();
+                await service.LoadForUserAsync("testuser");
+
+                Assert.True(service.Has("TEST.MULTI.GRANTED"));
+                Assert.False(service.Has("TEST.MULTI.DENIED"));
+                Assert.False(service.Has("TEST.MULTI.OVERRIDE"));
+            }
+            finally
+            {
+                settingsField.SetValue(null, oldSettings);
+                SqliteConnection.ClearAllPools();
+                if (File.Exists(databasePath))
+                    File.Delete(databasePath);
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    var sidecar = databasePath + suffix;
+                    if (File.Exists(sidecar))
+                        File.Delete(sidecar);
+                }
+            }
+        }
+
+        [Fact]
         public async Task RecycleBinSvc_ShouldDetectBooleanAndIntegerSoftDeleteColumns()
         {
             var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
