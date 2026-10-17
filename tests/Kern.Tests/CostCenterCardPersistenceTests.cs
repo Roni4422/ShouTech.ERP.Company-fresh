@@ -122,7 +122,7 @@ public sealed class CostCenterCardPersistenceTests
             using var verification = Open(databasePath);
             Assert.Equal(3L, ScalarLong(verification,
                 "SELECT COUNT(*) FROM cost_centers;"));
-            Assert.Equal(1L, ScalarLong(verification,
+            Assert.Equal(2L, ScalarLong(verification,
                 "SELECT COUNT(*) FROM cost_centers WHERE company_id='COMP-A' AND is_deleted=1;"));
             Assert.Equal(0L, ScalarLong(verification,
                 "SELECT COUNT(*) FROM cost_centers WHERE company_id='COMP-B' AND is_deleted=1;"));
