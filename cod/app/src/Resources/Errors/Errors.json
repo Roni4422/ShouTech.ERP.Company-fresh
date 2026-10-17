@@ -1173,5 +1173,21 @@
     "severity": "Error",
     "catalogRef": "CASH_WINDOW.OPERATION.001",
     "location": "CASH_WINDOW.OPERATION.001"
+  },
+  "PRM-DB-001": {
+    "type": "System",
+    "name": "PermissionsWindowOperationFailed",
+    "message": "The permissions operation failed. No success was reported.",
+    "severity": "Error",
+    "catalogRef": "PERMISSIONS_WINDOW.DATABASE.001",
+    "location": "PERMISSIONS_WINDOW.DATABASE.001"
+  },
+  "BIN-DB-001": {
+    "type": "System",
+    "name": "RecycleBinOperationFailed",
+    "message": "The recycle bin operation failed. Review the application logs for details.",
+    "severity": "Error",
+    "catalogRef": "RECYCLE_BIN.DATABASE.001",
+    "location": "RECYCLE_BIN.DATABASE.001"
   }
 }
