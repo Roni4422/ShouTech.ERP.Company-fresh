@@ -1338,6 +1338,8 @@
   "Qry": {
     "Type": "Type",
     "Amount": "Montant",
+    "CostCenter": "Centre de coûts",
+    "MoveCount": "Mouvements",
     "DocCount": "Documents"
   },
   "Lkp": {

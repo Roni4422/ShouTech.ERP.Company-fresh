@@ -1338,6 +1338,8 @@
   "Qry": {
     "Type": "Tür",
     "Amount": "Tutar",
+    "CostCenter": "Maliyet merkezi",
+    "MoveCount": "Hareket sayısı",
     "DocCount": "Belge sayısı"
   },
   "Lkp": {

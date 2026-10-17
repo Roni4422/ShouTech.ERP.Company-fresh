@@ -48,11 +48,34 @@ public sealed class QryWin : RptBase
             Txt("party_name", "Reports.Col.PartyName", 280), Num("doc_count", "Qry.DocCount", "N0"),
             Mny("subtotal", "Reports.Col.Subtotal"), Mny("tax", "Reports.Col.Tax"), Mny("total", "Reports.Col.Total"),
         }),
+        ["Accounts.DailyReport"] = new("v_rpt_daily_journal", "entry_date DESC", "debit", new[]
+        {
+            Txt("entry_date", "Reports.Col.Date", 110), Num("entry_count", "Qry.DocCount", "N0"),
+            Mny("debit", "Reports.Col.Debit"), Mny("credit", "Reports.Col.Credit"),
+        }),
+        ["Accounts.DormantAccounts"] = new("v_rpt_dormant_accounts", "account_code", null, new[]
+        {
+            Txt("account_code", "Reports.Col.AccountCode", 120), Txt("account_name", "Reports.Col.AccountName", 300),
+            Txt("account_type", "Qry.Type", 110),
+        }),
+        ["Accounts.CostCenterBalance"] = new("v_rpt_cost_center_balance", "cost_center", "balance", new[]
+        {
+            Txt("cost_center", "Qry.CostCenter", 200), Mny("debit", "Reports.Col.Debit"),
+            Mny("credit", "Reports.Col.Credit"), Mny("balance", "Reports.Col.Balance"),
+        }),
+        ["Inventory.MostActiveMaterials"] = new("v_rpt_active_materials", "move_count DESC", null, new[]
+        {
+            Txt("material_code", "Reports.Col.MaterialCode", 120), Txt("name", "Reports.Col.MaterialName", 260),
+            Num("move_count", "Qry.MoveCount", "N0"), Num("qty_in", "Reports.Col.QtyIn"), Num("qty_out", "Reports.Col.QtyOut"),
+        }),
     };
 
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.Ordinal)
     {
         ["Customers.CustomerReports"] = "Inventory.SalesReport",
+        ["Accounts.CostCenterReport"] = "Accounts.CostCenterBalance",
+        ["Accounts.CostCenter"] = "Accounts.CostCenterBalance",
+        ["Inventory.MaterialStatistics"] = "Inventory.MostActiveMaterials",
     };
 
     private readonly string _key;

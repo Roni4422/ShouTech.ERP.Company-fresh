@@ -1669,6 +1669,8 @@
   "Qry": {
     "Type": "Type",
     "Amount": "Amount",
+    "CostCenter": "Cost center",
+    "MoveCount": "Movements",
     "DocCount": "Documents"
   },
   "Lkp": {
