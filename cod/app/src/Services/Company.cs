@@ -756,7 +756,8 @@ public static class CoLocalStore
                             mobile = @mobile,
                             address_line1 = @address,
                             commercial_registration = @tax,
-                            currency_code = @currency
+                            currency_code = @currency,
+                            country = @country
                         WHERE company_code = @code AND is_deleted = 0
                         """, connection);
                     cmd.Parameters.AddWithValue("@nameAr", profile.Name ?? "");
@@ -767,6 +768,7 @@ public static class CoLocalStore
                     cmd.Parameters.AddWithValue("@address", (object?)profile.AddressLine1 ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@tax", (object?)(profile.TaxNumber ?? profile.License) ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@currency", string.IsNullOrWhiteSpace(profile.CurrencyCode) ? "USD" : profile.CurrencyCode);
+                    cmd.Parameters.AddWithValue("@country", string.IsNullOrWhiteSpace(profile.Country) ? DBNull.Value : profile.Country.Trim());
                     cmd.Parameters.AddWithValue("@code", profile.Code);
                     return await cmd.ExecuteNonQueryAsync() > 0;
                 }
@@ -784,7 +786,8 @@ public static class CoLocalStore
                             mobile = @mobile,
                             address_line1 = @address,
                             commercial_registration = @tax,
-                            currency_code = @currency
+                            currency_code = @currency,
+                            country = @country
                         WHERE company_code = @code AND COALESCE(is_deleted, FALSE) = FALSE
                         """, connection);
                     cmd.Parameters.AddWithValue("nameAr", profile.Name ?? "");
@@ -795,6 +798,7 @@ public static class CoLocalStore
                     cmd.Parameters.AddWithValue("address", (object?)profile.AddressLine1 ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("tax", (object?)(profile.TaxNumber ?? profile.License) ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("currency", string.IsNullOrWhiteSpace(profile.CurrencyCode) ? "USD" : profile.CurrencyCode);
+                    cmd.Parameters.AddWithValue("country", (object?)(string.IsNullOrWhiteSpace(profile.Country) ? null : profile.Country.Trim()) ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("code", profile.Code);
                     return await cmd.ExecuteNonQueryAsync() > 0;
                 }
