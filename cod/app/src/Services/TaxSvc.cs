@@ -89,9 +89,15 @@ public static class TaxSvc
                     Convert.ToString(reader.GetValue(3), CultureInfo.InvariantCulture) ?? ""));
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Optional table.
+            var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(
+                ShouTech.App.Localization.ErrorCodes.TaxLookupFailed);
+            AppHost.Logging?.LogError(
+                "TaxService",
+                $"[{definition.Code}] {definition.Name} | Operation=LoadCodes | Company={AppState.CurrentCompanyCode ?? "(none)"}",
+                ex);
+            throw new InvalidOperationException($"[{definition.Code}] {definition.Message}", ex);
         }
         return list;
     }
