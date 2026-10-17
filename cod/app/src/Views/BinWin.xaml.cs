@@ -179,7 +179,6 @@ public partial class BinWin : Window
         {
             var purged = 0;
             var failed = 0;
-            string? firstError = null;
             foreach (var item in selected)
             {
                 var result = await RecycleBinSvc.PurgeAsync(item).ConfigureAwait(true);
@@ -188,7 +187,6 @@ public partial class BinWin : Window
                 else
                 {
                     failed++;
-                    firstError ??= result.ErrorMessage;
                     ReportFailure("PurgeRecycleBinItem", new InvalidOperationException(
                         $"Table={item.TableName}; Key={item.PrimaryKeyValue}; Reason={result.ErrorMessage}"));
                 }
