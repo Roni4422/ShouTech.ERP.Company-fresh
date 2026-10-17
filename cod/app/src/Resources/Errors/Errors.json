@@ -2107,5 +2107,86 @@
     "severity": "Warning",
     "catalogRef": "COST_CENTER.CCTR-VAL-003",
     "location": "COST_CENTER.LOAD"
+  },
+  "REP-DB-001": {
+    "type": "Database",
+    "name": "SalesRepresentativeCompanyContextFailed",
+    "message": "The active company could not be verified in the connected database. No data was changed.",
+    "messageKey": "Errors.REP-DB-001",
+    "severity": "Error",
+    "catalogRef": "SALES_REP.REP-DB-001",
+    "location": "SALES_REP.CONTEXT"
+  },
+  "REP-DB-002": {
+    "type": "Database",
+    "name": "SalesRepresentativeSaveFailed",
+    "message": "The sales representative could not be saved completely. Review the database log before retrying.",
+    "messageKey": "Errors.REP-DB-002",
+    "severity": "Error",
+    "catalogRef": "SALES_REP.REP-DB-002",
+    "location": "SALES_REP.SAVE"
+  },
+  "REP-DB-003": {
+    "type": "Database",
+    "name": "SalesRepresentativeLoadFailed",
+    "message": "The sales representative could not be loaded from the selected company.",
+    "messageKey": "Errors.REP-DB-003",
+    "severity": "Error",
+    "catalogRef": "SALES_REP.REP-DB-003",
+    "location": "SALES_REP.LOAD"
+  },
+  "REP-DEL-001": {
+    "type": "Database",
+    "name": "SalesRepresentativeSoftDeleteFailed",
+    "message": "The sales representative could not be moved to the Recycle Bin. No permanent deletion was attempted.",
+    "messageKey": "Errors.REP-DEL-001",
+    "severity": "Error",
+    "catalogRef": "SALES_REP.REP-DEL-001",
+    "location": "SALES_REP.DELETE"
+  },
+  "REP-DEL-002": {
+    "type": "Validation",
+    "name": "SalesRepresentativeDeleteTargetNotFound",
+    "message": "The sales representative was not found in the active company or was already deleted.",
+    "messageKey": "Errors.REP-DEL-002",
+    "severity": "Warning",
+    "catalogRef": "SALES_REP.REP-DEL-002",
+    "location": "SALES_REP.DELETE"
+  },
+  "REP-VAL-001": {
+    "type": "Validation",
+    "name": "SalesRepresentativeInputInvalid",
+    "message": "One or more sales-representative fields are invalid. Review the values and try again.",
+    "messageKey": "Errors.REP-VAL-001",
+    "severity": "Warning",
+    "catalogRef": "SALES_REP.REP-VAL-001",
+    "location": "SALES_REP.VALIDATION"
+  },
+  "REP-VAL-002": {
+    "type": "Validation",
+    "name": "SalesRepresentativeDuplicateCode",
+    "message": "This sales-representative code already exists in the selected company. Load the record before editing it.",
+    "messageKey": "Errors.REP-VAL-002",
+    "severity": "Warning",
+    "catalogRef": "SALES_REP.REP-VAL-002",
+    "location": "SALES_REP.DUPLICATE_CODE"
+  },
+  "REP-VAL-003": {
+    "type": "Validation",
+    "name": "SalesRepresentativeCodeRequiresRestore",
+    "message": "This code belongs to a deleted sales representative. Restore it from the Recycle Bin before reusing the code.",
+    "messageKey": "Errors.REP-VAL-003",
+    "severity": "Warning",
+    "catalogRef": "SALES_REP.REP-VAL-003",
+    "location": "SALES_REP.RESTORE_REQUIRED"
+  },
+  "REP-VAL-004": {
+    "type": "Validation",
+    "name": "SalesRepresentativeNotFound",
+    "message": "No active sales representative was found for this code in the selected company.",
+    "messageKey": "Errors.REP-VAL-004",
+    "severity": "Warning",
+    "catalogRef": "SALES_REP.REP-VAL-004",
+    "location": "SALES_REP.LOAD"
   }
 }
