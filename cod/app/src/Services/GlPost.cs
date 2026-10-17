@@ -20,6 +20,7 @@ public static class GlPost
     public const string Receivables = "RECEIVABLES";
     public const string Payables = "PAYABLES";
     public const string Cash = "CASH";
+    public const string Bank = "BANK";
     public const string SalesRevenue = "SALES_REVENUE";
     public const string SalesReturns = "SALES_RETURNS";
     public const string OutputTax = "OUTPUT_TAX";
@@ -43,7 +44,7 @@ public static class GlPost
     /// <paramref name="cost"/> is the inventory cost of goods moved (sales and sales returns only).
     /// Zero-amount lines are omitted. Returns an empty list for kinds that do not post.
     /// </summary>
-    public static IReadOnlyList<GlLine> BuildLines(InvDocKind kind, decimal net, decimal tax, decimal cost)
+    public static IReadOnlyList<GlLine> BuildLines(InvDocKind kind, decimal net, decimal tax, decimal cost, string? paymentMethod = null)
     {
         if (net < 0m || tax < 0m || cost < 0m)
             throw new InvalidOperationException("Document amounts must not be negative.");
@@ -66,8 +67,21 @@ public static class GlPost
         switch (kind)
         {
             case InvDocKind.SalesInvoice:
+                Debit(Receivables, total, "Sale");
+                Credit(SalesRevenue, net, "Sales revenue");
+                Credit(OutputTax, tax, "Output tax");
+                Debit(CostOfGoodsSold, cost, "Cost of goods sold");
+                Credit(Inventory, cost, "Inventory issued");
+                break;
             case InvDocKind.PosSale:
-                Debit(kind == InvDocKind.PosSale ? Cash : Receivables, total, "Sale");
+                var tenderAccount = (paymentMethod ?? "Cash").Trim().ToUpperInvariant() switch
+                {
+                    "CASH" => Cash,
+                    "CREDIT" => Receivables,
+                    "VISA" or "K-NET" or "KNET" => Bank,
+                    _ => throw new InvalidOperationException("Unsupported POS payment method.")
+                };
+                Debit(tenderAccount, total, "POS sale");
                 Credit(SalesRevenue, net, "Sales revenue");
                 Credit(OutputTax, tax, "Output tax");
                 Debit(CostOfGoodsSold, cost, "Cost of goods sold");
@@ -135,7 +149,7 @@ public static class GlPost
             ? InventoryCost(connection, transaction, companyCode, doc, isPostgres)
             : 0m;
 
-        var plan = BuildLines(doc.Kind, net, tax, cost);
+        var plan = BuildLines(doc.Kind, net, tax, cost, doc.PaymentMethod);
         if (plan.Count == 0) return null;
 
         var missing = new List<string>();
