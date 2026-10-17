@@ -318,8 +318,9 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("CompanyManagement", "COM-LOAD-001: Failed to load the company list.", ex);
                 MessageBox.Show(
-                    $"{Loc.Get("CompanySelection.LoadErrorMessage", "Failed to load companies")}:\n{ex.Message}",
+                    ErrorCatalog.Get(ErrorCodes.CompanyListLoadFailed),
                     Loc.Get("Application.Error", "Error"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -974,8 +975,9 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("CompanyManagement", "COM-LOGIN-001: Failed to open the login window.", ex);
                 MessageBox.Show(
-                    $"{Loc.Get("CompanySelection.OpenLoginFailed", "Failed to open login")}:\n{ex.Message}",
+                    ErrorCatalog.Get(ErrorCodes.CompanyLoginOpenFailed),
                     Loc.Get("Application.Error", "Error"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
