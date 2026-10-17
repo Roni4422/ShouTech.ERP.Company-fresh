@@ -199,7 +199,7 @@ namespace ShouTech.App.Views
                 try { hits = Directory.GetFiles(baseDir, pattern, SearchOption.TopDirectoryOnly); }
                 catch (Exception ex)
                 {
-                    AppHost.Logging?.LogWarning("Startup", $"SPL-SEC-002: Unable to inspect startup directory for pattern '{pattern}'. {ex}");
+                    AppHost.Logging?.LogWarning("Startup", $"ShouTech.App.Localization.ErrorCodes.StartupDirectoryInspectionFailed: Unable to inspect startup directory for pattern '{pattern}'. {ex}");
                     continue;
                 }
 
@@ -228,7 +228,7 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                AppHost.Logging?.LogWarning("Startup", $"SPL-CFG-001: Unable to validate application configuration path. {ex}");
+                AppHost.Logging?.LogWarning("Startup", $"ShouTech.App.Localization.ErrorCodes.StartupConfigPathValidationFailed: Unable to validate application configuration path. {ex}");
             }
 
             try
@@ -239,7 +239,7 @@ namespace ShouTech.App.Views
             catch (Exception ex)
             {
                 // Preferences can be recreated, but the failure must remain diagnosable.
-                AppHost.Logging?.LogWarning("Startup", $"SPL-CFG-002: User preferences could not be loaded and may need to be recreated. {ex}");
+                AppHost.Logging?.LogWarning("Startup", $"ShouTech.App.Localization.ErrorCodes.StartupPreferencesLoadFailed: User preferences could not be loaded and may need to be recreated. {ex}");
             }
 
             return Task.CompletedTask;
@@ -263,7 +263,7 @@ namespace ShouTech.App.Views
         {
             if (AppHost.License == null)
             {
-                AppHost.Logging?.LogWarning("Startup", "SPL-LIC-001: License service is not configured; license initialization was skipped.");
+                AppHost.Logging?.LogWarning("Startup", "ShouTech.App.Localization.ErrorCodes.StartupLicenseServiceMissing: License service is not configured; license initialization was skipped.");
                 return;
             }
 
@@ -275,7 +275,7 @@ namespace ShouTech.App.Views
         {
             if (AppHost.Sync == null)
             {
-                AppHost.Logging?.LogWarning("Startup", "SPL-SYNC-001: User-data snapshot service is not configured; startup snapshot was skipped.");
+                AppHost.Logging?.LogWarning("Startup", "ShouTech.App.Localization.ErrorCodes.StartupUserSnapshotServiceMissing: User-data snapshot service is not configured; startup snapshot was skipped.");
                 return;
             }
 
@@ -287,7 +287,7 @@ namespace ShouTech.App.Views
         {
             if (AppHost.OnlineCoordinator == null)
             {
-                AppHost.Logging?.LogWarning("Startup", "SPL-SVC-001: Online coordinator is not configured; background synchronization was not started.");
+                AppHost.Logging?.LogWarning("Startup", "ShouTech.App.Localization.ErrorCodes.StartupBackgroundServiceMissing: Online coordinator is not configured; background synchronization was not started.");
                 return Task.CompletedTask;
             }
 
