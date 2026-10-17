@@ -16,36 +16,8 @@ namespace ShouTech.App.Views;
 /// </summary>
 public sealed class RepCard : BaseWin
 {
-
-    /// <summary>
-    /// Prevents a false success message when this screen has no database persistence wired.
-    /// This intentionally does not claim to save any values.
-    /// </summary>
-    private void ShowPersistenceUnavailable()
-    {
-        const string errorCode = "APP-2010";
-        const string context = "This window has no database persistence implementation.";
-        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
-        var exception = new NotSupportedException(context);
-
-        // Errors are routed to errors.log; the operational trace goes to log.log.
-        ShouTech.App.Services.AppHost.Logging?.LogError(
-            "WindowPersistence",
-            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
-            exception);
-        ShouTech.App.Services.AppHost.Logging?.LogOperation(
-            "WindowPersistence",
-            "PersistenceUnavailable",
-            $"Code={definition.Code} | Window={GetType().Name}");
-
-        MessageBox.Show(
-            this,
-            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
-            "العملية غير متاحة",
-            MessageBoxButton.OK,
-            MessageBoxImage.Warning);
-    }
-
+    private bool _busy;
+    private Guid? _currentRepId;
 
     private readonly TextBox _txtCode = new() { Width = 110, Height = 26 };
     private readonly TextBox _txtName = new() { Width = 220, Height = 26 };
@@ -165,6 +137,10 @@ public sealed class RepCard : BaseWin
 
     private void ResetCard()
     {
+        _currentRepId = null;
+        _txtCode.IsReadOnly = false;
+        _btnSave.IsEnabled = true;
+        _btnDelete.IsEnabled = false;
         _txtCode.Text = "REP-01";
         _txtName.Text = string.Empty;
         _txtPhone.Text = string.Empty;
@@ -259,6 +235,12 @@ public sealed class RepCard : BaseWin
     private async Task SaveRepAsync()
     {
         if (_busy) return;
+        if (_currentRepId.HasValue)
+        {
+            ShowWarn("SalesRepCard.SaveRequiresNew");
+            return;
+        }
+
         _busy = true;
         _btnSave.IsEnabled = false;
 
@@ -268,7 +250,6 @@ public sealed class RepCard : BaseWin
             var name = _txtName.Text.Trim();
             var phone = _txtPhone.Text.Trim();
             var commText = _txtComm.Text.Trim();
-            var targetText = _txtTarget.Text.Trim();
 
             if (string.IsNullOrWhiteSpace(code))
                 throw new InvalidOperationException("\u0631\u0642\u0645 \u0627\u0644\u0631\u062e\u0627\u0645 \u064a\u062c\u0628 \u0623\u0644\u062a\u062d\u0627\u0644.");
@@ -306,6 +287,8 @@ public sealed class RepCard : BaseWin
 
             var repId = await repository.SaveAsync(rep, actor).ConfigureAwait(true);
             _currentRepId = repId;
+            _txtCode.IsReadOnly = true;
+            _btnDelete.IsEnabled = true;
 
             MessageBox.Show(
                 this,
@@ -396,4 +379,25 @@ public sealed class RepCard : BaseWin
             _btnDelete.IsEnabled = true;
         }
     }
+    private void ReportPersistenceFailure(string operation, Exception exception)
+    {
+        const string errorCode = "APP-2010";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var context = $"Operation={operation}; Window={GetType().Name}; Company={ShouTech.App.Services.UsrSession.Current?.CompanyId ?? "(none)"}";
+        ShouTech.App.Services.AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | {context} | {exception.Message}",
+            exception);
+        ShouTech.App.Services.AppHost.Logging?.LogOperation(
+            "WindowPersistence",
+            "DatabaseOperationFailed",
+            $"Code={definition.Code}; {context}; Error={exception.Message}");
+        MessageBox.Show(
+            this,
+            $"لم تنجح العملية ولم تُعرض كنجاح.\n[{definition.Code}] {exception.Message}",
+            Title,
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+    }
+
 }
