@@ -209,7 +209,7 @@ public static class BankCardSvc
         if (!string.IsNullOrWhiteSpace(bank.Iban))
         {
             var compactIban = Regex.Replace(bank.Iban, @"\s+", string.Empty);
-            if (!IbanPattern.IsMatch(bank.Iban.Trim()) || compactIban.Length is < 15 or > 34 ||
+            if (compactIban.Length is < 15 or > 34 || !IbanPattern.IsMatch(compactIban) ||
                 compactIban.Any(ch => !char.IsLetterOrDigit(ch)))
                 throw new BankCardException(ErrorCodes.BankValidationFailed, "Enter an IBAN containing 15 to 34 letters or digits.");
         }
