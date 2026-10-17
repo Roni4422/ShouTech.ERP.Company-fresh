@@ -24,8 +24,25 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
         _connectionString = connectionString;
     }
 
-    private static string NormalizeProvider(string provider) =>
-        provider switch { "SQLite" => "SQLite", "PostgreSQL" => "PostgreSQL", _ => "SQLite" };
+    private static string NormalizeProvider(string provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            throw new ArgumentException("A database provider is required.", nameof(provider));
+
+        var normalized = provider.Trim();
+        if (normalized.Equals("SQLite", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("SQLite3", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("Microsoft.Data.Sqlite", StringComparison.OrdinalIgnoreCase))
+            return "SQLite";
+
+        if (normalized.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("Postgres", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("Npgsql", StringComparison.OrdinalIgnoreCase))
+            return "PostgreSQL";
+
+        throw new ArgumentOutOfRangeException(nameof(provider), provider,
+            "Unsupported database provider. Supported providers are SQLite and PostgreSQL.");
+    }
 
     private DbConnection CreateConnection() =>
         _provider == "PostgreSQL" ? new NpgsqlConnection(_connectionString) : new SqliteConnection(_connectionString);
