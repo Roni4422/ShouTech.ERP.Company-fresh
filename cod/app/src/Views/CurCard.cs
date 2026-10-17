@@ -426,7 +426,7 @@ public sealed class CurCard : BaseWin
 
     private void ReportPersistenceFailure(string operation, Exception exception)
     {
-        const string errorCode = "APP-2010";
+        const string errorCode = "CUR-PER-001";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var context = $"Operation={operation}; Window={GetType().Name}; Currency={_txtCode.Text.Trim()}; Company={ShouTech.App.Services.UsrSession.Current?.CompanyId ?? "(none)"}";
         ShouTech.App.Services.AppHost.Logging?.LogError(
