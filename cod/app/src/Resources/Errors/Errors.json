@@ -1309,5 +1309,37 @@
     "severity": "Critical",
     "catalogRef": "BACKUP.SECURITY.KEY.001",
     "location": "BACKUP.KEY_PROVIDER"
+  },
+  "BKP-CREATE-001": {
+    "type": "IO",
+    "name": "BackupCreationFailed",
+    "message": "The backup could not be created. Review the application logs before retrying.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.CREATE.001",
+    "location": "BACKUP.CREATE"
+  },
+  "BKP-RESTORE-001": {
+    "type": "Database",
+    "name": "BackupRestoreFailed",
+    "message": "The backup could not be restored. Review the application logs and validate the backup before retrying.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.RESTORE.001",
+    "location": "BACKUP.RESTORE"
+  },
+  "BKP-ROTATE-001": {
+    "type": "System",
+    "name": "BackgroundBackupFailed",
+    "message": "The background backup operation failed. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.BACKGROUND.001",
+    "location": "BACKUP.BACKGROUND"
+  },
+  "BKP-CYCLE-001": {
+    "type": "System",
+    "name": "BackupCycleFailed",
+    "message": "The backup cycle failed. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "BACKUP.CYCLE.001",
+    "location": "BACKUP.CYCLE"
   }
 }
