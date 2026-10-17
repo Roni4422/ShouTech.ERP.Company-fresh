@@ -689,7 +689,8 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Edit", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyManagement", "COM-EDIT-001: Company details could not be loaded for editing.", ex);
+                MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanyEditLoadFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -760,7 +761,13 @@ namespace ShouTech.App.Views
                     Enabled = true
                 };
 
-                await CoRegSvc.UpdateCompanyProfileAsync(profile);
+                var saved = await CoRegSvc.UpdateCompanyProfileAsync(profile);
+                if (!saved)
+                {
+                    AppHost.Logging?.LogOperation("CompanyManagement", "ProfileSaveFailed", $"COM-SAVE-001; company={profile.Code}; database update failed.");
+                    MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanyProfileSaveFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
 
                 ShowNotice("Company details saved.", "تم حفظ بيانات الشركة.");
                 ExitEditMode();
@@ -772,7 +779,8 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyManagement", "COM-SAVE-001: Company profile save failed.", ex);
+                MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanyProfileSaveFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -820,7 +828,8 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Delete", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyManagement", "COM-INDEX-DELETE-001: Company could not be removed from the local index.", ex);
+                MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanyIndexRemovalFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -853,14 +862,19 @@ namespace ShouTech.App.Views
             {
                 var ok = await CoRegSvc.DeleteCompanyFullyAsync(SelectedCompany!.Code);
                 if (!ok)
-                    await CoLocalStore.RemoveFromIndexAsync(SelectedCompany.Code);
+                {
+                    AppHost.Logging?.LogOperation("CompanyManagement", "DeleteFailed", $"COM-DELETE-001; company={SelectedCompany.Code}; database soft-delete returned false.");
+                    MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanySoftDeleteFailed), title, MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
 
                 ShowNotice("Company permanently deleted.", "تم حذف الشركة نهائياً.");
                 await LoadCompaniesAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyManagement", "COM-DELETE-001: Company database soft-delete failed.", ex);
+                MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanySoftDeleteFailed), title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -877,7 +891,8 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Reindex", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyManagement", "COM-REINDEX-001: Company index rebuild failed.", ex);
+                MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanyReindexFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -904,7 +919,8 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Default", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyManagement", "COM-DEFAULT-001: Default company update failed.", ex);
+                MessageBox.Show(ErrorCatalog.Get(ErrorCodes.CompanyDefaultUpdateFailed), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
