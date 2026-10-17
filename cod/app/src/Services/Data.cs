@@ -43,11 +43,11 @@ public sealed class DataServ : IDataServ
         const string sql = """
             SELECT COUNT(*) FROM (
                 SELECT doc_id FROM sales_documents
-                WHERE company_id = $company AND is_deleted = 0
+                WHERE company_id = $company AND {activePredicate}
                   AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
                 UNION ALL
                 SELECT doc_id FROM purchase_documents
-                WHERE company_id = $company AND is_deleted = 0
+                WHERE company_id = $company AND {activePredicate}
                   AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
             ) AS pending_docs;
             """;
@@ -65,11 +65,11 @@ public sealed class DataServ : IDataServ
             FROM (
                 SELECT doc_no, doc_kind, doc_date, party_name, grand_total, status, created_at
                 FROM sales_documents
-                WHERE company_id = $company AND is_deleted = 0
+                WHERE company_id = $company AND {activePredicate}
                 UNION ALL
                 SELECT doc_no, doc_kind, doc_date, party_name, grand_total, status, created_at
                 FROM purchase_documents
-                WHERE company_id = $company AND is_deleted = 0
+                WHERE company_id = $company AND {activePredicate}
             ) AS docs
             ORDER BY created_at DESC, doc_date DESC
             LIMIT $limit;
