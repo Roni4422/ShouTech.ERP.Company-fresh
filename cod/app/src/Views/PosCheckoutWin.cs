@@ -34,6 +34,7 @@ public sealed class PosCheckoutWin : BaseWin
         _doc = new InvDoc
         {
             Kind = InvDocKind.PosSale,
+            PaymentMethod = paymentMethod.Trim(),
             DocNo = InvRepo.NextDocNo(InvDocKind.PosSale),
             DocDate = DateTime.Today,
             CurrencyCode = InvRepo.GetCompanyCurrencyCode(),
