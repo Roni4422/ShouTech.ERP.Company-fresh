@@ -16,6 +16,7 @@ using System.Windows.Media;
 using System.Xml.Linq;
 using Microsoft.Win32;
 using ShouTech.App.Services;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Views;
 
@@ -79,7 +80,8 @@ public partial class CoaWin : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"Could not load the chart of accounts from the database.\n{ex.Message}", "Chart of accounts", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-LOAD-001: Failed to load the chart of accounts.", ex);
+            MessageBox.Show(this, ErrorCatalog.Get(ErrorCodes.ChartOfAccountsLoadFailed), "Chart of accounts", MessageBoxButton.OK, MessageBoxImage.Error);
             _allRoots.Clear();
             RebindTree(_allRoots);
         }
@@ -480,7 +482,8 @@ public partial class CoaWin : BaseWin
         }
         catch (Exception ex)
         {
-            ShowErrorMsg($"تعذر تصدير CSV.\n{ex.Message}");
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-EXP-001: CSV export failed.", ex);
+            ShowErrorMsg(ErrorCatalog.Get(ErrorCodes.ChartOfAccountsCsvExportFailed));
         }
     }
 
@@ -509,7 +512,8 @@ public partial class CoaWin : BaseWin
         }
         catch (Exception ex)
         {
-            ShowErrorMsg($"تعذر تصدير Excel.\n{ex.Message}");
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-EXP-002: Excel export failed.", ex);
+            ShowErrorMsg(ErrorCatalog.Get(ErrorCodes.ChartOfAccountsExcelExportFailed));
         }
     }
 
@@ -639,7 +643,8 @@ public partial class CoaWin : BaseWin
         }
         catch (Exception ex)
         {
-            ShowErrorMsg($"تعذر إنشاء ملف .sta.\n{ex.Message}");
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-EXP-003: Encrypted chart export failed.", ex);
+            ShowErrorMsg(ErrorCatalog.Get(ErrorCodes.ChartOfAccountsEncryptedExportFailed));
         }
     }
 
@@ -675,7 +680,8 @@ public partial class CoaWin : BaseWin
         }
         catch (Exception ex)
         {
-            ShowErrorMsg($"تعذر استيراد الملف.\n{ex.Message}");
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-IMP-001: Chart import failed.", ex);
+            ShowErrorMsg(ErrorCatalog.Get(ErrorCodes.ChartOfAccountsImportFailed));
         }
     }
 
@@ -751,13 +757,15 @@ public partial class CoaWin : BaseWin
             ImportAccounts(payload.Accounts);
             ShowInfoMsg("تم فك تشفير واستعادة Chart of accounts من ShouTechCrtOfAcc.sta بنجاح.");
         }
-        catch (CryptographicException)
+        catch (CryptographicException ex)
         {
-            ShowErrorMsg("Could not decrypt the .sta file. Check the password and file integrity.");
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-IMP-002: Encrypted chart import could not be decrypted.", ex);
+            ShowErrorMsg(ErrorCatalog.Get(ErrorCodes.ChartOfAccountsEncryptedImportFailed));
         }
         catch (Exception ex)
         {
-            ShowErrorMsg($"Could not import the .sta file.\n{ex.Message}");
+            AppHost.Logging?.LogError("ChartOfAccounts", "COA-IMP-002: Encrypted chart import failed.", ex);
+            ShowErrorMsg(ErrorCatalog.Get(ErrorCodes.ChartOfAccountsEncryptedImportFailed));
         }
     }
 
