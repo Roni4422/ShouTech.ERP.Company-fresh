@@ -19,7 +19,7 @@ public sealed class JrnWin : BaseWin
     /// <summary>Logs unavailable operations instead of reporting a false success.</summary>
     private void ShowOperationUnavailable(string operation)
     {
-        const string errorCode = "APP-2011";
+        const string errorCode = "JRN-OPS-001";
         var context = $"Operation={operation} is not implemented in window {GetType().Name}.";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var exception = new NotSupportedException(context);
@@ -511,7 +511,7 @@ public sealed class JrnWin : BaseWin
 
     private void ReportPersistenceFailure(string operation, Exception exception)
     {
-        const string errorCode = "APP-2010";
+        const string errorCode = "JRN-PER-001";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var context = $"Operation={operation}; Window={GetType().Name}; Company={ShouTech.App.Services.UsrSession.Current?.CompanyId ?? "(none)"}";
         ShouTech.App.Services.AppHost.Logging?.LogError(
