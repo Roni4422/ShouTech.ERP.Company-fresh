@@ -171,3 +171,9 @@ jobs:
         env:
           PGPASSWORD: shoutest
         run: psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -f tests/sql/test_journal_integrity_pg.sql
+      - name: Assert delete-audit triggers exist in PostgreSQL
+        env:
+          PGPASSWORD: shoutest
+        run: |
+          n=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_trigger WHERE tgname LIKE 'trg_audit_hd_%'")
+          test "$n" -ge 30 || { echo "Expected delete-audit triggers, found $n"; exit 1; }
