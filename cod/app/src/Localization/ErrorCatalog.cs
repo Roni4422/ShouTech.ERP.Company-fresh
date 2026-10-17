@@ -44,6 +44,8 @@ namespace ShouTech.App.Localization
         public const string CompanySoftDeleteFailed = "COM-DELETE-001";
         public const string CompanyReindexFailed = "COM-REINDEX-001";
         public const string CompanyDefaultUpdateFailed = "COM-DEFAULT-001";
+        public const string CompanyListLoadFailed = "COM-LOAD-001";
+        public const string CompanyLoginOpenFailed = "COM-LOGIN-001";
     }
 
     public static class ErrorCatalog
