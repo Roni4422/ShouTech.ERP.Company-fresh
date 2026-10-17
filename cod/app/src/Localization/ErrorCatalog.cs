@@ -18,6 +18,14 @@ namespace ShouTech.App.Localization
         public const string CustomerValidationFailed = "CUS-VAL-001";
         public const string CustomerCodeRequiresRestore = "CUS-VAL-002";
         public const string CustomerNotFound = "CUS-VAL-003";
+        public const string BankContextFailed = "BNK-DB-001";
+        public const string BankSaveFailed = "BNK-DB-002";
+        public const string BankLoadFailed = "BNK-DB-003";
+        public const string BankDeleteFailed = "BNK-DEL-001";
+        public const string BankDeleteNotFound = "BNK-DEL-002";
+        public const string BankValidationFailed = "BNK-VAL-001";
+        public const string BankCodeRequiresRestore = "BNK-VAL-002";
+        public const string BankNotFound = "BNK-VAL-003";
         public const string ReportSaveFailed = "RPT-SAVE-001";
         public const string ReportSaveAsFailed = "RPT-SAVE-002";
         public const string ReportFormulaCompileFailed = "RPT-FORMULA-001";
