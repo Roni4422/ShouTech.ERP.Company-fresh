@@ -9,6 +9,7 @@ using ShouTech.App.Services;
 namespace ShouTech.App.Views;
 
 /// <summary>
+/// Company-scoped customer and supplier card with database-backed save, load, and soft-delete operations.
 /// </summary>
 public sealed class CstCard : BaseWin
 {
@@ -32,36 +33,6 @@ public sealed class CstCard : BaseWin
         MessageBox.Show(
             this,
             $"[{definition.Code}] {definition.Message}\n{context}",
-            "Operation Unavailable",
-            MessageBoxButton.OK,
-            MessageBoxImage.Warning);
-    }
-
-
-    /// <summary>
-    /// Prevents a false success message when this screen has no database persistence wired.
-    /// This intentionally does not claim to save any values.
-    /// </summary>
-    private void ShowPersistenceUnavailable()
-    {
-        const string errorCode = "CUS-PER-001";
-        const string context = "This window has no database persistence implementation.";
-        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
-        var exception = new NotSupportedException(context);
-
-        // Errors are routed to errors.log; the operational trace goes to log.log.
-        ShouTech.App.Services.AppHost.Logging?.LogError(
-            "WindowPersistence",
-            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
-            exception);
-        ShouTech.App.Services.AppHost.Logging?.LogOperation(
-            "WindowPersistence",
-            "PersistenceUnavailable",
-            $"Code={definition.Code} | Window={GetType().Name}");
-
-        MessageBox.Show(
-            this,
-            $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}\n{context}\nNo data was saved.",
             "Operation Unavailable",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
@@ -222,7 +193,8 @@ public sealed class CstCard : BaseWin
 
     private void ResetCard()
     {
-        _txtCode.Text = "CUS-" + DateTime.Now.ToString("yyMMddHHmmss", CultureInfo.InvariantCulture);
+        _txtCode.Text = "CUS-" + DateTime.Now.ToString("yyMMddHHmmss", CultureInfo.InvariantCulture)
+            + "-" + Guid.NewGuid().ToString("N")[..4].ToUpperInvariant();
         _txtNameAr.Text = string.Empty;
         _txtNameEn.Text = string.Empty;
         _txtGroup.Text = string.Empty;
