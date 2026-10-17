@@ -70,6 +70,36 @@ public sealed class GlPostingTests
     }
 
     [Fact]
+    public void PosTenderMigration_ShouldAddPaymentMethodAndPermitBankAccountMapping()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-pos-tender-{Guid.NewGuid():N}.sqlite3");
+        try
+        {
+            ApplySqliteMigrations(databasePath);
+            using var connection = Open(databasePath);
+
+            Assert.Equal(1L, ScalarLong(connection,
+                "SELECT COUNT(*) FROM pragma_table_info('sales_documents') WHERE name='payment_method';"));
+
+            Execute(connection, """
+                INSERT INTO companies(company_id, company_code, company_name_ar, company_name_en)
+                VALUES ('POS-CO', 'POS-CO', 'POS Company', 'POS Company');
+                INSERT INTO chart_of_accounts(account_id, company_id, account_code, account_name, account_type)
+                VALUES ('POS-BANK', 'POS-CO', '1020', 'Card Clearing', 'ASSET');
+                INSERT INTO account_mappings(company_id, mapping_key, account_id)
+                VALUES ('POS-CO', 'BANK', 'POS-BANK');
+                """);
+
+            Assert.Equal(1L, ScalarLong(connection,
+                "SELECT COUNT(*) FROM account_mappings WHERE company_id='POS-CO' AND mapping_key='BANK';"));
+        }
+        finally
+        {
+            try { File.Delete(databasePath); } catch { }
+        }
+    }
+
+    [Fact]
     public void BuildLines_PurchaseInvoice_WithoutTax_ShouldOmitTaxLine()
     {
         var lines = GlPost.BuildLines(InvDocKind.PurchaseInvoice, 250m, 0m, 0m);
