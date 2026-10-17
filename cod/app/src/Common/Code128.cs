@@ -13,6 +13,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ShouTech.App.Localization;
+using ShouTech.App.Services;
 
 namespace ShouTech.App.Common
 {
@@ -356,12 +358,8 @@ namespace ShouTech.App.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    owner,
-                    ex.Message,
-                    jobTitle,
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                AppHost.Logging?.LogError("BarcodeLabel", "LBL-PRINT-001: Print dialog failed.", ex);
+                MessageBox.Show(owner, ErrorCatalog.Get(ErrorCodes.BarcodePrintDialogFailed), jobTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
 
@@ -376,12 +374,8 @@ namespace ShouTech.App.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    owner,
-                    ex.Message,
-                    jobTitle,
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                AppHost.Logging?.LogError("BarcodeLabel", "LBL-PRINT-002: Label printing failed.", ex);
+                MessageBox.Show(owner, ErrorCatalog.Get(ErrorCodes.BarcodePrintFailed), jobTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -412,12 +406,8 @@ namespace ShouTech.App.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    owner,
-                    ex.Message,
-                    jobTitle,
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                AppHost.Logging?.LogError("BarcodeLabel", "LBL-PRINT-001: Print dialog failed.", ex);
+                MessageBox.Show(owner, ErrorCatalog.Get(ErrorCodes.BarcodePrintDialogFailed), jobTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
 
@@ -432,12 +422,8 @@ namespace ShouTech.App.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    owner,
-                    ex.Message,
-                    jobTitle,
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                AppHost.Logging?.LogError("BarcodeLabel", "LBL-PRINT-002: Label printing failed.", ex);
+                MessageBox.Show(owner, ErrorCatalog.Get(ErrorCodes.BarcodePrintFailed), jobTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
