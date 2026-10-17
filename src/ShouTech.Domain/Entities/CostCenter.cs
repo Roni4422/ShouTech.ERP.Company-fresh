@@ -88,6 +88,23 @@ public sealed class CostCenter : EntBase
         if (modifiedBy != default)
             Touch(modifiedBy);
     }
+    /// <summary>Recreates a domain entity from persisted data without exposing audit setters.</summary>
+    public static CostCenter Rehydrate(CostCenterSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Id == Guid.Empty)
+            throw new ArgumentException("A persisted cost-center snapshot must have a valid identifier.", nameof(snapshot));
+
+        var entity = new CostCenter(snapshot.CompanyId, snapshot.Code, snapshot.NameAr,
+            snapshot.NameEn, snapshot.Description, snapshot.IsActive);
+        entity.Id = snapshot.Id;
+        entity.IsDeleted = snapshot.IsDeleted;
+        entity.CreatedAt = snapshot.CreatedAt;
+        entity.CreatedBy = snapshot.CreatedBy;
+        entity.ModifiedAt = snapshot.ModifiedAt;
+        entity.ModifiedBy = snapshot.ModifiedBy;
+        return entity;
+    }
 }
 
 /// <summary>
