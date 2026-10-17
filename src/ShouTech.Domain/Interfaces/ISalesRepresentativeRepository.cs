@@ -27,6 +27,9 @@ public interface ISalesRepresentativeRepository
     /// </summary>
     Task<SalesRepresentativeSnapshot?> FindByCodeAsync(Guid companyId, string code, CancellationToken cancellationToken = default);
 
+    /// <summary>Finds a representative by company and code, including soft-deleted records for restore validation.</summary>
+    Task<SalesRepresentativeSnapshot?> FindByCodeIncludingDeletedAsync(Guid companyId, string code, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets all sales representatives for a specific company.
     /// </summary>
