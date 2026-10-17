@@ -69,6 +69,7 @@ namespace ShouTech.App.Localization
         public const string ChartOfAccountsEncryptedExportFailed = "COA-EXP-003";
         public const string ChartOfAccountsImportFailed = "COA-IMP-001";
         public const string ChartOfAccountsEncryptedImportFailed = "COA-IMP-002";
+        public const string CategoryCardUnknownFailure = "CAT-000";
         public const string CategoryCardSaveFailed = "CAT-001";
         public const string CategoryCardDeleteFailed = "CAT-002";
         public const string CategoryCardLoadFailed = "CAT-003";
