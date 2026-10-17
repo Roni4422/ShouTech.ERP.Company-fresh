@@ -229,9 +229,10 @@ private void Reload()
     }
     catch (Exception ex)
     {
+        AppHost.Logging?.LogError("MaterialDirectory", "MAT-DIR-001: Failed to load the material directory.", ex);
         MessageBox.Show(
             this,
-            ex.Message,
+            ErrorCatalog.Get(ErrorCodes.MaterialDirectoryLoadFailed),
             Title,
             MessageBoxButton.OK,
             MessageBoxImage.Error);
@@ -494,9 +495,10 @@ private void Remove_Click(
     }
     catch (Exception ex)
     {
+        AppHost.Logging?.LogError("MaterialDirectory", "MAT-DIR-002: Failed to delete the selected material.", ex);
         MessageBox.Show(
             this,
-            ex.Message,
+            ErrorCatalog.Get(ErrorCodes.MaterialDirectoryDeleteFailed),
             Title,
             MessageBoxButton.OK,
             MessageBoxImage.Error);
@@ -617,9 +619,10 @@ x => x != null);
 }
 catch (Exception ex)
 {
+    AppHost.Logging?.LogError("MaterialDirectory", "MAT-DIR-003: Failed to open the selected material card.", ex);
     MessageBox.Show(
         this,
-        ex.Message,
+        ErrorCatalog.Get(ErrorCodes.MaterialDirectoryOpenCardFailed),
         Title,
         MessageBoxButton.OK,
         MessageBoxImage.Error);
