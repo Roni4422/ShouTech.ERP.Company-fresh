@@ -286,7 +286,7 @@
     "CompleteSale": "Terminer la vente",
     "ConfirmSale": "Terminer et valider cette vente POS ?",
     "SalePosted": "Vente POS validée.",
-    "PaymentPostingNotice": "Le mode de paiement est enregistré dans les notes ; la comptabilisation du paiement n'est pas encore disponible.",
+    "PaymentPostingNotice": "Les ventes en espèces débitent CASH, Visa/K-Net débitent BANK et les ventes à crédit débitent RECEIVABLES. Configurez les correspondances de comptes avant validation.",
     "CustomerNotFound": "Le code client saisi est introuvable.",
     "CreditNeedsCustomer": "Sélectionnez un client avant de terminer une vente à crédit.",
     "CashDrawerOptionsTitle": "Options du tiroir-caisse POS"
