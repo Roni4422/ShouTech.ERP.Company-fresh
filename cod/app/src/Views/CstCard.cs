@@ -59,7 +59,7 @@ public sealed class CstCard : BaseWin
 
         MessageBox.Show(
             this,
-            $"[{definition.Code}] {definition.Message}\n{context}\nNo data was saved.",
+            $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}\n{context}\nNo data was saved.",
             "Operation Unavailable",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
