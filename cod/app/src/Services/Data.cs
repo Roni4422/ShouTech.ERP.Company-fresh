@@ -51,9 +51,8 @@ public sealed class DataServ : IDataServ
     public Task<int> GetTotalPendingApprovalsAsync()
     {
         var companyId = GetActiveCompanyId();
-        var activePredicate = DatabaseRuntime.IsPostgreSql()
-            ? "COALESCE(is_deleted, FALSE) = FALSE"
-            : "COALESCE(is_deleted, 0) = 0";
+        // Commercial document migrations intentionally use an integer deletion flag on both providers.
+        var activePredicate = "COALESCE(is_deleted, 0) = 0";
         var sql = $"""
             SELECT COUNT(*) FROM (
                 SELECT doc_id FROM sales_documents
@@ -73,9 +72,8 @@ public sealed class DataServ : IDataServ
         if (count <= 0) return new List<RecentDocument>();
 
         var companyId = GetActiveCompanyId();
-        var activePredicate = DatabaseRuntime.IsPostgreSql()
-            ? "COALESCE(is_deleted, FALSE) = FALSE"
-            : "COALESCE(is_deleted, 0) = 0";
+        // Commercial document migrations intentionally use an integer deletion flag on both providers.
+        var activePredicate = "COALESCE(is_deleted, 0) = 0";
         var sql = $"""
             SELECT doc_no, doc_kind, doc_date, COALESCE(party_name, ''),
                    COALESCE(grand_total, 0), COALESCE(status, '')
