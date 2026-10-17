@@ -1197,5 +1197,13 @@
     "severity": "Error",
     "catalogRef": "ACCOUNT_CARD.DATABASE.001",
     "location": "ACCOUNT_CARD.DATABASE.001"
+  },
+  "DSH-DB-001": {
+    "type": "Database",
+    "name": "DashboardMetricsLoadFailed",
+    "message": "Dashboard data could not be loaded. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "DASHBOARD.DATABASE.001",
+    "location": "DASHBOARD.DATABASE.001"
   }
 }
