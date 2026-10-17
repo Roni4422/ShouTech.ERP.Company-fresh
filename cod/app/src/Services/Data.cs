@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System;
 using Microsoft.Data.Sqlite;
+using Npgsql;
 using ShouTech.App.Common;
 using ShouTech.App.Configuration;
 using ShouTech.Domain.Interfaces;
@@ -24,27 +25,137 @@ namespace ShouTech.App.Services
 
     // ========== DataServ.cs ==========
 public sealed class DataServ : IDataServ
+{
+    public async Task<int> GetTotalCustomersAsync() =>
+        await ExecuteCountAsync("customers", "COALESCE(is_deleted, 0) = 0").ConfigureAwait(false);
+
+    public async Task<int> GetTotalProductsAsync()
     {
-        public Task<int> GetTotalCustomersAsync() => Task.FromResult(1284);
+        var activePredicate = DatabaseRuntime.IsPostgreSql()
+            ? "COALESCE(is_deleted, FALSE) = FALSE"
+            : "COALESCE(is_deleted, 0) = 0";
+        return await ExecuteCountAsync("materials", activePredicate).ConfigureAwait(false);
+    }
 
-        public Task<int> GetTotalProductsAsync() => Task.FromResult(3567);
+    public async Task<int> GetTotalPendingApprovalsAsync()
+    {
+        var companyId = GetActiveCompanyId();
+        const string sql = """
+            SELECT COUNT(*) FROM (
+                SELECT doc_id FROM sales_documents
+                WHERE company_id = $company AND is_deleted = 0
+                  AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
+                UNION ALL
+                SELECT doc_id FROM purchase_documents
+                WHERE company_id = $company AND is_deleted = 0
+                  AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
+            ) AS pending_docs;
+            """;
+        return await ExecuteScalarCountAsync(sql, companyId).ConfigureAwait(false);
+    }
 
-        public Task<int> GetTotalPendingApprovalsAsync() => Task.FromResult(12);
+    public async Task<List<RecentDocument>> GetRecentDocumentsAsync(int count)
+    {
+        if (count <= 0) return new List<RecentDocument>();
 
-        public Task<List<RecentDocument>> GetRecentDocumentsAsync(int count)
+        var companyId = GetActiveCompanyId();
+        var sql = """
+            SELECT doc_no, doc_kind, doc_date, COALESCE(party_name, ''),
+                   COALESCE(grand_total, 0), COALESCE(status, '')
+            FROM (
+                SELECT doc_no, doc_kind, doc_date, party_name, grand_total, status, created_at
+                FROM sales_documents
+                WHERE company_id = $company AND is_deleted = 0
+                UNION ALL
+                SELECT doc_no, doc_kind, doc_date, party_name, grand_total, status, created_at
+                FROM purchase_documents
+                WHERE company_id = $company AND is_deleted = 0
+            ) AS docs
+            ORDER BY created_at DESC, doc_date DESC
+            LIMIT $limit;
+            """;
+
+        var results = new List<RecentDocument>();
+        await using var connection = await OpenConnectionAsync().ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        AddParameter(command, "$company", companyId);
+        AddParameter(command, "$limit", count);
+        await using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
+        while (await reader.ReadAsync().ConfigureAwait(false))
         {
-            var docs = new List<RecentDocument>
+            var kind = Convert.ToString(reader.GetValue(1), System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            var dateText = Convert.ToString(reader.GetValue(2), System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            DateTime.TryParse(dateText, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeLocal, out var documentDate);
+            results.Add(new RecentDocument
             {
-                new() { DocumentNumber = "INV-2026-00142", DocumentType = "فاتورة مبيعات", CustomerName = "شركة النور", TotalAmount = 15420.50m, Status = "معتمد", Date = DateTime.Now.AddHours(-2) },
-                new() { DocumentNumber = "PO-2026-00089", DocumentType = "طلب شراء", CustomerName = "مورد الخليج", TotalAmount = 8750.00m, Status = "معلق", Date = DateTime.Now.AddHours(-5) },
-                new() { DocumentNumber = "JV-2026-00301", DocumentType = "سند قيد", CustomerName = "-", TotalAmount = 3200.00m, Status = "مرحّل", Date = DateTime.Now.AddDays(-1) },
-                new() { DocumentNumber = "SO-2026-00256", DocumentType = "طلبية بيع", CustomerName = "متجر الأمل", TotalAmount = 4890.75m, Status = "قيد التنفيذ", Date = DateTime.Now.AddDays(-1) },
-                new() { DocumentNumber = "RC-2026-00017", DocumentType = "سند قبض", CustomerName = "عميل نقدي", TotalAmount = 1200.00m, Status = "مكتمل", Date = DateTime.Now.AddDays(-2) }
-            };
+                DocumentNumber = Convert.ToString(reader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                DocumentType = kind.Equals("PUR", StringComparison.OrdinalIgnoreCase) ? "Purchase" : "Sales",
+                Date = documentDate == default ? DateTime.MinValue : documentDate,
+                CustomerName = Convert.ToString(reader.GetValue(3), System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                TotalAmount = Convert.ToDecimal(reader.GetValue(4), System.Globalization.CultureInfo.InvariantCulture),
+                Status = Convert.ToString(reader.GetValue(5), System.Globalization.CultureInfo.InvariantCulture) ?? ""
+            });
+        }
 
-            return Task.FromResult(docs.GetRange(0, Math.Min(count, docs.Count)));
+        return results;
+    }
+
+    private static async Task<int> ExecuteCountAsync(string table, string activePredicate)
+    {
+        var companyId = GetActiveCompanyId();
+        var sql = $"SELECT COUNT(*) FROM {table} WHERE company_id = $company AND {activePredicate};";
+        return await ExecuteScalarCountAsync(sql, companyId).ConfigureAwait(false);
+    }
+
+    private static async Task<int> ExecuteScalarCountAsync(string sql, string companyId)
+    {
+        await using var connection = await OpenConnectionAsync().ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        AddParameter(command, "$company", companyId);
+        var value = await command.ExecuteScalarAsync().ConfigureAwait(false);
+        return Convert.ToInt32(value ?? 0, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static async Task<System.Data.Common.DbConnection> OpenConnectionAsync()
+    {
+        var connectionString = DatabaseRuntime.GetConnectionString();
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("The active database connection is not configured.");
+
+        System.Data.Common.DbConnection connection = DatabaseRuntime.IsPostgreSql()
+            ? new Npgsql.NpgsqlConnection(connectionString)
+            : new SqliteConnection(DatabaseRuntime.NormalizeSqliteConnectionString(connectionString));
+        try
+        {
+            await connection.OpenAsync().ConfigureAwait(false);
+            return connection;
+        }
+        catch
+        {
+            await connection.DisposeAsync().ConfigureAwait(false);
+            throw;
         }
     }
+
+    private static string GetActiveCompanyId()
+    {
+        var companyId = AppState.CurrentCompanyCode;
+        if (string.IsNullOrWhiteSpace(companyId))
+            throw new InvalidOperationException("No active company is selected.");
+        return companyId.Trim();
+    }
+
+    private static void AddParameter(System.Data.Common.DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+}
 
     // ========== DatabaseRuntime.cs ==========
 internal static class DatabaseRuntime
