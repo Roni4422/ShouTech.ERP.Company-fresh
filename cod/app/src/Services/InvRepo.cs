@@ -108,6 +108,7 @@ public static class InvRepo
         using var tx = connection.BeginTransaction();
 
         var isSales = doc.IsSalesSide;
+        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
         var headerTable = isSales ? "sales_documents" : "purchase_documents";
         var lineTable = isSales ? "sales_document_lines" : "purchase_document_lines";
 
@@ -159,7 +160,7 @@ public static class InvRepo
                       doc_date=$date, party_id=$party, party_name=$pname, warehouse_id=$wh,
                       currency_code=$cur, exchange_rate=$fx, subtotal=$sub, tax_amount=$tax,
                       grand_total=$grand, tax_code=$tcode, tax_rate=$trate, notes=$notes{(isSales ? ", payment_method=$payment" : "")}
-                    WHERE doc_id=$id AND company_id=$company AND status='Draft' AND is_deleted=0;
+                    WHERE doc_id=$id AND company_id=$company AND status='Draft' AND {activePredicate};
                     """;
                 BindHeader(cmd, doc, isSales);
                 Add(cmd, "$id", docId);
@@ -217,6 +218,7 @@ public static class InvRepo
         DocSchema.Ensure();
         MatRepo.EnsureSchema();
         var isSales = kind.IsSales();
+        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
         var headerTable = isSales ? "sales_documents" : "purchase_documents";
         var cs = DatabaseRuntime.GetConnectionString()
             ?? throw new InvalidOperationException("No database connection.");
@@ -231,7 +233,7 @@ public static class InvRepo
                 SELECT doc_id, doc_kind, doc_no, doc_date, party_id, party_name, warehouse_id,
                        currency_code, exchange_rate, subtotal, tax_amount, grand_total, status, tax_rate{(isSales ? ", payment_method" : "")}
                 FROM {headerTable}
-                WHERE doc_id=$id AND company_id=$company AND is_deleted=0;
+                WHERE doc_id=$id AND company_id=$company AND {activePredicate};
                 """;
             Add(cmd, "$id", docId);
             Add(cmd, "$company", Company);
@@ -361,6 +363,7 @@ public static class InvRepo
         var isSales = kind.IsSales();
         var headerTable = isSales ? "sales_documents" : "purchase_documents";
         var lineTable = isSales ? "sales_document_lines" : "purchase_document_lines";
+        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
         var cs = DatabaseRuntime.GetConnectionString();
         if (string.IsNullOrWhiteSpace(cs)) return null;
 
