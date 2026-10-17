@@ -38,7 +38,7 @@ public sealed class CustomerRepository : ICustomerRepository
         command.Parameters.Add(parameter);
     }
 
-    private static string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
+    private string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
 
     private static DbCommand CreateCommand(DbConnection connection, DbTransaction? transaction, string commandText)
     {
@@ -550,7 +550,7 @@ public sealed class CustomerRepository : ICustomerRepository
         return new CustomerSummary(totalCustomers, activeCustomers, suppliers, both, totalCreditLimit);
     }
 
-    private CustomerSnapshot MapCustomerSnapshot(IDataReader reader)
+    private CustomerSnapshot MapCustomerSnapshot(DbDataReader reader)
     {
         var customerId = Guid.Parse(Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture)!);
         var companyId = Guid.Parse(Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture)!);
@@ -562,8 +562,8 @@ public sealed class CustomerRepository : ICustomerRepository
         var crNo = reader.GetString(7);
         var creditLimit = Convert.ToDecimal(reader.GetValue(8), CultureInfo.InvariantCulture);
         var creditDays = reader.GetInt32(9);
-        var priceTierId = reader.IsDBNull(10) ? null : Guid.Parse(Convert.ToString(reader.GetValue(10), CultureInfo.InvariantCulture)!);
-        var glAccountId = reader.IsDBNull(11) ? null : Guid.Parse(Convert.ToString(reader.GetValue(11), CultureInfo.InvariantCulture)!);
+        var priceTierId = reader.IsDBNull(10) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(10), CultureInfo.InvariantCulture)!);
+        var glAccountId = reader.IsDBNull(11) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(11), CultureInfo.InvariantCulture)!);
         var phone = reader.GetString(12);
         var mobile = reader.GetString(13);
         var email = reader.GetString(14);
@@ -573,11 +573,11 @@ public sealed class CustomerRepository : ICustomerRepository
         var createdAt = _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(18)
             : DateTime.Parse(Convert.ToString(reader.GetValue(18), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var createdBy = reader.IsDBNull(19) ? null : Guid.Parse(Convert.ToString(reader.GetValue(19), CultureInfo.InvariantCulture)!);
-        var modifiedAt = reader.IsDBNull(20) ? null : _provider == "PostgreSQL"
+        var createdBy = reader.IsDBNull(19) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(19), CultureInfo.InvariantCulture)!);
+        var modifiedAt = reader.IsDBNull(20) ? (DateTime?)null : _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(20)
             : DateTime.Parse(Convert.ToString(reader.GetValue(20), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var modifiedBy = reader.IsDBNull(21) ? null : Guid.Parse(Convert.ToString(reader.GetValue(21), CultureInfo.InvariantCulture)!);
+        var modifiedBy = reader.IsDBNull(21) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(21), CultureInfo.InvariantCulture)!);
 
         return new CustomerSnapshot(
             customerId,
@@ -628,7 +628,7 @@ public static class CustomerRepositoryExtensions
         if (snapshot == null)
             return null;
 
-        return new Customer(
+        var entity = new Customer(
             snapshot.CompanyId,
             snapshot.Code,
             snapshot.NameAr,
@@ -644,13 +644,8 @@ public static class CustomerRepositoryExtensions
             snapshot.Mobile,
             snapshot.Email,
             snapshot.Address,
-            snapshot.IsActive)
-        {
-            Id = snapshot.Id,
-            CreatedAt = snapshot.CreatedAt,
-            CreatedBy = snapshot.CreatedBy,
-            ModifiedAt = snapshot.ModifiedAt,
-            ModifiedBy = snapshot.ModifiedBy
-        };
+            snapshot.IsActive);
+        entity.Rehydrate(snapshot.Id, snapshot.CreatedAt, snapshot.CreatedBy, snapshot.ModifiedAt, snapshot.ModifiedBy);
+        return entity;
     }
 }

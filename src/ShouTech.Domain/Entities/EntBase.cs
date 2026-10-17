@@ -44,6 +44,16 @@ public abstract class EntBase
         ModifiedBy = restoredBy;
     }
 
+    /// <summary>Restores persisted identity and audit values when loading from storage.</summary>
+    public void Rehydrate(Guid id, DateTime createdAt, Guid? createdBy, DateTime? modifiedAt, Guid? modifiedBy)
+    {
+        Id = id;
+        CreatedAt = createdAt;
+        CreatedBy = createdBy;
+        ModifiedAt = modifiedAt;
+        ModifiedBy = modifiedBy;
+    }
+
     protected void Touch(Guid modifiedBy)
     {
         ModifiedAt = DateTime.UtcNow;

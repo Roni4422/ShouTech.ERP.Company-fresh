@@ -38,7 +38,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
         command.Parameters.Add(parameter);
     }
 
-    private static string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
+    private string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
 
     private static DbCommand CreateCommand(DbConnection connection, DbTransaction? transaction, string commandText)
     {
@@ -472,7 +472,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
         return Convert.ToInt32(await command.ExecuteScalarAsync(ct).ConfigureAwait(false), CultureInfo.InvariantCulture);
     }
 
-    private SalesRepresentativeSnapshot MapSalesRepresentativeSnapshot(IDataReader reader)
+    private SalesRepresentativeSnapshot MapSalesRepresentativeSnapshot(DbDataReader reader)
     {
         var repId = Guid.Parse(Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture)!);
         var companyId = Guid.Parse(Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture)!);
@@ -486,11 +486,11 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
         var createdAt = _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(9)
             : DateTime.Parse(Convert.ToString(reader.GetValue(9), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var createdBy = reader.IsDBNull(10) ? null : Guid.Parse(Convert.ToString(reader.GetValue(10), CultureInfo.InvariantCulture)!);
-        var modifiedAt = reader.IsDBNull(11) ? null : _provider == "PostgreSQL"
+        var createdBy = reader.IsDBNull(10) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(10), CultureInfo.InvariantCulture)!);
+        var modifiedAt = reader.IsDBNull(11) ? (DateTime?)null : _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(11)
             : DateTime.Parse(Convert.ToString(reader.GetValue(11), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var modifiedBy = reader.IsDBNull(12) ? null : Guid.Parse(Convert.ToString(reader.GetValue(12), CultureInfo.InvariantCulture)!);
+        var modifiedBy = reader.IsDBNull(12) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(12), CultureInfo.InvariantCulture)!);
 
         return new SalesRepresentativeSnapshot(
             repId,
@@ -532,20 +532,15 @@ public static class SalesRepresentativeRepositoryExtensions
         if (snapshot == null)
             return null;
 
-        return new SalesRepresentative(
+        var entity = new SalesRepresentative(
             snapshot.CompanyId,
             snapshot.Code,
             snapshot.Name,
             snapshot.Area,
             snapshot.CommissionRate,
             snapshot.Phone,
-            snapshot.IsActive)
-        {
-            Id = snapshot.Id,
-            CreatedAt = snapshot.CreatedAt,
-            CreatedBy = snapshot.CreatedBy,
-            ModifiedAt = snapshot.ModifiedAt,
-            ModifiedBy = snapshot.ModifiedBy
-        };
+            snapshot.IsActive);
+        entity.Rehydrate(snapshot.Id, snapshot.CreatedAt, snapshot.CreatedBy, snapshot.ModifiedAt, snapshot.ModifiedBy);
+        return entity;
     }
 }
