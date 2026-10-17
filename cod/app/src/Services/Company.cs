@@ -1162,13 +1162,13 @@ public sealed class CoCreateSvc : ICoCreateSvc
                         (
                             company_id, company_code, company_name_ar, company_name_en,
                             email, phone, mobile, address_line1, commercial_registration,
-                            currency_code, language_code, is_active, is_deleted
+                            currency_code, country, language_code, is_active, is_deleted
                         )
                         VALUES
                         (
                             @CompanyId, @Code, @NameAr, @NameEn,
                             @Email, @Phone, @Mobile, @Address, @License,
-                            @Currency, 'ar-SY', TRUE, FALSE
+                            @Currency, @Country, 'ar-SY', TRUE, FALSE
                         );
                         """;
 
@@ -1184,6 +1184,7 @@ public sealed class CoCreateSvc : ICoCreateSvc
                         cmd.Parameters.Add("@Address", NpgsqlDbType.Varchar).Value = NullIfEmpty(record.AddressLine1);
                         cmd.Parameters.Add("@License", NpgsqlDbType.Varchar).Value = NullIfEmpty(record.License);
                         cmd.Parameters.Add("@Currency", NpgsqlDbType.Char).Value = record.CurrencyCode;
+                        cmd.Parameters.Add("@Country", NpgsqlDbType.Varchar).Value = (object?)NullIfEmpty(record.Country) ?? DBNull.Value;
                         await cmd.ExecuteNonQueryAsync();
                     }
 
@@ -1321,12 +1322,13 @@ public sealed class CoCreateSvc : ICoCreateSvc
                 await ExecuteSqliteAsync(connection, transaction, """
                     INSERT INTO companies
                         (company_id, company_code, company_name_ar, company_name_en, email, phone, mobile, address_line1,
-                         commercial_registration, currency_code, language_code)
-                    VALUES (@id, @code, @name, @nameEn, @email, @phone, @mobile, @address, @license, @currency, 'ar-SY')
+                         commercial_registration, currency_code, country, language_code)
+                    VALUES (@id, @code, @name, @nameEn, @email, @phone, @mobile, @address, @license, @currency, @country, 'ar-SY')
                     """, ("id", record.CompanyId.ToString()), ("code", record.Code), ("name", record.Name),
                     ("nameEn", record.NameEn), ("email", NullIfEmpty(record.Email)), ("phone", NullIfEmpty(record.Phone)),
                     ("mobile", NullIfEmpty(record.Mobile)), ("address", NullIfEmpty(record.AddressLine1)),
-                    ("license", NullIfEmpty(record.License)), ("currency", record.CurrencyCode));
+                    ("license", NullIfEmpty(record.License)), ("currency", record.CurrencyCode),
+                    ("country", NullIfEmpty(record.Country)));
                 var fiscalYear = record.FiscalYearStart.Year;
                 await ExecuteSqliteAsync(connection, transaction, """
                     INSERT INTO fiscal_years (company_id, fiscal_year, database_name, start_date, end_date)
