@@ -2320,5 +2320,13 @@
     "messageKey": "Errors.TAX-RATE-001",
     "severity": "Error",
     "location": "TAX.RATE.DEFAULT"
+  },
+  "TAX-LOOKUP-001": {
+    "type": "System",
+    "name": "TaxLookupFailed",
+    "message": "A company tax or party lookup failed. The operation could not continue. Review the application error log for details.",
+    "messageKey": "Errors.TAX-LOOKUP-001",
+    "severity": "Error",
+    "location": "TAX.DATA.LOOKUP"
   }
 }
