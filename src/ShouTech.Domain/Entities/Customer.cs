@@ -162,6 +162,25 @@ public sealed class Customer : EntBase
 
         if (modifiedBy != default) Touch(modifiedBy);
     }
+    /// <summary>Recreates a domain entity from persisted data without exposing audit setters.</summary>
+    public static Customer Rehydrate(CustomerSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Id == Guid.Empty)
+            throw new ArgumentException("A persisted customer snapshot must have a valid identifier.", nameof(snapshot));
+
+        var entity = new Customer(snapshot.CompanyId, snapshot.Code, snapshot.NameAr, snapshot.NameEn,
+            snapshot.Type, snapshot.TaxNo, snapshot.CrNo, snapshot.CreditLimit, snapshot.CreditDays,
+            snapshot.PriceTierId, snapshot.GlAccountId, snapshot.Phone, snapshot.Mobile,
+            snapshot.Email, snapshot.Address, snapshot.IsActive);
+        entity.Id = snapshot.Id;
+        entity.IsDeleted = snapshot.IsDeleted;
+        entity.CreatedAt = snapshot.CreatedAt;
+        entity.CreatedBy = snapshot.CreatedBy;
+        entity.ModifiedAt = snapshot.ModifiedAt;
+        entity.ModifiedBy = snapshot.ModifiedBy;
+        return entity;
+    }
 }
 
 /// <summary>
