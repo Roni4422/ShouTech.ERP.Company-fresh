@@ -372,7 +372,8 @@ public sealed class RepCard : BaseWin
 
             var targetRows = _targets.Where(row => !row.IsBlankDraft).Select(row => row.ToRecord()).ToArray();
             var context = await ResolvePersistenceContextAsync().ConfigureAwait(true);
-            var currentByCode = await context.Repository.FindByCodeAsync(context.CompanyId, code).ConfigureAwait(true);
+            var existingByCode = await context.Repository.FindByCodeIncludingDeletedAsync(context.CompanyId, code).ConfigureAwait(true);
+            var currentByCode = existingByCode is { IsDeleted: false } ? existingByCode : null;
             Guid representativeId;
             if (_currentRepId.HasValue)
             {
@@ -390,6 +391,9 @@ public sealed class RepCard : BaseWin
             }
             else
             {
+                if (existingByCode is { IsDeleted: true })
+                    throw new RepCardFailureException(ErrorCodes.SalesRepCodeRequiresRestore,
+                        "This code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.");
                 if (currentByCode is not null)
                     throw new RepCardFailureException(ErrorCodes.SalesRepDuplicateCode,
                         "This code already exists in the selected company. Load it before editing.");
