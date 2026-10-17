@@ -126,7 +126,7 @@ namespace ShouTech.App.Views
             catch (Exception ex)
             {
                 // Never abort the whole splash for a single non-critical check.
-                AppHost.Logging?.LogWarning("Startup", $"SPL-START-004: {message} check failed.", ex);
+                AppHost.Logging?.LogWarning("Startup", $"SPL-START-004: {message} check failed. {ex}");
                 SetStatus(message);
                 await SafeDelay(80);
             }
