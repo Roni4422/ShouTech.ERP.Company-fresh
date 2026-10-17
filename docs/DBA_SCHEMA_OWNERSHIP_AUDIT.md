@@ -88,3 +88,7 @@ This document records the audit findings and safe execution order; it does not c
 5. test fresh databases and upgrades from databases where the old service already installed triggers.
 
 Do not mark schema ownership complete until that migration and both-provider integration tests pass.
+
+### Re-verification (migrations 023–024)
+
+A repository-wide search of `.cs`/`.py` sources found no `CREATE TABLE`/`ALTER TABLE` in application code outside `tools/SqlMigrator` (ledger bootstrap) and test fixtures. `company_features` (023) and `lookup_items` (024) are defined only in `dba/mig/{sqlite,postgresql}` and asserted by the SQLite migration smoke workflow. The `RecycleBinSvc.cs` trigger item above remains open.

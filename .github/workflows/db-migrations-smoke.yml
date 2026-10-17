@@ -68,6 +68,13 @@ jobs:
           missing_rate_columns = sorted(required_rate_columns - rate_columns)
           if missing_rate_columns:
               raise SystemExit(f"SQLite currency_rates columns are missing: {missing_rate_columns}")
+          for table, cols in {
+              "company_features": {"company_id", "feature_key", "is_enabled"},
+              "lookup_items": {"company_id", "kind", "code", "name_ar", "name_en", "is_active", "is_deleted"},
+          }.items():
+              found = {row[1] for row in con.execute(f"PRAGMA table_info({table})")}
+              if not cols <= found:
+                  raise SystemExit(f"SQLite {table} columns are missing: {sorted(cols - found)}")
           print("SQLite journal, cash voucher, and currency schemas verified.")
           PY
       - name: Test existing SQLite migration-history table
