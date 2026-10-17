@@ -1221,5 +1221,53 @@
     "severity": "Error",
     "catalogRef": "REPORT.DESIGNER.SAVE.002",
     "location": "REPORT.DESIGNER.SAVE_AS"
+  },
+  "RPT-FORMULA-001": {
+    "type": "Validation",
+    "name": "ReportFormulaCompileFailed",
+    "message": "A report formula is invalid. Review the formula and application logs.",
+    "severity": "Error",
+    "catalogRef": "REPORT.DESIGNER.FORMULA.001",
+    "location": "REPORT.DESIGNER.FORMULA"
+  },
+  "RPT-OWNER-001": {
+    "type": "Authorization",
+    "name": "ReportEditNotAllowed",
+    "message": "You cannot edit this report. Use Save As to create an editable copy.",
+    "severity": "Warning",
+    "catalogRef": "REPORT.DESIGNER.AUTH.001",
+    "location": "REPORT.DESIGNER.AUTHORIZATION"
+  },
+  "RPT-VALIDATE-001": {
+    "type": "Validation",
+    "name": "DuplicateReportColumnKey",
+    "message": "The report contains duplicate column keys. Correct the column definitions before saving.",
+    "severity": "Error",
+    "catalogRef": "REPORT.DESIGNER.VALIDATION.001",
+    "location": "REPORT.DESIGNER.VALIDATION"
+  },
+  "RPT-VALIDATE-002": {
+    "type": "Validation",
+    "name": "EmptyReportFormula",
+    "message": "A calculated column has an empty formula. Enter a formula before saving.",
+    "severity": "Error",
+    "catalogRef": "REPORT.DESIGNER.VALIDATION.002",
+    "location": "REPORT.DESIGNER.VALIDATION"
+  },
+  "RPT-VALIDATE-003": {
+    "type": "Validation",
+    "name": "InvalidReportFormula",
+    "message": "A calculated column contains an invalid formula. Correct the formula before saving.",
+    "severity": "Error",
+    "catalogRef": "REPORT.DESIGNER.VALIDATION.003",
+    "location": "REPORT.DESIGNER.VALIDATION"
+  },
+  "RPT-VALIDATE-004": {
+    "type": "Validation",
+    "name": "ReportNameRequired",
+    "message": "Enter a name for the new report.",
+    "severity": "Warning",
+    "catalogRef": "REPORT.DESIGNER.VALIDATION.004",
+    "location": "REPORT.DESIGNER.SAVE_AS"
   }
 }
