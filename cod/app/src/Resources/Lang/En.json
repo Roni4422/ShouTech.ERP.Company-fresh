@@ -1288,7 +1288,9 @@
     "Currency": "Currency",
     "GlAccount": "Linked GL Account",
     "Balance": "Book Balance",
-    "Saved": "Bank card saved successfully"
+    "Saved": "Bank card saved successfully",
+    "DeleteConfirmation": "Move this bank to the Recycle Bin? The record will be retained and can be restored.",
+    "Deleted": "Bank card moved to the Recycle Bin."
   },
   "SalesRepCard": {
     "Title": "Sales Representative Card",
