@@ -78,7 +78,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex, "XPT-EXP-001");
+            NotifyFailure(owner, ex, ErrorCodes.ExcelReportExportFailed);
             return false;
         }
     }
@@ -123,7 +123,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex, "XPT-EXP-002");
+            NotifyFailure(owner, ex, ErrorCodes.PdfReportExportFailed);
             return false;
         }
     }
@@ -168,7 +168,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex, "XPT-EXP-003");
+            NotifyFailure(owner, ex, ErrorCodes.EncryptedReportExportFailed);
             return false;
         }
     }
@@ -192,7 +192,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex, "XPT-EXP-004");
+            NotifyFailure(owner, ex, ErrorCodes.ReportPrintFailed);
         }
     }
 
