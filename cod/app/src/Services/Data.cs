@@ -26,21 +26,21 @@ namespace ShouTech.App.Services
     // ========== DataServ.cs ==========
 public sealed class DataServ : IDataServ
 {
-    public async Task<int> GetTotalCustomersAsync() =>
-        await ExecuteCountAsync("customers", "COALESCE(is_deleted, 0) = 0").ConfigureAwait(false);
-
-    public async Task<int> GetTotalProductsAsync()
-    {
-        var activePredicate = DatabaseRuntime.IsPostgreSql()
+    public Task<int> GetTotalCustomersAsync() =>
+        ExecuteCountAsync("customers", DatabaseRuntime.IsPostgreSql()
             ? "COALESCE(is_deleted, FALSE) = FALSE"
-            : "COALESCE(is_deleted, 0) = 0";
-        return await ExecuteCountAsync("materials", activePredicate).ConfigureAwait(false);
-    }
+            : "COALESCE(is_deleted, 0) = 0");
 
-    public async Task<int> GetTotalPendingApprovalsAsync()
+    public Task<int> GetTotalProductsAsync() =>
+        ExecuteCountAsync("materials", DatabaseRuntime.IsPostgreSql()
+            ? "COALESCE(is_deleted, FALSE) = FALSE"
+            : "COALESCE(is_deleted, 0) = 0");
+
+    public Task<int> GetTotalPendingApprovalsAsync()
     {
         var companyId = GetActiveCompanyId();
-        const string sql = """
+        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted = FALSE" : "is_deleted = 0";
+        var sql = $"""
             SELECT COUNT(*) FROM (
                 SELECT doc_id FROM sales_documents
                 WHERE company_id = $company AND {activePredicate}
@@ -51,7 +51,7 @@ public sealed class DataServ : IDataServ
                   AND LOWER(COALESCE(status, '')) IN ('pending', 'pending approval', 'pendingapproval', 'submitted')
             ) AS pending_docs;
             """;
-        return await ExecuteScalarCountAsync(sql, companyId).ConfigureAwait(false);
+        return ExecuteScalarCountAsync(sql, companyId);
     }
 
     public async Task<List<RecentDocument>> GetRecentDocumentsAsync(int count)
@@ -59,7 +59,8 @@ public sealed class DataServ : IDataServ
         if (count <= 0) return new List<RecentDocument>();
 
         var companyId = GetActiveCompanyId();
-        var sql = """
+        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted = FALSE" : "is_deleted = 0";
+        var sql = $"""
             SELECT doc_no, doc_kind, doc_date, COALESCE(party_name, ''),
                    COALESCE(grand_total, 0), COALESCE(status, '')
             FROM (
