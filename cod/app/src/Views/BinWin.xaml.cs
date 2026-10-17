@@ -98,7 +98,8 @@ public partial class BinWin : Window
         {
             ItemsGrid.ItemsSource = Array.Empty<RecycleBinItem>();
             StatusText.Text = L("Failed to load the recycle bin.", "تعذر تحميل سلة المحذوفات.");
-            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportFailure("LoadRecycleBin", ex);
+            MessageBox.Show(this, FormatError("BIN-DB-001"), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -145,7 +146,8 @@ public partial class BinWin : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportFailure("RestoreRecycleBinItems", ex);
+            MessageBox.Show(this, FormatError("BIN-DB-001"), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -206,13 +208,29 @@ public partial class BinWin : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportFailure("PurgeRecycleBinItems", ex);
+            MessageBox.Show(this, FormatError("BIN-DB-001"), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
             SetBusy(false);
             await ReloadAsync().ConfigureAwait(true);
         }
+    }
+
+    private static string FormatError(string code)
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(code);
+        return $"[{definition.Code}] {definition.Message}{Environment.NewLine}Location: {definition.Location}";
+    }
+
+    private void ReportFailure(string operation, Exception exception)
+    {
+        const string code = "BIN-DB-001";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(code);
+        var context = $"Operation={operation}; Window={GetType().Name}; Company={AppState.CurrentCompanyCode ?? "(none)"}";
+        AppHost.Logging?.LogError("RecycleBin", $"[{definition.Code}] {definition.Name} | {context}", exception);
+        AppHost.Logging?.LogOperation("RecycleBin", "OperationFailed", $"Code={definition.Code} | {context}");
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
