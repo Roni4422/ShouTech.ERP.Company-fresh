@@ -1205,5 +1205,21 @@
     "severity": "Error",
     "catalogRef": "DASHBOARD.DATABASE.001",
     "location": "DASHBOARD.DATABASE.001"
+  },
+  "RPT-SAVE-001": {
+    "type": "Database",
+    "name": "ReportDefinitionSaveFailed",
+    "message": "The report could not be saved. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "REPORT.DESIGNER.SAVE.001",
+    "location": "REPORT.DESIGNER.SAVE"
+  },
+  "RPT-SAVE-002": {
+    "type": "Database",
+    "name": "ReportDefinitionSaveAsFailed",
+    "message": "The report copy could not be saved. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "REPORT.DESIGNER.SAVE.002",
+    "location": "REPORT.DESIGNER.SAVE_AS"
   }
 }
