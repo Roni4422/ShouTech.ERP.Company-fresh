@@ -23,8 +23,9 @@ public partial class AccCard : BaseWin
 
     private static AccRepo.AccRec? LoadDefaultRecord()
     {
-        try { return AccRepo.LoadAll().OrderByDescending(x => x.Id).FirstOrDefault(); }
-        catch { return null; }
+        // Do not convert a database failure into a new-account state. The caller
+        // must see the real failure rather than continuing with misleading defaults.
+        return AccRepo.LoadAll().OrderByDescending(x => x.Id).FirstOrDefault();
     }
 
     public AccCard(string parentCode) : this(null, parentCode) { }
