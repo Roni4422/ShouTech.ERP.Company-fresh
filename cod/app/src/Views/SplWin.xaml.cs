@@ -197,7 +197,11 @@ namespace ShouTech.App.Views
             {
                 string[] hits;
                 try { hits = Directory.GetFiles(baseDir, pattern, SearchOption.TopDirectoryOnly); }
-                catch { continue; }
+                catch (Exception ex)
+                {
+                    AppHost.Logging?.LogWarning("Startup", $"SPL-SEC-002: Unable to inspect startup directory for pattern '{pattern}'. {ex}");
+                    continue;
+                }
 
                 if (hits.Length > 0)
                     throw new InvalidOperationException("Suspicious files detected near the application.");
@@ -222,9 +226,9 @@ namespace ShouTech.App.Views
                     // Soft: configuration may be created on first run.
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Soft failure.
+                AppHost.Logging?.LogWarning("Startup", $"SPL-CFG-001: Unable to validate application configuration path. {ex}");
             }
 
             try
@@ -232,9 +236,10 @@ namespace ShouTech.App.Views
                 var pref = UsrPref.Load();
                 _ = pref.Lang;
             }
-            catch
+            catch (Exception ex)
             {
-                // Soft failure — preferences will be recreated.
+                // Preferences can be recreated, but the failure must remain diagnosable.
+                AppHost.Logging?.LogWarning("Startup", $"SPL-CFG-002: User preferences could not be loaded and may need to be recreated. {ex}");
             }
 
             return Task.CompletedTask;
@@ -256,41 +261,38 @@ namespace ShouTech.App.Views
 
         private static async Task CheckLicenseAsync()
         {
-            try
+            if (AppHost.License == null)
             {
-                if (AppHost.License != null)
-                    await AppHost.License.InitializeAsync();
+                AppHost.Logging?.LogWarning("Startup", "SPL-LIC-001: License service is not configured; license initialization was skipped.");
+                return;
             }
-            catch
-            {
-                // License service may run in evaluation mode offline.
-            }
+
+            // RunStepAsync records initialization failures. Do not swallow them here.
+            await AppHost.License.InitializeAsync();
         }
 
         private static async Task PrepareUserDataAsync()
         {
-            try
+            if (AppHost.Sync == null)
             {
-                if (AppHost.Sync != null)
-                    await AppHost.Sync.SnapshotLocalUserDataAsync();
+                AppHost.Logging?.LogWarning("Startup", "SPL-SYNC-001: User-data snapshot service is not configured; startup snapshot was skipped.");
+                return;
             }
-            catch
-            {
-                // Offline snapshot is non-fatal.
-            }
+
+            // RunStepAsync records failures while allowing offline startup to continue.
+            await AppHost.Sync.SnapshotLocalUserDataAsync();
         }
 
         private static Task StartBackgroundServicesAsync()
         {
-            try
+            if (AppHost.OnlineCoordinator == null)
             {
-                AppHost.OnlineCoordinator?.Start();
-            }
-            catch
-            {
-                // Coordinator may be unavailable offline.
+                AppHost.Logging?.LogWarning("Startup", "SPL-SVC-001: Online coordinator is not configured; background synchronization was not started.");
+                return Task.CompletedTask;
             }
 
+            // RunStepAsync records startup failures without masking them.
+            AppHost.OnlineCoordinator.Start();
             return Task.CompletedTask;
         }
 
