@@ -63,6 +63,12 @@ namespace ShouTech.App.Localization
         public const string MaterialDirectoryLoadFailed = "MAT-DIR-001";
         public const string MaterialDirectoryDeleteFailed = "MAT-DIR-002";
         public const string MaterialDirectoryOpenCardFailed = "MAT-DIR-003";
+        public const string ChartOfAccountsLoadFailed = "COA-LOAD-001";
+        public const string ChartOfAccountsCsvExportFailed = "COA-EXP-001";
+        public const string ChartOfAccountsExcelExportFailed = "COA-EXP-002";
+        public const string ChartOfAccountsEncryptedExportFailed = "COA-EXP-003";
+        public const string ChartOfAccountsImportFailed = "COA-IMP-001";
+        public const string ChartOfAccountsEncryptedImportFailed = "COA-IMP-002";
     }
 
     public static class ErrorCatalog
