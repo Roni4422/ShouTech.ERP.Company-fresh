@@ -769,8 +769,12 @@ public static class CoLocalStore
                     return await cmd.ExecuteNonQueryAsync() > 0;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppHost.Logging?.LogError(
+                    "CompanyManagement",
+                    $"COM-SAVE-001: Database profile update failed for company '{profile.Code}'.",
+                    ex);
                 return false;
             }
 
