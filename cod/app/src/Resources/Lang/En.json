@@ -1302,7 +1302,20 @@
     "Commission": "Commission %",
     "Target": "Monthly Target",
     "SalesTotal": "Total Sales",
-    "Saved": "Sales rep card saved successfully"
+    "Saved": "Sales representative and target changes were saved.",
+    "Load": "Load",
+    "AddTarget": "Add target",
+    "Period": "Period (YYYY-MM)",
+    "Notes": "Notes",
+    "NotFound": "No sales representative exists with this code in the selected company.",
+    "ConfirmDelete": "Move this sales representative to the Recycle Bin? The record will be retained for audit and can be restored.",
+    "Deleted": "Sales representative moved to the Recycle Bin.",
+    "DeleteFailed": "The sales representative could not be moved to the Recycle Bin.",
+    "NoRepSelected": "Load or save a sales representative before deleting.",
+    "TargetAdded": "A monthly target row was added.",
+    "SaveValidation": "Check the sales representative fields and monthly targets.",
+    "DuplicateCode": "This code already exists in the selected company. Load it before editing.",
+    "RestoreRequired": "This code belongs to a deleted record. Restore it before reusing the code."
   },
   "MfgOrder": {
     "Title": "Manufacturing Orders & BOM",
