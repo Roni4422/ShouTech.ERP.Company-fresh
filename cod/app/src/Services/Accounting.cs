@@ -216,6 +216,8 @@ namespace ShouTech.App.Services
 /// </summary>
 internal static class AccRepo
 {
+    private static string ActiveRowPredicate => DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
+
     internal sealed record AccRec(
         long Id,
         string Code,
@@ -263,13 +265,13 @@ internal static class AccRepo
         EnsureSchema();
         using var connection = Open(cs);
         using var command = connection.CreateCommand();
-        command.CommandText = """
+        command.CommandText = $"""
             SELECT account_id, account_code, parent_code, name_ar, name_en,
                    posting_mode, status, risk, cost_center, allow_reconcile,
                    taxable, foreign_currency, cost_required, budget, is_default,
                    tax_rate, description, balance, debit, credit
             FROM accounts
-            WHERE company_id = $company AND is_deleted = 0
+            WHERE company_id = $company AND {ActiveRowPredicate}
             ORDER BY account_code;
             """;
         Add(command, "$company", AppState.CurrentCompanyCode ?? string.Empty);
@@ -287,13 +289,13 @@ internal static class AccRepo
         EnsureSchema();
         using var connection = Open(cs);
         using var command = connection.CreateCommand();
-        command.CommandText = """
+        command.CommandText = $"""
             SELECT account_id, account_code, parent_code, name_ar, name_en,
                    posting_mode, status, risk, cost_center, allow_reconcile,
                    taxable, foreign_currency, cost_required, budget, is_default,
                    tax_rate, description, balance, debit, credit
             FROM accounts
-            WHERE company_id = $company AND account_id = $id AND is_deleted = 0;
+            WHERE company_id = $company AND account_id = $id AND {ActiveRowPredicate};
             """;
         Add(command, "$company", AppState.CurrentCompanyCode ?? string.Empty);
         Add(command, "$id", id);
@@ -328,7 +330,7 @@ internal static class AccRepo
         EnsureSchema();
         using var connection = Open(cs);
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(1) FROM accounts WHERE company_id=$company AND account_code=$code AND is_deleted=0" +
+        command.CommandText = $"SELECT COUNT(1) FROM accounts WHERE company_id=$company AND account_code=$code AND {ActiveRowPredicate}" +
                               (excludeId.HasValue ? " AND account_id<>$id" : "") + ";";
         Add(command, "$company", AppState.CurrentCompanyCode ?? string.Empty);
         Add(command, "$code", RequireCode(code));
@@ -519,7 +521,7 @@ internal static class AccRepo
         {
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = """
+            command.CommandText = $"""
                 SELECT table_name, column_name
                 FROM information_schema.columns
                 WHERE table_schema = current_schema()
@@ -617,7 +619,7 @@ internal static class AccRepo
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(1) FROM accounts WHERE company_id=$company AND parent_code=$parent AND is_deleted=0;";
+        command.CommandText = $"SELECT COUNT(1) FROM accounts WHERE company_id=$company AND parent_code=$parent AND {ActiveRowPredicate};";
         Add(command, "$company", AppState.CurrentCompanyCode ?? string.Empty);
         Add(command, "$parent", code);
         return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture) > 0;
@@ -627,7 +629,7 @@ internal static class AccRepo
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "UPDATE accounts SET parent_code=$newparent, updated_at=CURRENT_TIMESTAMP WHERE company_id=$company AND parent_code=$oldparent AND is_deleted=0;";
+        command.CommandText = $"UPDATE accounts SET parent_code=$newparent, updated_at=CURRENT_TIMESTAMP WHERE company_id=$company AND parent_code=$oldparent AND {ActiveRowPredicate};";
         Add(command, "$company", AppState.CurrentCompanyCode ?? string.Empty);
         Add(command, "$oldparent", oldParent);
         Add(command, "$newparent", newParent);
@@ -640,7 +642,7 @@ internal static class AccRepo
         using (var select = connection.CreateCommand())
         {
             select.Transaction = transaction;
-            select.CommandText = "SELECT account_id, account_code, parent_code FROM accounts WHERE company_id=$company AND is_deleted=0;";
+            select.CommandText = $"SELECT account_id, account_code, parent_code FROM accounts WHERE company_id=$company AND {ActiveRowPredicate};";
             Add(select, "$company", AppState.CurrentCompanyCode ?? string.Empty);
             using var reader = select.ExecuteReader();
             while (reader.Read())
@@ -696,7 +698,7 @@ internal static class AccRepo
         {
             using var check = connection.CreateCommand();
             check.Transaction = transaction;
-            check.CommandText = "SELECT COUNT(1) FROM accounts WHERE company_id=$company AND account_code=$code AND account_id<>$id AND is_deleted=0;";
+            check.CommandText = $"SELECT COUNT(1) FROM accounts WHERE company_id=$company AND account_code=$code AND account_id<>$id AND {ActiveRowPredicate};";
             Add(check, "$company", AppState.CurrentCompanyCode ?? string.Empty);
             Add(check, "$code", item.New);
             Add(check, "$id", item.Id);
@@ -744,7 +746,7 @@ internal static class AccRepo
             status=$status,risk=$risk,cost_center=$cc,allow_reconcile=$reconcile,taxable=$taxable,
             foreign_currency=$foreign,cost_required=$costreq,budget=$budget,is_default=$default,tax_rate=$tax,
             description=$desc,balance=$balance,debit=$debit,credit=$credit,updated_at=CURRENT_TIMESTAMP
-        WHERE company_id=$company AND account_id=$id AND is_deleted=0;
+        WHERE company_id=$company AND account_id=$id AND {ActiveRowPredicate};
         """;
 
     private static void Bind(DbCommand command, AccRec value, long? id)
@@ -786,7 +788,7 @@ internal static class AccRepo
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(1) FROM accounts WHERE company_id=$company AND account_code=$code AND is_deleted=0" +
+        command.CommandText = $"SELECT COUNT(1) FROM accounts WHERE company_id=$company AND account_code=$code AND {ActiveRowPredicate}" +
                               (excludeId.HasValue ? " AND account_id<>$id" : "") + ";";
         Add(command, "$company", AppState.CurrentCompanyCode ?? string.Empty);
         Add(command, "$code", code);
