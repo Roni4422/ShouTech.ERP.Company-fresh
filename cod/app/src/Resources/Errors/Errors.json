@@ -1657,5 +1657,59 @@
     "severity": "Error",
     "catalogRef": "MATERIAL.DIRECTORY.OPEN.003",
     "location": "MATERIAL.DIRECTORY.OPEN"
+  },
+  "COA-LOAD-001": {
+    "type": "System",
+    "name": "ChartOfAccountsLoadFailed",
+    "message": "The chart of accounts could not be loaded from the active database. Check the database connection and application log.",
+    "messageKey": "Errors.COA-LOAD-001",
+    "severity": "Error",
+    "catalogRef": "CHART_OF_ACCOUNTS.LOAD.001",
+    "location": "CHART_OF_ACCOUNTS.LOAD"
+  },
+  "COA-EXP-001": {
+    "type": "System",
+    "name": "ChartOfAccountsCsvExportFailed",
+    "message": "The chart of accounts could not be exported to CSV. Check the destination path and application log.",
+    "messageKey": "Errors.COA-EXP-001",
+    "severity": "Error",
+    "catalogRef": "CHART_OF_ACCOUNTS.EXPORT.CSV.001",
+    "location": "CHART_OF_ACCOUNTS.EXPORT.CSV"
+  },
+  "COA-EXP-002": {
+    "type": "System",
+    "name": "ChartOfAccountsExcelExportFailed",
+    "message": "The chart of accounts could not be exported to Excel. Check the destination path and application log.",
+    "messageKey": "Errors.COA-EXP-002",
+    "severity": "Error",
+    "catalogRef": "CHART_OF_ACCOUNTS.EXPORT.EXCEL.002",
+    "location": "CHART_OF_ACCOUNTS.EXPORT.EXCEL"
+  },
+  "COA-EXP-003": {
+    "type": "System",
+    "name": "ChartOfAccountsEncryptedExportFailed",
+    "message": "The encrypted chart-of-accounts package could not be created. Check the destination path and application log.",
+    "messageKey": "Errors.COA-EXP-003",
+    "severity": "Error",
+    "catalogRef": "CHART_OF_ACCOUNTS.EXPORT.ENCRYPTED.003",
+    "location": "CHART_OF_ACCOUNTS.EXPORT.ENCRYPTED"
+  },
+  "COA-IMP-001": {
+    "type": "System",
+    "name": "ChartOfAccountsImportFailed",
+    "message": "The chart of accounts could not be imported. Verify the file format and data, then check the application log.",
+    "messageKey": "Errors.COA-IMP-001",
+    "severity": "Error",
+    "catalogRef": "CHART_OF_ACCOUNTS.IMPORT.001",
+    "location": "CHART_OF_ACCOUNTS.IMPORT"
+  },
+  "COA-IMP-002": {
+    "type": "System",
+    "name": "ChartOfAccountsEncryptedImportFailed",
+    "message": "The encrypted chart-of-accounts package could not be opened. Verify the password and file integrity, then check the application log.",
+    "messageKey": "Errors.COA-IMP-002",
+    "severity": "Error",
+    "catalogRef": "CHART_OF_ACCOUNTS.IMPORT.ENCRYPTED.002",
+    "location": "CHART_OF_ACCOUNTS.IMPORT.ENCRYPTED"
   }
 }
