@@ -1,4 +1,4 @@
-﻿{
+{
   "AccountCard": "Account Card",
   "Accounts": {
     "AIAnalysis": "AI",
@@ -1239,7 +1239,8 @@
     "TotalCredit": "Total Credit",
     "Statement": "Statement",
     "Saved": "Card saved successfully",
-    "Deleted": "Card deleted"
+    "Deleted": "Card deleted",
+    "DeleteConfirmation": "Move this customer to the Recycle Bin? The record will be retained and can be restored."
   },
   "CostCenter": {
     "Title": "Cost Center Card",
