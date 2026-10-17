@@ -1837,5 +1837,59 @@
     "severity": "Error",
     "catalogRef": "CATEGORY_CARD.INIT.013",
     "location": "CATEGORY_CARD.INIT"
+  },
+  "BCG-LOAD-001": {
+    "type": "System",
+    "name": "BarcodeGenerationLoadFailed",
+    "message": "Materials could not be loaded for barcode generation. Check the active database and application log.",
+    "messageKey": "Errors.BCG-LOAD-001",
+    "severity": "Error",
+    "catalogRef": "BARCODE.GENERATION.LOAD.001",
+    "location": "BARCODE.GENERATION.LOAD"
+  },
+  "BCG-PRINT-001": {
+    "type": "System",
+    "name": "BarcodeLabelPrintFailed",
+    "message": "Barcode labels could not be printed. Check the selected printer and application log.",
+    "messageKey": "Errors.BCG-PRINT-001",
+    "severity": "Error",
+    "catalogRef": "BARCODE.LABEL.PRINT.001",
+    "location": "BARCODE.LABEL.PRINT"
+  },
+  "SPL-START-001": {
+    "type": "System",
+    "name": "StartupSecurityPipelineFailed",
+    "message": "A startup security check could not be completed. Review the application log before continuing.",
+    "messageKey": "Errors.SPL-START-001",
+    "severity": "Error",
+    "catalogRef": "STARTUP.SECURITY.001",
+    "location": "STARTUP.SECURITY"
+  },
+  "SPL-START-002": {
+    "type": "System",
+    "name": "StartupCompanyCheckFailed",
+    "message": "The company list could not be verified. Check the database connection and application log.",
+    "messageKey": "Errors.SPL-START-002",
+    "severity": "Error",
+    "catalogRef": "STARTUP.COMPANY.CHECK.002",
+    "location": "STARTUP.COMPANY.CHECK"
+  },
+  "SPL-START-003": {
+    "type": "System",
+    "name": "StartupCompanyFlowFailed",
+    "message": "The company selection screen could not be opened. Check the application log and restart the application.",
+    "messageKey": "Errors.SPL-START-003",
+    "severity": "Critical",
+    "catalogRef": "STARTUP.COMPANY.FLOW.003",
+    "location": "STARTUP.COMPANY.FLOW"
+  },
+  "SPL-START-004": {
+    "type": "System",
+    "name": "StartupOptionalCheckFailed",
+    "message": "A non-critical startup check could not be completed. Review the application log if the issue persists.",
+    "messageKey": "Errors.SPL-START-004",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.OPTIONAL.CHECK.004",
+    "location": "STARTUP.OPTIONAL.CHECK"
   }
 }
