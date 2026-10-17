@@ -290,7 +290,7 @@
     "CompleteSale": "إتمام البيع",
     "ConfirmSale": "هل تريد إتمام وترحيل عملية البيع؟",
     "SalePosted": "تم ترحيل عملية البيع.",
-    "PaymentPostingNotice": "تُحفظ طريقة الدفع المختارة ضمن ملاحظات البيع؛ ترحيل سند الدفع غير متاح حالياً.",
+    "PaymentPostingNotice": "تُرحّل المبيعات النقدية إلى حساب CASH، وVisa/K-Net إلى BANK، والمبيعات الآجلة إلى RECEIVABLES. اضبط ربط الحسابات المطابق قبل الترحيل.",
     "CustomerNotFound": "تعذر العثور على العميل بالرمز المدخل.",
     "CreditNeedsCustomer": "حدد عميلاً قبل إتمام البيع الآجل.",
     "CashDrawerOptionsTitle": "خيارات درج الكاشير"
