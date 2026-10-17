@@ -5,6 +5,7 @@ using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 using ShouTech.App;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Services;
 
@@ -127,7 +128,7 @@ public static class CustomerCardSvc
 
             if (existingDeleted)
                 throw new CustomerCardException(
-                    "CUS-VAL-002",
+                    ErrorCodes.CustomerCodeRequiresRestore,
                     "This customer code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.");
 
             var now = TimestampValue();
@@ -238,34 +239,34 @@ public static class CustomerCardSvc
     {
         ValidateCode(customer.Code);
         if (string.IsNullOrWhiteSpace(customer.NameAr) || customer.NameAr.Trim().Length > 200)
-            throw new CustomerCardException("CUS-VAL-001", "Enter an Arabic customer name with no more than 200 characters.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "Enter an Arabic customer name with no more than 200 characters.");
         if (customer.NameEn.Trim().Length > 200)
-            throw new CustomerCardException("CUS-VAL-001", "The English customer name cannot exceed 200 characters.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "The English customer name cannot exceed 200 characters.");
         if (customer.Type is < 1 or > 3)
-            throw new CustomerCardException("CUS-VAL-001", "Select a valid customer type.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "Select a valid customer type.");
         if (customer.CreditLimit < 0 || customer.CreditLimit > 999999999999999.9999m
             || decimal.Round(customer.CreditLimit, 4) != customer.CreditLimit)
-            throw new CustomerCardException("CUS-VAL-001", "The credit limit must be non-negative and support at most four decimal places.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "The credit limit must be non-negative and support at most four decimal places.");
         if (customer.CreditDays is < 0 or > 3650)
-            throw new CustomerCardException("CUS-VAL-001", "Credit days must be between 0 and 3650.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "Credit days must be between 0 and 3650.");
         if (customer.GroupCode.Trim().Length > 80 || customer.PriceTierCode.Trim().Length > 30
             || customer.GlAccountCode.Trim().Length > 80)
-            throw new CustomerCardException("CUS-VAL-001", "Group, price tier, and account codes exceed the supported length.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "Group, price tier, and account codes exceed the supported length.");
         if (customer.TaxNo.Trim().Length > 50 || customer.CommercialRegistration.Trim().Length > 50
             || customer.Phone.Trim().Length > 30 || customer.Mobile.Trim().Length > 30
             || customer.Email.Trim().Length > 100 || customer.Address.Trim().Length > 500)
-            throw new CustomerCardException("CUS-VAL-001", "One or more customer fields exceed the supported length.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "One or more customer fields exceed the supported length.");
         if (!string.IsNullOrWhiteSpace(customer.Email)
             && (!customer.Email.Contains('@') || customer.Email.StartsWith('@') || customer.Email.EndsWith('@')))
-            throw new CustomerCardException("CUS-VAL-001", "Enter a valid email address.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "Enter a valid email address.");
     }
 
     private static void ValidateCode(string code)
     {
         if (string.IsNullOrWhiteSpace(code) || code.Trim().Length > 50)
-            throw new CustomerCardException("CUS-VAL-001", "Enter a customer code with no more than 50 characters.");
+            throw new CustomerCardException(ErrorCodes.CustomerValidationFailed, "Enter a customer code with no more than 50 characters.");
         if (string.IsNullOrWhiteSpace(ActiveCompanyCode))
-            throw new CustomerCardException("CUS-DB-001", "Select an active company before using the customer card.");
+            throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "Select an active company before using the customer card.");
     }
 
     private static async Task<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
@@ -293,7 +294,7 @@ public static class CustomerCardSvc
         DbConnection connection, DbTransaction? transaction, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(ActiveCompanyCode))
-            throw new CustomerCardException("CUS-DB-001", "Select an active company before using the customer card.");
+            throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "Select an active company before using the customer card.");
 
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -305,12 +306,12 @@ public static class CustomerCardSvc
         Add(command, "@code", ActiveCompanyCode);
         var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         if (value is null or DBNull)
-            throw new CustomerCardException("CUS-DB-001", "The active company is not registered in the connected database.");
+            throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "The active company is not registered in the connected database.");
         if (IsPostgreSql && value is Guid guid)
             return guid;
         if (Guid.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out var parsed))
             return IsPostgreSql ? parsed : parsed.ToString("D", CultureInfo.InvariantCulture);
-        throw new CustomerCardException("CUS-DB-001", "The active company identifier is invalid.");
+        throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "The active company identifier is invalid.");
     }
 
     private static void BindCustomer(DbCommand command, CustomerCardRecord customer)
