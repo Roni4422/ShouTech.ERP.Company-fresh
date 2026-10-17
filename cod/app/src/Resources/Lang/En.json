@@ -1209,7 +1209,16 @@
     "Posted": "Voucher posted successfully",
     "MustBalance": "Cannot post an unbalanced journal voucher",
     "NeedLines": "Add at least one line",
-    "ConfirmPost": "Post this voucher? It cannot be edited after posting."
+    "ConfirmPost": "Post this voucher? It cannot be edited after posting.",
+    "LoadChequeBatch": "Load batch",
+    "SaveChequeBatch": "Save batch",
+    "DeleteChequeBatch": "Delete batch",
+    "ChequeBatchSaved": "Cheque batch saved successfully.",
+    "ChequeBatchLoaded": "Cheque batch loaded successfully.",
+    "ConfirmChequeBatchDelete": "Move this draft cheque batch to the Recycle Bin? It can be restored later.",
+    "ChequeBatchDeleted": "Cheque batch moved to the Recycle Bin.",
+    "AddChequeLine": "Add cheque",
+    "ChequeBatchCode": "Batch code"
   },
   "CustCard": {
     "Title": "Customer & Supplier Card",
