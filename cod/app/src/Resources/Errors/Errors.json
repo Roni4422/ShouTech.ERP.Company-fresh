@@ -1432,5 +1432,59 @@
     "severity": "Error",
     "catalogRef": "COMPANY_RESTORE.RESTORE.002",
     "location": "COMPANY_RESTORE.RESTORE"
+  },
+  "COM-EDIT-001": {
+    "type": "System",
+    "name": "CompanyEditLoadFailed",
+    "message": "Company details could not be loaded for editing. Check the application log for details.",
+    "messageKey": "Errors.COM-EDIT-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.EDIT.LOAD.001",
+    "location": "COMPANY.EDIT.LOAD"
+  },
+  "COM-SAVE-001": {
+    "type": "System",
+    "name": "CompanyProfileSaveFailed",
+    "message": "The company profile was saved to the local index, but the database update failed. Verify the active database and retry.",
+    "messageKey": "Errors.COM-SAVE-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.PROFILE.SAVE.001",
+    "location": "COMPANY.PROFILE.SAVE"
+  },
+  "COM-INDEX-DELETE-001": {
+    "type": "System",
+    "name": "CompanyIndexRemovalFailed",
+    "message": "The company could not be removed from the local index. Check the application log for details.",
+    "messageKey": "Errors.COM-INDEX-DELETE-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.INDEX.DELETE.001",
+    "location": "COMPANY.INDEX.DELETE"
+  },
+  "COM-DELETE-001": {
+    "type": "System",
+    "name": "CompanySoftDeleteFailed",
+    "message": "The company was not deleted from the database. It remains in the company list. Check the application log for details.",
+    "messageKey": "Errors.COM-DELETE-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.DELETE.001",
+    "location": "COMPANY.DELETE"
+  },
+  "COM-REINDEX-001": {
+    "type": "System",
+    "name": "CompanyReindexFailed",
+    "message": "The company index could not be rebuilt. Check the application log for details.",
+    "messageKey": "Errors.COM-REINDEX-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.REINDEX.001",
+    "location": "COMPANY.REINDEX"
+  },
+  "COM-DEFAULT-001": {
+    "type": "System",
+    "name": "CompanyDefaultUpdateFailed",
+    "message": "The default company setting could not be updated. Check the application log for details.",
+    "messageKey": "Errors.COM-DEFAULT-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.DEFAULT.001",
+    "location": "COMPANY.DEFAULT"
   }
 }
