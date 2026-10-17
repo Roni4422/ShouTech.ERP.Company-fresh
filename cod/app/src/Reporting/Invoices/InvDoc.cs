@@ -74,6 +74,7 @@ public sealed class InvDoc
     public int? WarehouseId { get; set; }
     public int? TargetWarehouseId { get; set; }
     public string CurrencyCode { get; set; } = "SAR";
+    public string PaymentMethod { get; set; } = "Cash";
     public decimal ExchangeRate { get; set; } = 1m;
     public string? TaxCode { get; set; }
     public decimal DefaultTaxRate { get; set; }
