@@ -1487,26 +1487,10 @@ namespace ShouTech.App.Views
                         $"{result.Message}");
 
                     MessageBox.Show(
-                        Msg(
-                            $"لم يتم إنشاء الشركة.\n\n" +
-                            $"{result.Message}\n\n" +
-                            "راجع البيانات أو إعدادات الاتصال " +
-                            "ثم حاول مرة أخرى.",
-
-                            $"Company was not created.\n\n" +
-                            $"{result.Message}\n\n" +
-                            "Review the data or connection settings " +
-                            "and try again.",
-
-                            $"La société n'a pas été créée.\n\n" +
-                            $"{result.Message}\n\n" +
-                            "Vérifiez les données ou les paramètres " +
-                            "de connexion, puis réessayez.",
-
-                            $"Şirket oluşturulamadı.\n\n" +
-                            $"{result.Message}\n\n" +
-                            "Verileri veya bağlantı ayarlarını " +
-                            "kontrol edip tekrar deneyin."),
+                        ErrorCatalog.Get(
+                            string.IsNullOrWhiteSpace(result.ErrorCode)
+                                ? ErrorCodes.CompanyCreationFailed
+                                : result.ErrorCode),
                         "ShouTech ERP",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -1521,18 +1505,7 @@ namespace ShouTech.App.Views
                     ex);
 
                 MessageBox.Show(
-                    Msg(
-                        "تعذر إنشاء الشركة بسبب خطأ غير متوقع. " +
-                        "تم تسجيل التفاصيل للمراجعة.",
-
-                        "Company could not be created due to an " +
-                        "unexpected error. Details were logged for review.",
-
-                        "Impossible de créer la société en raison " +
-                        "d'une erreur inattendue. Les détails ont été enregistrés.",
-
-                        "Beklenmeyen bir hata nedeniyle şirket " +
-                        "oluşturulamadı. Ayrıntılar incelenmek üzere kaydedildi."),
+                    ErrorCatalog.Get(ErrorCodes.CompanyCreationFailed),
                     "ShouTech ERP",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
