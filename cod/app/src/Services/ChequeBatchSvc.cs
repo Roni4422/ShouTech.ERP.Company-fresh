@@ -188,7 +188,7 @@ public static class ChequeBatchSvc
                     """;
                 Add(insert, "@id", FormatId(batchId));
                 Add(insert, "@company", companyId);
-                AddBatch(insert, batch);
+                AddBatch(insert, batch, includeCode: true);
                 Add(insert, "@isActive", true);
                 Add(insert, "@isDeleted", false);
                 Add(insert, "@createdAt", now);
@@ -210,7 +210,7 @@ public static class ChequeBatchSvc
                     """;
                 Add(update, "@company", companyId);
                 Add(update, "@id", FormatId(batchId));
-                AddBatch(update, batch);
+                AddBatch(update, batch, includeCode: false);
                 Add(update, "@modifiedAt", now);
                 Add(update, "@modifiedBy", actor);
                 if (await update.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) != 1)
@@ -423,9 +423,10 @@ public static class ChequeBatchSvc
         throw new ChequeBatchException(ErrorCodes.ChequeContextFailed, "The active company identifier is invalid.");
     }
 
-    private static void AddBatch(DbCommand command, ChequeBatchRecord batch)
+    private static void AddBatch(DbCommand command, ChequeBatchRecord batch, bool includeCode)
     {
-        Add(command, "@code", batch.Code.Trim());
+        if (includeCode)
+            Add(command, "@code", batch.Code.Trim());
         Add(command, "@batchDate", DateValue(batch.BatchDate));
         Add(command, "@cashBoxCode", batch.CashBoxCode.Trim());
         Add(command, "@currencyCode", batch.CurrencyCode.Trim().ToUpperInvariant());
