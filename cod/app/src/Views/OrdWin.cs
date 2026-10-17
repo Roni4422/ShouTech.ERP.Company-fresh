@@ -42,7 +42,7 @@ public sealed class OrdWin : BaseWin
         MessageBox.Show(
             this,
             $"[{definition.Code}] {definition.Message}\n{context}",
-            "العملية غير متاحة",
+            "Operation Unavailable",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
@@ -71,8 +71,8 @@ public sealed class OrdWin : BaseWin
 
         MessageBox.Show(
             this,
-            $"[{definition.Code}] {definition.Message}\n{context}\nلم يتم حفظ أي بيانات.",
-            "العملية غير متاحة",
+            $"[{definition.Code}] {definition.Message}\n{context}\nNo data was saved.",
+            "Operation Unavailable",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
