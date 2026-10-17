@@ -38,7 +38,7 @@ public sealed class BankRepository : IBankRepository
         command.Parameters.Add(parameter);
     }
 
-    private static string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
+    private string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
 
     private static DbCommand CreateCommand(DbConnection connection, DbTransaction? transaction, string commandText)
     {
@@ -478,14 +478,14 @@ public sealed class BankRepository : IBankRepository
         return Convert.ToInt32(await command.ExecuteScalarAsync(ct).ConfigureAwait(false), CultureInfo.InvariantCulture);
     }
 
-    private BankSnapshot MapBankSnapshot(IDataReader reader)
+    private BankSnapshot MapBankSnapshot(DbDataReader reader)
     {
         var bankId = Guid.Parse(Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture)!);
         var companyId = Guid.Parse(Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture)!);
         var code = reader.GetString(2);
         var name = reader.GetString(3);
         var type = (BankType)reader.GetInt32(4);
-        var glAccountId = reader.IsDBNull(5) ? null : Guid.Parse(Convert.ToString(reader.GetValue(5), CultureInfo.InvariantCulture)!);
+        Guid? glAccountId = reader.IsDBNull(5) ? null : Guid.Parse(Convert.ToString(reader.GetValue(5), CultureInfo.InvariantCulture)!);
         var accountNumber = reader.GetString(6);
         var address = reader.GetString(7);
         var phone = reader.GetString(8);
@@ -494,11 +494,11 @@ public sealed class BankRepository : IBankRepository
         var createdAt = _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(11)
             : DateTime.Parse(Convert.ToString(reader.GetValue(11), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var createdBy = reader.IsDBNull(12) ? null : Guid.Parse(Convert.ToString(reader.GetValue(12), CultureInfo.InvariantCulture)!);
-        var modifiedAt = reader.IsDBNull(13) ? null : _provider == "PostgreSQL"
+        Guid? createdBy = reader.IsDBNull(12) ? null : Guid.Parse(Convert.ToString(reader.GetValue(12), CultureInfo.InvariantCulture)!);
+        DateTime? modifiedAt = reader.IsDBNull(13) ? null : _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(13)
             : DateTime.Parse(Convert.ToString(reader.GetValue(13), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var modifiedBy = reader.IsDBNull(14) ? null : Guid.Parse(Convert.ToString(reader.GetValue(14), CultureInfo.InvariantCulture)!);
+        Guid? modifiedBy = reader.IsDBNull(14) ? null : Guid.Parse(Convert.ToString(reader.GetValue(14), CultureInfo.InvariantCulture)!);
 
         return new BankSnapshot(
             bankId,
@@ -542,22 +542,6 @@ public static class BankRepositoryExtensions
         if (snapshot == null)
             return null;
 
-        return new Bank(
-            snapshot.CompanyId,
-            snapshot.Code,
-            snapshot.Name,
-            snapshot.Type,
-            snapshot.GlAccountId,
-            snapshot.AccountNumber,
-            snapshot.Address,
-            snapshot.Phone,
-            snapshot.IsActive)
-        {
-            Id = snapshot.Id,
-            CreatedAt = snapshot.CreatedAt,
-            CreatedBy = snapshot.CreatedBy,
-            ModifiedAt = snapshot.ModifiedAt,
-            ModifiedBy = snapshot.ModifiedBy
-        };
+        return Bank.Rehydrate(snapshot);
     }
 }
