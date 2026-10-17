@@ -244,7 +244,7 @@ public static class RecycleBinSvc
                 $"UPDATE {Quote(item.TableName)} SET {string.Join(", ", assignments)} " +
                 $"WHERE {string.Join(" AND ", predicates)}";
 
-            AddParameter(command, "@primaryKey", CoercePrimaryKey(item.PrimaryKeyValue));
+            AddParameter(command, "@primaryKey", CoercePrimaryKey(item.PrimaryKeyValue, connection is NpgsqlConnection));
 
             var affected = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             if (affected <= 0)
@@ -333,14 +333,50 @@ public static class RecycleBinSvc
                 predicates.Add($"{Quote(statusColumn!)} = @draftStatus");
                 AddParameter(command, "@draftStatus", "Draft");
             }
+            AddParameter(command, "@primaryKey", CoercePrimaryKey(
+                item.PrimaryKeyValue, connection is NpgsqlConnection));
+
+            // Check the full tenant/deleted/draft predicates before deleting any dependent rows.
+            command.CommandText =
+                $"SELECT 1 FROM {Quote(item.TableName)} WHERE {string.Join(" AND ", predicates)} LIMIT 1";
+            var eligible = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            if (eligible is null or DBNull)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                return Failed(item, "No matching bin row was found to purge.");
+            }
+
+            // Cheque batches own line-version history with an FK that intentionally does not cascade.
+            // Purging a draft parent must remove all child versions in the same transaction or retain both.
+            if (item.TableName.Equals("cheque_batches", StringComparison.OrdinalIgnoreCase))
+            {
+                var tables = await GetTableNamesAsync(connection, cancellationToken).ConfigureAwait(false);
+                if (!tables.Contains("cheque_batch_lines"))
+                {
+                    await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                    return Failed(item, "Cheque-batch detail schema is missing; permanent deletion was blocked.");
+                }
+
+                await using var deleteLines = connection.CreateCommand();
+                deleteLines.Transaction = transaction;
+                deleteLines.CommandText = $"""
+                    DELETE FROM {Quote("cheque_batch_lines")}
+                    WHERE {Quote("company_id")}=@companyValue AND {Quote("batch_id")}=@batchId;
+                    """;
+                AddParameter(deleteLines, "@companyValue", companyValue);
+                AddParameter(deleteLines, "@batchId", CoercePrimaryKey(
+                    item.PrimaryKeyValue, connection is NpgsqlConnection));
+                await deleteLines.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             command.CommandText =
                 $"DELETE FROM {Quote(item.TableName)} WHERE {string.Join(" AND ", predicates)}";
-
-            AddParameter(command, "@primaryKey", CoercePrimaryKey(item.PrimaryKeyValue));
-
             var affected = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            if (affected <= 0)
-                return Failed(item, "No matching bin row was found to purge.");
+            if (affected != 1)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                return Failed(item, "The bin row changed during purge; the transaction was rolled back.");
+            }
 
             await WriteAuditEventAsync(connection, transaction, item, "PERMANENT_DELETE",
                 AppState.CurrentUser?.Username ?? Environment.UserName,
@@ -795,12 +831,12 @@ public static class RecycleBinSvc
     private static RecycleBinMutationResult Failed(RecycleBinItem item, string message)
         => new() { Item = item, Succeeded = false, ErrorMessage = message };
 
-    private static object CoercePrimaryKey(string value)
+    private static object CoercePrimaryKey(string value, bool isPostgreSql)
     {
         if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var int64))
             return int64;
         if (Guid.TryParse(value, out var guid))
-            return guid.ToString("D", CultureInfo.InvariantCulture);
+            return isPostgreSql ? guid : guid.ToString("D", CultureInfo.InvariantCulture);
         return value;
     }
 
