@@ -43,7 +43,7 @@ public sealed class CshWin : BaseWin
         MessageBox.Show(
             this,
             $"[{definition.Code}] {definition.Message}\n{context}",
-            "العملية غير متاحة",
+            "Operation Unavailable",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
