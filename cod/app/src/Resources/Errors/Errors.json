@@ -1522,5 +1522,14 @@
     "severity": "Error",
     "catalogRef": "COMPANY.CREATE.WAREHOUSE.001",
     "location": "COMPANY.CREATE.WAREHOUSE"
+  },
+  "CO-CREATE-DB-001": {
+    "type": "System",
+    "name": "CompanyDatabaseRegistrationFailed",
+    "message": "The company was saved to the local registry, but database registration failed. Do not use this company for accounting until the database registration is repaired. Check the application log.",
+    "messageKey": "Errors.CO-CREATE-DB-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.CREATE.DATABASE.001",
+    "location": "COMPANY.CREATE.DATABASE"
   }
 }
