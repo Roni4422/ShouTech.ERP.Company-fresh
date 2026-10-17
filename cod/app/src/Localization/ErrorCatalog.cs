@@ -70,6 +70,12 @@ namespace ShouTech.App.Localization
         public const string ChartOfAccountsImportFailed = "COA-IMP-001";
         public const string ChartOfAccountsEncryptedImportFailed = "COA-IMP-002";
         public const string CategoryCardUnknownFailure = "CAT-000";
+        public const string BarcodeGenerationLoadFailed = "BCG-LOAD-001";
+        public const string BarcodeLabelPrintFailed = "BCG-PRINT-001";
+        public const string StartupSecurityPipelineFailed = "SPL-START-001";
+        public const string StartupCompanyCheckFailed = "SPL-START-002";
+        public const string StartupCompanyFlowFailed = "SPL-START-003";
+        public const string StartupOptionalCheckFailed = "SPL-START-004";
         public const string CategoryCardSaveFailed = "CAT-001";
         public const string CategoryCardDeleteFailed = "CAT-002";
         public const string CategoryCardLoadFailed = "CAT-003";
