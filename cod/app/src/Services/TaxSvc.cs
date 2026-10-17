@@ -151,7 +151,7 @@ public static class TaxSvc
                 SELECT material_id, COALESCE(NULLIF(pos_name,''), NULLIF(name_ar,''), NULLIF(name_en,''), code),
                        COALESCE(price_retail, price_list, 0),
                        COALESCE(default_unit, unit1, ''),
-                       COALESCE(tax_rate, 0)
+                       tax_rate, is_taxable, is_zero_rated
                 FROM materials
                 WHERE company_id=$c
                   AND {activeMaterialPredicate}
@@ -174,16 +174,33 @@ public static class TaxSvc
             Add(cmd, "$like", "%" + code.Trim() + "%");
             using var reader = cmd.ExecuteReader();
             if (!reader.Read()) return null;
+            var configuredTaxRate = reader.IsDBNull(4)
+                ? 0m
+                : Convert.ToDecimal(reader.GetValue(4), CultureInfo.InvariantCulture);
+            var isTaxable = reader.IsDBNull(5)
+                || Convert.ToBoolean(reader.GetValue(5), CultureInfo.InvariantCulture);
+            var isZeroRated = !reader.IsDBNull(6)
+                && Convert.ToBoolean(reader.GetValue(6), CultureInfo.InvariantCulture);
+            var effectiveTaxRate = !isTaxable || isZeroRated
+                ? 0m
+                : configuredTaxRate > 0m ? configuredTaxRate : GetDefaultRate();
+
             return (
                 Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture),
                 Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture) ?? "",
                 Convert.ToDecimal(reader.GetValue(2), CultureInfo.InvariantCulture),
                 Convert.ToString(reader.GetValue(3), CultureInfo.InvariantCulture) ?? "",
-                Convert.ToDecimal(reader.GetValue(4), CultureInfo.InvariantCulture));
+                effectiveTaxRate);
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(
+                ShouTech.App.Localization.ErrorCodes.TaxConfigurationLoadFailed);
+            AppHost.Logging?.LogError(
+                "TaxService",
+                $"[{definition.Code}] {definition.Name} | Operation=ResolveMaterial | Company={AppState.CurrentCompanyCode ?? "(none)"}",
+                ex);
+            throw new InvalidOperationException($"[{definition.Code}] {definition.Message}", ex);
         }
     }
 
