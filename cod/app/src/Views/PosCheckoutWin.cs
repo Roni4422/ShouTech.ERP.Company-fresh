@@ -36,7 +36,7 @@ public sealed class PosCheckoutWin : BaseWin
             Kind = InvDocKind.PosSale,
             DocNo = InvRepo.NextDocNo(InvDocKind.PosSale),
             DocDate = DateTime.Today,
-            CurrencyCode = "SAR",
+            CurrencyCode = InvRepo.GetCompanyCurrencyCode(),
             DefaultTaxRate = TaxSvc.GetDefaultRate(),
             Notes = notes,
             Lines = lines.Select(line => new InvLine
