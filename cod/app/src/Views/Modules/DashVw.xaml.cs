@@ -30,11 +30,13 @@ namespace ShouTech.App.Views.Modules
                 PendingCount.Text =
                     AppFormat.FormatNumber(await data.GetTotalPendingApprovalsAsync());
             }
-            catch
+            catch (System.Exception ex)
             {
                 CustomersCount.Text = "—";
                 ProductsCount.Text = "—";
                 PendingCount.Text = "—";
+                AppHost.Logging?.LogError("Dashboard", "Dashboard data could not be loaded from the active company database.", ex);
+                AppHost.Logging?.LogOperation("Dashboard", "LoadFailed", "Dashboard metrics unavailable; placeholders displayed instead of sample data.");
             }
         }
     }
