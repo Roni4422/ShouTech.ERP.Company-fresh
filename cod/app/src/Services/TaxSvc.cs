@@ -58,10 +58,13 @@ public static class TaxSvc
         {
             using var connection = Open(cs);
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = """
+            var activePredicate = DatabaseRuntime.IsPostgreSql()
+                ? "COALESCE(is_active, TRUE) = TRUE"
+                : "COALESCE(is_active, 1) = 1";
+            cmd.CommandText = $"""
                 SELECT tax_code, COALESCE(tax_name, tax_code), COALESCE(rate, 0), COALESCE(country_code, '')
                 FROM tax_codes
-                WHERE COALESCE(is_active, 1) = 1
+                WHERE {activePredicate}
                 ORDER BY tax_code;
                 """;
             using var reader = cmd.ExecuteReader();
@@ -178,21 +181,20 @@ public static class TaxSvc
         if (string.IsNullOrWhiteSpace(cs)) return null;
         using var connection = Open(cs);
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = """
+        var activePredicate = DatabaseRuntime.IsPostgreSql()
+            ? "COALESCE(is_active, TRUE) = TRUE"
+            : "COALESCE(is_active, 1) = 1";
+        var defaultPredicate = DatabaseRuntime.IsPostgreSql()
+            ? "COALESCE(is_default, FALSE) = TRUE"
+            : "COALESCE(is_default, 0) = 1";
+        cmd.CommandText = $"""
             SELECT rate FROM tax_codes
-            WHERE COALESCE(is_active,1)=1 AND COALESCE(is_default,0)=1
+            WHERE {activePredicate} AND {defaultPredicate}
             LIMIT 1;
             """;
-        try
-        {
-            var v = cmd.ExecuteScalar();
-            if (v is null or DBNull) return null;
-            return Convert.ToDecimal(v, CultureInfo.InvariantCulture);
-        }
-        catch
-        {
-            return null;
-        }
+        var v = cmd.ExecuteScalar();
+        if (v is null or DBNull) return null;
+        return Convert.ToDecimal(v, CultureInfo.InvariantCulture);
     }
 
     private static string GetCompanyCountry()
