@@ -252,10 +252,10 @@ public sealed class CstCard : BaseWin
     {
         if (!decimal.TryParse(_txtCreditLimit.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var creditLimit)
             && !decimal.TryParse(_txtCreditLimit.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out creditLimit))
-            throw new CustomerCardException("CUS-VAL-001", "Enter a valid numeric credit limit.");
+            throw new CustomerCardException(ShouTech.App.Localization.ErrorCodes.CustomerValidationFailed, "Enter a valid numeric credit limit.");
         if (!int.TryParse(_txtCreditDays.Text, NumberStyles.Integer, CultureInfo.CurrentCulture, out var creditDays)
             && !int.TryParse(_txtCreditDays.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out creditDays))
-            throw new CustomerCardException("CUS-VAL-001", "Enter a whole number for credit days.");
+            throw new CustomerCardException(ShouTech.App.Localization.ErrorCodes.CustomerValidationFailed, "Enter a whole number for credit days.");
 
         return new CustomerCardRecord
         {
@@ -293,7 +293,7 @@ public sealed class CstCard : BaseWin
         }
         catch (Exception ex)
         {
-            ReportCustomerFailure(ex, "CUS-DB-002", "Save");
+            ReportCustomerFailure(ex, ShouTech.App.Localization.ErrorCodes.CustomerSaveFailed, "Save");
         }
     }
 
@@ -336,7 +336,7 @@ public sealed class CstCard : BaseWin
         }
         catch (Exception ex)
         {
-            ReportCustomerFailure(ex, "CUS-DB-003", "Load");
+            ReportCustomerFailure(ex, ShouTech.App.Localization.ErrorCodes.CustomerLoadFailed, "Load");
         }
         finally
         {
@@ -348,7 +348,7 @@ public sealed class CstCard : BaseWin
     {
         if (string.IsNullOrWhiteSpace(_txtCode.Text))
         {
-            ReportCustomerFailure(new CustomerCardException("CUS-VAL-001", "Enter a customer code first."), "CUS-DEL-001", "Delete");
+            ReportCustomerFailure(new CustomerCardException(ShouTech.App.Localization.ErrorCodes.CustomerValidationFailed, "Enter a customer code first."), ShouTech.App.Localization.ErrorCodes.CustomerDeleteFailed, "Delete");
             return;
         }
 
@@ -363,8 +363,8 @@ public sealed class CstCard : BaseWin
             if (!deleted)
             {
                 ReportCustomerFailure(
-                    new CustomerCardException("CUS-DEL-002", "The customer was not found in the active company or has already been deleted."),
-                    "CUS-DEL-001", "Delete");
+                    new CustomerCardException(ShouTech.App.Localization.ErrorCodes.CustomerDeleteNotFound, "The customer was not found in the active company or has already been deleted."),
+                    ShouTech.App.Localization.ErrorCodes.CustomerDeleteFailed, "Delete");
                 return;
             }
 
@@ -373,13 +373,13 @@ public sealed class CstCard : BaseWin
         }
         catch (Exception ex)
         {
-            ReportCustomerFailure(ex, "CUS-DEL-001", "Delete");
+            ReportCustomerFailure(ex, ShouTech.App.Localization.ErrorCodes.CustomerDeleteFailed, "Delete");
         }
     }
 
     private void ReportCustomerNotFound()
     {
-        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve("CUS-VAL-003");
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(ShouTech.App.Localization.ErrorCodes.CustomerNotFound);
         AppHost.Logging?.LogOperation("CustomerCard", "LoadNotFound",
             $"Code={_txtCode.Text.Trim()}; Company={AppState.CurrentCompanyCode}");
         MessageBox.Show(this, $"[{definition.Code}] {definition.Message}", Title,
