@@ -63,6 +63,7 @@ public sealed class InvoiceWin : BaseWin
         BuildUi();
         _doc.DocNo = InvRepo.NextDocNo(kind);
         _txtDocNo.Text = _doc.DocNo;
+        _txtCurrency.Text = _doc.CurrencyCode;
         _txtTaxRate.Text = _doc.DefaultTaxRate.ToString("0.##", CultureInfo.InvariantCulture);
         _lines.Add(new LineVm { TaxRate = _doc.DefaultTaxRate });
         _txtPartyCode.LostFocus += (_, _) => ResolveParty();
@@ -397,7 +398,7 @@ public sealed class InvoiceWin : BaseWin
         _doc.DocDate = _dtDate.SelectedDate ?? DateTime.Today;
         _doc.PartyCode = _txtPartyCode.Text.Trim();
         _doc.PartyName = _txtPartyName.Text.Trim();
-        _doc.CurrencyCode = string.IsNullOrWhiteSpace(_txtCurrency.Text) ? "SAR" : _txtCurrency.Text.Trim().ToUpperInvariant();
+        _doc.CurrencyCode = string.IsNullOrWhiteSpace(_txtCurrency.Text) ? InvRepo.GetCompanyCurrencyCode() : _txtCurrency.Text.Trim().ToUpperInvariant();
         _doc.DefaultTaxRate = ParseDec(_txtTaxRate.Text, TaxSvc.GetDefaultRate());
         _doc.Notes = _txtNotes.Text;
         _doc.Lines = _lines.Select(l => l.ToLine()).Where(l => !string.IsNullOrWhiteSpace(l.Description) || l.Qty != 0).ToList();
