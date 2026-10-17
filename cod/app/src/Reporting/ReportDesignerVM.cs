@@ -200,7 +200,11 @@ namespace ShouTech.App.Reporting
                 }
                 catch (FormulaException ex)
                 {
-                    StatusMessage = $"خطأ في معادلة العمود «{col.CaptionAR}»: {ex.Message}";
+                    StatusMessage = ErrorCatalog.Get("RPT-FORMULA-001");
+                    AppHost.Logging?.LogError(
+                        "ReportDesigner",
+                        $"RPT-FORMULA-001: Formula compilation failed for field '{col.FieldKey}'.",
+                        ex);
                 }
             }
 
@@ -307,7 +311,7 @@ namespace ShouTech.App.Reporting
         {
             if (!IsOwner)
             {
-                StatusMessage = "لا يمكنك تعديل هذا التقرير — استخدم «حفظ باسم».";
+                StatusMessage = ErrorCatalog.Get("RPT-OWNER-001");
                 return;
             }
 
@@ -343,7 +347,7 @@ namespace ShouTech.App.Reporting
         {
             if (string.IsNullOrWhiteSpace(newName))
             {
-                StatusMessage = "أدخل اسماً للتقرير الجديد.";
+                StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-004");
                 return;
             }
 
@@ -387,7 +391,7 @@ namespace ShouTech.App.Reporting
                 .FirstOrDefault(g => g.Count() > 1);
             if (duplicate is not null)
             {
-                StatusMessage = $"مفتاح عمود مكرر: {duplicate.Key}.";
+                StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-001");
                 return false;
             }
 
@@ -396,12 +400,12 @@ namespace ShouTech.App.Reporting
             {
                 if (string.IsNullOrWhiteSpace(col.FormulaText))
                 {
-                    StatusMessage = $"العمود «{col.CaptionAR}» معادلته فارغة.";
+                    StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-002");
                     return false;
                 }
                 if (!CompiledFormula.TryCompile(col.FormulaText, out var err))
                 {
-                    StatusMessage = $"معادلة العمود «{col.CaptionAR}» غير صالحة: {err}";
+                    StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-003");
                     return false;
                 }
             }
