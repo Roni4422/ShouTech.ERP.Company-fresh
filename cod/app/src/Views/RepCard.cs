@@ -347,7 +347,13 @@ public sealed class RepCard : BaseWin
             var repository = ShouTech.App.Services.AppHost.RepStore
                 ?? throw new InvalidOperationException("\u062e\u062f\u0645\u0629 \u0633\u0644\u0627\u0645\u0627\u0629 \u0648\u0623\u0633\u0648\u0631 \u0627\u0644\u0628\u064e\u064a\u0627\u0646\u0627\u062a \u0645\u0640\u0646 \u0645\u0647\u064e\u0627\u0629.");
 
-            var deleted = await repository.DeleteAsync(_currentRepId.Value, actor, "Deleted via UI").ConfigureAwait(true);
+            var companyCode = user?.CompanyId;
+            if (string.IsNullOrWhiteSpace(companyCode))
+                throw new InvalidOperationException("Select an active company before deleting a representative.");
+
+            var companyId = await repository.ResolveCompanyIdAsync(companyCode).ConfigureAwait(true);
+            var deleted = await repository.DeleteAsync(
+                _currentRepId.Value, companyId, actor, "Deleted via UI").ConfigureAwait(true);
             if (deleted)
             {
                 ResetCard();
