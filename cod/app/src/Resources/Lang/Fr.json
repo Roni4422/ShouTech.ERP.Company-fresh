@@ -1334,5 +1334,13 @@
     "ApprovalWorkflow": "Flux d'approbation",
     "Save": "Enregistrer",
     "Saved": "Paramètres enregistrés avec succès"
+  },
+  "Lkp": {
+    "Code": "Code",
+    "NameAr": "Nom (arabe)",
+    "NameEn": "Nom (anglais)",
+    "Active": "Actif",
+    "Delete": "Supprimer la ligne",
+    "Saved": "Enregistré avec succès"
   }
 }

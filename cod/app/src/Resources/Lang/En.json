@@ -1665,5 +1665,13 @@
     "ApprovalWorkflow": "Approval Workflow",
     "Save": "Save",
     "Saved": "Settings saved successfully"
+  },
+  "Lkp": {
+    "Code": "Code",
+    "NameAr": "Name (Arabic)",
+    "NameEn": "Name (English)",
+    "Active": "Active",
+    "Delete": "Delete row",
+    "Saved": "Saved successfully"
   }
 }

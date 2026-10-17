@@ -17,15 +17,18 @@ public class LangTests
     }
 
     [Theory]
-    [InlineData("Ar")]
-    [InlineData("Fr")]
-    [InlineData("Tr")]
-    public void EnterpriseKeys_ShouldExistInAllLanguages(string lang)
+    [InlineData("Ar", "Enterprise")]
+    [InlineData("Fr", "Enterprise")]
+    [InlineData("Tr", "Enterprise")]
+    [InlineData("Ar", "Lkp")]
+    [InlineData("Fr", "Lkp")]
+    [InlineData("Tr", "Lkp")]
+    public void NewKeys_ShouldExistInAllLanguages(string lang, string section)
     {
         string Keys(string l)
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Dir(), l + ".json")));
-            return string.Join(",", doc.RootElement.GetProperty("Enterprise").EnumerateObject().Select(p => p.Name));
+            return string.Join(",", doc.RootElement.GetProperty(section).EnumerateObject().Select(p => p.Name));
         }
         Assert.Equal(Keys("En"), Keys(lang));
     }

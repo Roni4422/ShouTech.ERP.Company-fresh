@@ -1334,5 +1334,13 @@
     "ApprovalWorkflow": "Onay İş Akışı",
     "Save": "Kaydet",
     "Saved": "Ayarlar başarıyla kaydedildi"
+  },
+  "Lkp": {
+    "Code": "Kod",
+    "NameAr": "Ad (Arapça)",
+    "NameEn": "Ad (İngilizce)",
+    "Active": "Aktif",
+    "Delete": "Satırı sil",
+    "Saved": "Başarıyla kaydedildi"
   }
 }

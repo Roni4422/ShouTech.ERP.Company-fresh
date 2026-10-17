@@ -34,7 +34,7 @@ public static class FeatSvc
         {
             using var connection = Open(cs);
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT feature_key, is_enabled FROM company_features WHERE company_id=@c;";
+            cmd.CommandText = "SELECT feature_key, is_enabled FROM company_features WHERE company_id=(SELECT company_id FROM companies WHERE company_code=@c);";
             Add(cmd, "@c", CompanyParam());
             using var r = cmd.ExecuteReader();
             while (r.Read())
@@ -58,7 +58,7 @@ public static class FeatSvc
             using var cmd = connection.CreateCommand();
             cmd.CommandText = """
                 INSERT INTO company_features (company_id, feature_key, is_enabled, modified_at, modified_by)
-                VALUES (@c, @k, @e, @t, @u)
+                VALUES ((SELECT company_id FROM companies WHERE company_code=@c), @k, @e, @t, @u)
                 ON CONFLICT (company_id, feature_key)
                 DO UPDATE SET is_enabled = excluded.is_enabled, modified_at = excluded.modified_at, modified_by = excluded.modified_by;
                 """;
@@ -75,11 +75,7 @@ public static class FeatSvc
         }
     }
 
-    private static object CompanyParam()
-    {
-        var id = AppState.CurrentCompanyCode ?? "";
-        return DatabaseRuntime.IsPostgreSql() && Guid.TryParse(id, out var g) ? g : id;
-    }
+    private static object CompanyParam() => AppState.CurrentCompanyCode ?? "";
 
     private static DbConnection Open(string connectionString)
     {
