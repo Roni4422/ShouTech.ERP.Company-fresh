@@ -31,6 +31,13 @@ namespace ShouTech.App.Views
         private const string ErrSearchFailed    = "CAT-004";
         private const string ErrImageFailed     = "CAT-005";
         private const string ErrRepoUnavailable = "CAT-006";
+        private const string ErrCodeRequired = "CAT-007";
+        private const string ErrNameRequired = "CAT-008";
+        private const string ErrCodeDuplicate = "CAT-009";
+        private const string ErrNoCardToPrint = "CAT-010";
+        private const string ErrSearchTextRequired = "CAT-011";
+        private const string ErrSearchNotFound = "CAT-012";
+        private const string ErrInitFailed = "CAT-013";
 
         private readonly List<MatRepo.MatGroupRec> _items = new();
         private readonly List<MatRepo.WarehouseRec> _warehouses = new();
@@ -63,8 +70,9 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("CategoryCard", "CAT-013: Category card window initialization failed.", ex);
                 MessageBox.Show(
-                    L("InitFailed", "Could not initialize the category card window.") + "\n\n" + ex.Message,
+                    ErrorCatalog.Get(ErrInitFailed),
                     L("Title", "Category Card"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -744,14 +752,14 @@ namespace ShouTech.App.Views
         {
             if (string.IsNullOrWhiteSpace(TxtCode?.Text))
             {
-                ShowToast(false, L("CodeRequired", "Item code is required."), ErrSaveFailed);
+                ShowToast(false, L("CodeRequired", "Item code is required."), ErrCodeRequired);
                 try { TxtCode?.Focus(); } catch { }
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(TxtName?.Text))
             {
-                ShowToast(false, L("NameRequired", "Item name is required."), ErrSaveFailed);
+                ShowToast(false, L("NameRequired", "Item name is required."), ErrNameRequired);
                 try { TxtName?.Focus(); } catch { }
                 return false;
             }
@@ -759,7 +767,7 @@ namespace ShouTech.App.Views
             var code = (TxtCode?.Text ?? string.Empty).Trim();
             if (IsCodeDuplicate(code, _isNew ? null : _current?.Id))
             {
-                ShowToast(false, L("CodeDuplicate", "Item code already exists."), ErrSaveFailed);
+                ShowToast(false, L("CodeDuplicate", "Item code already exists."), ErrCodeDuplicate);
                 try { TxtCode?.Focus(); } catch { }
                 return false;
             }
@@ -931,7 +939,7 @@ namespace ShouTech.App.Views
         {
             if (_current == null)
             {
-                ShowToast(false, L("NoCardToPrint", "No card to print."), ErrSaveFailed);
+                ShowToast(false, L("NoCardToPrint", "No card to print."), ErrNoCardToPrint);
                 return;
             }
 
@@ -982,7 +990,7 @@ namespace ShouTech.App.Views
             var term = (TxtSearch?.Text ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(term))
             {
-                ShowToast(false, L("SearchEmpty", "Enter search text (code or name)."), ErrSearchFailed);
+                ShowToast(false, L("SearchEmpty", "Enter search text (code or name)."), ErrSearchTextRequired);
                 return;
             }
 
@@ -1000,7 +1008,7 @@ namespace ShouTech.App.Views
                 }
                 else
                 {
-                    ShowToast(false, L("SearchNotFound", "No results found."), ErrSearchFailed);
+                    ShowToast(false, L("SearchNotFound", "No results found."), ErrSearchNotFound);
                 }
             }
             catch (Exception ex)
@@ -1014,6 +1022,22 @@ namespace ShouTech.App.Views
         /// </summary>
         private void ShowToast(bool success, string message, string? errorCode = null, string? detail = null)
         {
+            if (!success && !string.IsNullOrWhiteSpace(detail))
+            {
+                AppHost.Logging?.LogWarning(
+                    "CategoryCard",
+                    $"{errorCode ?? "CAT-000"}: {detail}");
+            }
+
+            if (!success)
+            {
+                message = ErrorCatalog.Get(
+                    string.IsNullOrWhiteSpace(errorCode)
+                        ? "CAT-000"
+                        : errorCode);
+                detail = null;
+            }
+
             try
             {
                 var toast = new Window
