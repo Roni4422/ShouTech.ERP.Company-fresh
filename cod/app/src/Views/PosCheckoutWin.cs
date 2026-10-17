@@ -221,7 +221,25 @@ public sealed class PosCheckoutWin : BaseWin
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, T("Common.Error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            const string errorCode = ShouTech.App.Localization.ErrorCodes.PosSalePostingFailed;
+            var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+            var context = $"Document={_doc.DocNo}; Company={AppState.CurrentCompanyCode ?? "unknown"}; User={AppState.CurrentUser?.Username ?? "unknown"}.";
+
+            AppHost.Logging?.LogError(
+                "PosSalePosting",
+                $"[{definition.Code}] {definition.Name} | {context}",
+                ex);
+            AppHost.Logging?.LogOperation(
+                "POS",
+                "SalePostingFailed",
+                $"Code={definition.Code} | {context}");
+
+            MessageBox.Show(
+                this,
+                $"[{definition.Code}] {definition.Message}",
+                T("Common.Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
             _complete.IsEnabled = true;
         }
     }
