@@ -128,6 +128,68 @@ def main() -> int:
     assets = db.execute("SELECT COALESCE(SUM(natural_amount),0) FROM v_posted_gl_lines WHERE account_type='ASSET'").fetchone()[0]
     eq = db.execute("SELECT COALESCE(SUM(natural_amount),0) FROM v_posted_gl_lines WHERE account_type IN ('LIABILITY','EQUITY')").fetchone()[0]
     assert assets == eq == -40, (assets, eq)
+
+    # --- Invoice posting (same SQL statements as GlPost.PostDocument; @name becomes :name for sqlite3) ---
+    def q(sql):
+        return sql.replace("@", ":")
+
+    db.execute("INSERT INTO companies(company_id, company_code, company_name_ar, company_name_en) VALUES ('c2','C2','ش','Co2')")
+    for aid, code, kind in [("c2rec", "1100", "ASSET"), ("c2inv", "1200", "ASSET"), ("c2tax", "2100", "LIABILITY"),
+                            ("c2rev", "4000", "REVENUE"), ("c2cog", "5000", "EXPENSE")]:
+        db.execute("INSERT INTO chart_of_accounts(account_id, company_id, account_code, account_name, account_type) VALUES (?, 'c2', ?, ?, ?)", (aid, code, code, kind))
+    db.execute("INSERT INTO fiscal_years(company_id, fiscal_year, database_name, start_date, end_date) VALUES ('c2', 2026, '', '2026-01-01', '2026-12-31')")
+    db.execute("INSERT INTO fiscal_periods(fiscal_period_id, company_id, fiscal_year_id, period_number, period_name, start_date, end_date) "
+               "SELECT 'c2p', company_id, fiscal_year_id, 1, '2026', '2026-01-01', '2026-12-31' FROM fiscal_years WHERE company_id='c2'")
+    try:
+        db.execute("INSERT INTO account_mappings(company_id, mapping_key, account_id) VALUES ('c2', 'BOGUS', 'c2rec')")
+        raise AssertionError("account_mappings accepted an unknown key")
+    except sqlite3.IntegrityError:
+        pass
+    for key, acc in [("RECEIVABLES", "c2rec"), ("SALES_REVENUE", "c2rev"), ("OUTPUT_TAX", "c2tax"),
+                     ("INVENTORY", "c2inv"), ("COST_OF_GOODS_SOLD", "c2cog")]:
+        db.execute("INSERT INTO account_mappings(company_id, mapping_key, account_id) VALUES ('c2', ?, ?)", (key, acc))
+    mapped = dict(db.execute(q("SELECT mapping_key, account_id FROM account_mappings WHERE company_id=@company"), {"company": "c2"}).fetchall())
+    assert len(mapped) == 5 and mapped["RECEIVABLES"] == "c2rec", mapped
+
+    period = db.execute(q("SELECT fp.fiscal_period_id FROM fiscal_periods fp JOIN fiscal_years fy ON fy.fiscal_year_id=fp.fiscal_year_id "
+                          "WHERE fp.company_id=@company AND @date BETWEEN fp.start_date AND fp.end_date AND fp.status='OPEN' AND fy.is_closed=0"),
+                        {"company": "c2", "date": "2026-03-10"}).fetchone()
+    assert period == ("c2p",), period
+    assert db.execute(q("SELECT fp.fiscal_period_id FROM fiscal_periods fp JOIN fiscal_years fy ON fy.fiscal_year_id=fp.fiscal_year_id "
+                        "WHERE fp.company_id=@company AND @date BETWEEN fp.start_date AND fp.end_date AND fp.status='OPEN' AND fy.is_closed=0"),
+                      {"company": "c2", "date": "2027-01-05"}).fetchone() is None
+
+    db.execute(q("INSERT INTO journal_entries (journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id, reference_number, currency_code, exchange_rate, document_number) "
+                 "VALUES (@id, @company, @date, @description, 0, @actor, @period, @reference, @currency, @rate, @documentNumber)"),
+               {"id": "inv1", "company": "c2", "date": "2026-03-10", "description": "SAL SAL-2026-0001", "actor": "u",
+                "period": "c2p", "reference": "SAL-2026-0001", "currency": "SAR", "rate": "1", "documentNumber": "GL:SAL:SAL-2026-0001"})
+    plan = [("c2rec", "23.0000", "0"), ("c2rev", "0", "20.0000"), ("c2tax", "0", "3.0000"), ("c2cog", "8.0000", "0"), ("c2inv", "0", "8.0000")]
+    for n, (acc, dr, cr) in enumerate(plan, 1):
+        db.execute(q("INSERT INTO journal_entry_lines (journal_entry_id, line_number, account_id, debit, credit, note) VALUES (@id, @line, @account, @debit, @credit, @note)"),
+                   {"id": "inv1", "line": n, "account": acc, "debit": dr, "credit": cr, "note": "n"})
+    db.execute(q("INSERT INTO journal_audit_events (journal_entry_id, event_type, actor, details) VALUES (@id, 1, @actor, @details)"),
+               {"id": "inv1", "actor": "u", "details": "Created"})
+    cur = db.execute(q("UPDATE journal_entries SET status=1, posted_by=@actor, posted_at=CURRENT_TIMESTAMP WHERE journal_entry_id=@id AND status=0"),
+                     {"id": "inv1", "actor": "u"})
+    assert cur.rowcount == 1
+    db.execute(q("INSERT INTO journal_audit_events (journal_entry_id, event_type, actor, details) VALUES (@id, 2, @actor, @details)"),
+               {"id": "inv1", "actor": "u", "details": "Posted"})
+    # The posting trigger must reject a second entry that uses an account from another company.
+    try:
+        db.execute("INSERT INTO journal_entries(journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id) VALUES ('bad','c2','2026-03-11','x',0,'u','c2p')")
+        db.execute("INSERT INTO journal_entry_lines(journal_entry_id, line_number, account_id, debit, credit) VALUES ('bad',1,'cash',5,0),('bad',2,'c2rev',0,5)")
+        db.execute("UPDATE journal_entries SET status=1 WHERE journal_entry_id='bad'")
+        raise AssertionError("posting accepted another company's account")
+    except sqlite3.IntegrityError:
+        pass
+    rev = db.execute("SELECT SUM(natural_amount) FROM v_posted_gl_lines WHERE company_id='c2' AND account_code='4000'").fetchone()[0]
+    assert rev == 20, rev
+    # Document numbers are unique per company, so the same invoice cannot be posted twice.
+    try:
+        db.execute("INSERT INTO journal_entries(journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id, document_number) VALUES ('dup','c2','2026-03-10','x',0,'u','c2p','GL:SAL:SAL-2026-0001')")
+        raise AssertionError("duplicate document number accepted")
+    except sqlite3.IntegrityError:
+        pass
     print("OK: financial report view verified against all SQLite migrations")
     return 0
 

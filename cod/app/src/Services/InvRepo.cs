@@ -310,6 +310,10 @@ public static class InvRepo
             led.ExecuteNonQuery();
         }
 
+        // General ledger: when the company has account mappings, post the accounting entry in this
+        // transaction. Missing mappings or a closed fiscal period abort the post and keep the draft.
+        GlPost.PostDocument(connection, tx, doc, docId, userId);
+
         // Inventory effects (same transaction as ledger + status).
         StkPost.ApplyDocument(connection, tx, doc);
 

@@ -1,5 +1,23 @@
 # Chart of Accounts, Fiscal Periods, and Year-End Controls
 
+## Invoice posting to the general ledger
+
+Posting a sales or purchase document now also creates a posted journal entry, in the same database transaction as the document status, party ledger and stock movements (`GlPost.PostDocument`, called from `InvRepo.Post`). The entry is linked to the document through its document number `GL:<kind>:<document no>` and its reference number.
+
+| Document | Debit | Credit |
+| --- | --- | --- |
+| Sales invoice | Receivables; cost of goods sold | Sales revenue; output tax; inventory |
+| POS sale | Cash; cost of goods sold | Sales revenue; output tax; inventory |
+| Sales return | Sales returns (or sales revenue); output tax; inventory | Receivables; cost of goods sold |
+| Purchase invoice | Inventory; input tax | Payables |
+| Purchase return | Payables | Inventory; input tax |
+
+- **Account mappings:** the `account_mappings` table (migration 027) maps `RECEIVABLES`, `PAYABLES`, `CASH`, `SALES_REVENUE`, `SALES_RETURNS`, `OUTPUT_TAX`, `INPUT_TAX`, `INVENTORY` and `COST_OF_GOODS_SOLD` to postable accounts of the company. A company with no rows keeps the old behaviour and no entry is created. Once any row exists, every account a document needs must be mapped, otherwise posting is refused and the document stays a draft. `SALES_RETURNS` is optional and falls back to `SALES_REVENUE`.
+- **Cost of goods:** sales and sales returns use the current average cost in `material_stock_balances` for the line's warehouse (any warehouse when none is set), taken before the stock movement is applied.
+- **Currency:** ledger amounts are in the company base currency: the document amount multiplied by the document exchange rate. The journal header keeps the document currency code and rate.
+- **Fiscal periods:** the document date must fall in an open period of an open fiscal year, otherwise posting is refused. Returns and invoice reversals post their own mirror entries, so closed-period corrections follow the same rules as any other entry.
+- **Not covered yet:** per-material-group revenue accounts, discounts booked to a separate account, and settlement (receipts and payments against open invoices).
+
 ## Financial statements and closing entry
 
 - `GetTrialBalanceAsync(companyId, from, to)` returns opening balance, period debit/credit and closing balance per account, plus an `IsBalanced` flag.
