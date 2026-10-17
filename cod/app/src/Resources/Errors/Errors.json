@@ -1190,6 +1190,15 @@
     "catalogRef": "RECYCLE_BIN.DATABASE.001",
     "location": "RECYCLE_BIN.DATABASE.001"
   },
+  "ACC-FEAT-001": {
+    "type": "System",
+    "name": "AccountInquiryUnavailable",
+    "message": "This account inquiry is not available because its ledger view has not been implemented. No report was opened.",
+    "messageKey": "Errors.ACC-FEAT-001",
+    "severity": "Warning",
+    "catalogRef": "ACCOUNT.INQUIRY.001",
+    "location": "ACCOUNT_CARD.INQUIRY"
+  },
   "ACC-DB-001": {
     "type": "System",
     "name": "AccountCardOperationFailed",
