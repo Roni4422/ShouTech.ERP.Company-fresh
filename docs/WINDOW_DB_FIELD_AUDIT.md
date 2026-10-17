@@ -14,7 +14,7 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 
 | Window | Entity / intended data | DB/repository path observed | Static finding | Field + child-row round-trip |
 |---|---|---|---|---|
-| `CstCard.cs` | Customers | No customer repository call in window | **Blocked**; save/delete report unavailable | Not passed |
+| `CstCard.cs` | Customers | `CustomerCardSvc` uses provider-aware SQL with active-company scoping; `dba/mig/{sqlite,postgresql}/023_customer_card_fields.sql` owns additional card fields | Save and edit use transactional upsert, Enter loads by code, delete is soft-delete only; failures use central English error codes and `errors.log`/`log.log` | SQLite migration-backed integration test added for every card field, update/read-back, two-company isolation, and soft delete; latest CI run pending. PostgreSQL round-trip still required |
 | `BnkCard.cs` | Banks | No bank repository call in window | **Blocked**; save/delete report unavailable | Not passed |
 | `CcCard.cs` | Cost centers | No cost-center repository call in window | **Blocked**; save/delete report unavailable | Not passed |
 | `RepCard.cs` | Sales representatives | No representative repository call in window | **Blocked**; save/delete report unavailable | Not passed |
@@ -134,3 +134,11 @@ Rule: a control bound in memory is **not** counted as persisted unless the save 
 - `CshWin.cs` now resolves treasury/allocation accounts against the active company, saves and reloads header and child rows, validates the total against allocations, blocks unsupported decimal precision, and keeps saved forms read-only. The Load and Reverse actions are localized in Arabic and English.
 - Posting writes the corresponding balanced general-ledger journal and links it to the voucher in the same transaction; receipt/payment debit-credit directions differ correctly. Reversal requires a reason, keeps the source audit trail, creates a reversing journal, and does not delete the voucher or source lines.
 - Added SQLite integration coverage for save/read-back of all voucher header and child-line fields, duplicate number rejection, posting, balanced journal totals, reversal reason/audit and reversal line directions, plus payment posting direction. **CI result pending; this implementation is not called verified until the current build/test run passes.** PostgreSQL schema smoke checks are added; full PostgreSQL voucher repository integration testing remains outstanding.
+
+
+## Customer-card completion update (2026-10-17)
+
+- Added additive provider-specific migration `023_customer_card_fields.sql` for `group_code`, `price_tier_code`, and `gl_account_code`; existing `price_tier_id` and `gl_account_id` columns are preserved for future normalized lookup integration.
+- `CustomerCardSvc` resolves the active company on every operation, uses parameterized SQL and transactions, supports SQLite text company IDs and PostgreSQL UUID company IDs, and never physically deletes a customer.
+- The card now saves/updates fields, loads a record by pressing Enter in the code field, and soft-deletes with confirmation. Unsupported statement balances render as unavailable rather than false zero amounts.
+- `CustomerCardPersistenceTests` verifies migration + SQLite round-trip and same-code records across companies. CI must pass before treating the runtime coverage as verified; PostgreSQL integration remains outstanding.
