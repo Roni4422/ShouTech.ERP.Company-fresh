@@ -1486,5 +1486,23 @@
     "severity": "Error",
     "catalogRef": "COMPANY.DEFAULT.001",
     "location": "COMPANY.DEFAULT"
+  },
+  "COM-LOAD-001": {
+    "type": "System",
+    "name": "CompanyListLoadFailed",
+    "message": "The company list could not be loaded. Check the application log for details.",
+    "messageKey": "Errors.COM-LOAD-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.LIST.LOAD.001",
+    "location": "COMPANY.LIST.LOAD"
+  },
+  "COM-LOGIN-001": {
+    "type": "System",
+    "name": "CompanyLoginOpenFailed",
+    "message": "The login window could not be opened for the selected company. Check the application log for details.",
+    "messageKey": "Errors.COM-LOGIN-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.LOGIN.OPEN.001",
+    "location": "COMPANY.LOGIN.OPEN"
   }
 }
