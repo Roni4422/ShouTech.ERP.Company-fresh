@@ -16,6 +16,20 @@ namespace Kern.Tests;
 public sealed class SalesRepresentativePersistenceTests
 {
     [Fact]
+    public void SalesRepresentativeRepository_ShouldNormalizeProviderNamesAndRejectUnknownProviders()
+    {
+        const string connectionString = "Data Source=:memory;";
+        Assert.NotNull(new SalesRepresentativeRepository("sqlite", connectionString));
+        Assert.NotNull(new SalesRepresentativeRepository("SQLite3", connectionString));
+        Assert.NotNull(new SalesRepresentativeRepository("postgres", "Host=localhost;Database=test;Username=test;Password=test"));
+        Assert.NotNull(new SalesRepresentativeRepository("Npgsql", "Host=localhost;Database=test;Username=test;Password=test"));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new SalesRepresentativeRepository("UnknownProvider", connectionString));
+        Assert.Throws<ArgumentException>(() =>
+            new SalesRepresentativeRepository(" ", connectionString));
+    }
+
+    [Fact]
     public async Task SalesRepresentativeRepositoryAndTargets_ShouldRoundTripAndEnforceCompanyScope()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-rep-card-{Guid.NewGuid():N}.sqlite3");
