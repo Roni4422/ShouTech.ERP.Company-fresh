@@ -85,7 +85,7 @@ public sealed class OrdWin : BaseWin
     private readonly DatePicker _dtDeliveryDate = new() { Width = 120, Height = 26, SelectedDate = DateTime.Today.AddDays(7) };
     private readonly TextBox _txtPartyCode = new() { Width = 110, Height = 26 };
     private readonly TextBox _txtPartyName = new() { Width = 220, Height = 26 };
-    private readonly TextBox _txtWhs = new() { Width = 110, Height = 26, Text = "WH-01" };
+    private readonly TextBox _txtWhs = new() { Width = 110, Height = 26 };
     private readonly TextBox _txtNotes = new() { Width = 380, Height = 26 };
 
     private readonly Button _btnNew = new();
@@ -135,7 +135,7 @@ public sealed class OrdWin : BaseWin
 
         _btnAddLine.Click += (_, _) =>
         {
-            var l = new OrderLineVm { LineNo = _lines.Count + 1, Unit = "PCS", Qty = 1, UnitPrice = 100 };
+            var l = new OrderLineVm { LineNo = _lines.Count + 1, Qty = 0, UnitPrice = 0 };
             _lines.Add(l);
             _grid.SelectedItem = l;
             _grid.ScrollIntoView(l);
@@ -253,14 +253,14 @@ public sealed class OrdWin : BaseWin
         _txtPartyName.Text = string.Empty;
         _txtNotes.Text = string.Empty;
         _lines.Clear();
-        _lines.Add(new OrderLineVm { LineNo = 1, Unit = "PCS", Qty = 1, UnitPrice = 100 });
+        _lines.Add(new OrderLineVm { LineNo = 1, Qty = 0, UnitPrice = 0 });
         RefreshTotals();
     }
 
     private void RefreshTotals()
     {
         var total = _lines.Sum(l => l.LineTotal);
-        _lblTotal.Text = $"{T("Invoice.Total")}: {total:N2} SAR";
+        _lblTotal.Text = $"{T("Invoice.Total")}: {total:N2}";
         _lblTotal.FontWeight = FontWeights.Bold;
         _lblStatus.Text = $"{T("OrderDoc.Status")}: {T("Invoice.StatusDraft")}";
     }
@@ -333,7 +333,7 @@ public sealed class OrdWin : BaseWin
     {
         private int _lineNo;
         private string _itemCode = "", _desc = "", _unit = "";
-        private decimal _qty = 1, _price, _disc;
+        private decimal _qty, _price, _disc;
 
         public int LineNo { get => _lineNo; set { _lineNo = value; OnChanged(); } }
         public string ItemCode { get => _itemCode; set { _itemCode = value; OnChanged(); } }
