@@ -142,7 +142,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
                    phone, is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM sales_representatives
-            WHERE rep_id = @id");
+            WHERE rep_id = @id";
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -223,7 +223,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE rep_id = @id";
+                WHERE rep_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(representative.Id));
             Add(updateCmd, "@name", representative.Name);

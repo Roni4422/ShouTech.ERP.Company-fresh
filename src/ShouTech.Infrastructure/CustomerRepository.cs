@@ -154,7 +154,7 @@ public sealed class CustomerRepository : ICustomerRepository
                    phone, mobile, email, address, is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM customers
-            WHERE customer_id = @id");
+            WHERE customer_id = @id";
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -246,7 +246,7 @@ public sealed class CustomerRepository : ICustomerRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE customer_id = @id";
+                WHERE customer_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(customer.Id));
             Add(updateCmd, "@nameAr", customer.NameAr);

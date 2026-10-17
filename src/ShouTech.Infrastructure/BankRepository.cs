@@ -144,7 +144,7 @@ public sealed class BankRepository : IBankRepository
                    gl_account_id, account_number, address, phone, is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM banks
-            WHERE bank_id = @id");
+            WHERE bank_id = @id";
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -227,7 +227,7 @@ public sealed class BankRepository : IBankRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE bank_id = @id";
+                WHERE bank_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(bank.Id));
             Add(updateCmd, "@name", bank.Name);

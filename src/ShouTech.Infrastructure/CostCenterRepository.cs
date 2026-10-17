@@ -141,7 +141,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
                    is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM cost_centers
-            WHERE cost_center_id = @id");
+            WHERE cost_center_id = @id";
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -221,7 +221,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE cost_center_id = @id";
+                WHERE cost_center_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(costCenter.Id));
             Add(updateCmd, "@nameAr", costCenter.NameAr);
