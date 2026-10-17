@@ -32,8 +32,8 @@ public partial class PrmWin : Window
         }
         catch (Exception ex)
         {
-            AppHost.Logging.LogWarning("PrmWin", ex.Message);
-            MessageBox.Show(this, "تعذر تحميل الصلاحيات.", "ShouTech ERP", MessageBoxButton.OK, MessageBoxImage.Error);
+            ReportFailure("LoadPermissions", ex);
+            MessageBox.Show(this, FormatError("PRM-DB-001"), "ShouTech ERP", MessageBoxButton.OK, MessageBoxImage.Error);
             DialogResult = false;
             Close();
         }
@@ -50,10 +50,25 @@ public partial class PrmWin : Window
         }
         catch (Exception ex)
         {
-            AppHost.Logging.LogWarning("PrmWin", ex.Message);
-            MessageBox.Show(this, ex.Message, "ShouTech ERP", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ReportFailure("SavePermissions", ex);
+            MessageBox.Show(this, FormatError("PRM-DB-001"), "ShouTech ERP", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally { BtnSave.IsEnabled = true; }
+    }
+
+    private static string FormatError(string code)
+    {
+        var definition = ErrorCatalog.Resolve(code);
+        return $"[{definition.Code}] {definition.Message}{Environment.NewLine}Location: {definition.Location}";
+    }
+
+    private void ReportFailure(string operation, Exception exception)
+    {
+        const string code = "PRM-DB-001";
+        var definition = ErrorCatalog.Resolve(code);
+        var context = $"Operation={operation}; Window={GetType().Name}; User={UsrSession.Current?.Id ?? "(none)"}; Company={UsrSession.Current?.CompanyId ?? "(none)"}";
+        AppHost.Logging?.LogError("PermissionsWindow", $"[{definition.Code}] {definition.Name} | {context}", exception);
+        AppHost.Logging?.LogOperation("PermissionsWindow", "OperationFailed", $"Code={definition.Code} | {context}");
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
