@@ -2,43 +2,18 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Globalization;
+using System.Threading.Tasks;
+using ShouTech.App.Services;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Views;
 
 /// <summary>
+/// Company-scoped cost-center maintenance with persisted hierarchy and soft-delete.
 /// </summary>
 public sealed class CcCard : BaseWin
 {
-
-    /// <summary>
-    /// Prevents a false success message when this screen has no database persistence wired.
-    /// This intentionally does not claim to save any values.
-    /// </summary>
-    private void ShowPersistenceUnavailable()
-    {
-        const string errorCode = "CC-PER-001";
-        const string context = "This window has no database persistence implementation.";
-        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
-        var exception = new NotSupportedException(context);
-
-        // Errors are routed to errors.log; the operational trace goes to log.log.
-        ShouTech.App.Services.AppHost.Logging?.LogError(
-            "WindowPersistence",
-            $"[{definition.Code}] {definition.Name} | Window={GetType().Name} | {context}",
-            exception);
-        ShouTech.App.Services.AppHost.Logging?.LogOperation(
-            "WindowPersistence",
-            "PersistenceUnavailable",
-            $"Code={definition.Code} | Window={GetType().Name}");
-
-        MessageBox.Show(
-            this,
-            $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}\n{context}\nNo data was saved.",
-            "Operation Unavailable",
-            MessageBoxButton.OK,
-            MessageBoxImage.Warning);
-    }
-
 
     private readonly TextBox _txtCode = new() { Width = 130, Height = 26 };
     private readonly TextBox _txtParentCode = new() { Width = 130, Height = 26 };
@@ -79,8 +54,16 @@ public sealed class CcCard : BaseWin
         StyleButton(_btnDelete, "Common.Delete");
 
         _btnNew.Click += (_, _) => ResetCard();
-        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
-        _btnDelete.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnSave.Click += async (_, _) => await SaveCardAsync();
+        _btnDelete.Click += async (_, _) => await DeleteCardAsync();
+        _txtCode.KeyDown += async (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                e.Handled = true;
+                await LoadCardAsync();
+            }
+        };
 
         foreach (var b in new[] { _btnNew, _btnSave, _btnDelete })
             toolbar.Children.Add(b);
@@ -134,13 +117,14 @@ public sealed class CcCard : BaseWin
 
     private void ResetCard()
     {
-        _txtCode.Text = "CC-101";
+        _txtCode.Text = "CC-" + DateTime.Now.ToString("yyMMddHHmmss", CultureInfo.InvariantCulture)
+            + "-" + Guid.NewGuid().ToString("N")[..4].ToUpperInvariant();
         _txtParentCode.Text = string.Empty;
         _txtNameAr.Text = string.Empty;
         _txtNameEn.Text = string.Empty;
         _txtLevel.Text = "1";
         _txtNotes.Text = string.Empty;
-        UpdateBalances(0, 0);
+        UpdateBalancesUnavailable();
     }
 
     private void UpdateBalances(decimal debit, decimal credit)
@@ -150,6 +134,125 @@ public sealed class CcCard : BaseWin
         var bal = debit - credit;
         _lblBal.Text = $"{T("CostCenter.Balance")}: {bal:N2} SAR";
         _lblBal.FontWeight = FontWeights.Bold;
+    }
+
+
+    private CostCenterCardRecord ReadCard()
+    {
+        if (!int.TryParse(_txtLevel.Text, NumberStyles.Integer, CultureInfo.CurrentCulture, out var level)
+            && !int.TryParse(_txtLevel.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out level))
+            throw new CostCenterCardException(ErrorCodes.CostCenterValidationFailed, "Enter a whole number for the hierarchy level.");
+
+        return new CostCenterCardRecord
+        {
+            Code = _txtCode.Text,
+            ParentCode = _txtParentCode.Text,
+            Level = level,
+            NameAr = _txtNameAr.Text,
+            NameEn = _txtNameEn.Text,
+            Notes = _txtNotes.Text
+        };
+    }
+
+    private async Task SaveCardAsync()
+    {
+        try
+        {
+            var record = ReadCard();
+            await CostCenterCardSvc.SaveAsync(record);
+            _txtCode.Text = record.Code.Trim();
+            MessageBox.Show(this, T("CostCenter.Saved"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ReportCostCenterFailure(ex, ErrorCodes.CostCenterSaveFailed, "Save");
+        }
+    }
+
+    private async Task LoadCardAsync()
+    {
+        if (_isLoadingRecord) return;
+        _isLoadingRecord = true;
+        try
+        {
+            var record = await CostCenterCardSvc.LoadByCodeAsync(_txtCode.Text);
+            if (record is null)
+            {
+                var definition = ErrorCatalog.Resolve(ErrorCodes.CostCenterNotFound);
+                AppHost.Logging?.LogOperation("CostCenterCard", "LoadNotFound",
+                    $"Company={AppState.CurrentCompanyCode}; Code={_txtCode.Text.Trim()}");
+                MessageBox.Show(this, $"[{definition.Code}] {definition.Message}", Title,
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _txtCode.Text = record.Code;
+            _txtParentCode.Text = record.ParentCode;
+            _txtLevel.Text = record.Level.ToString(CultureInfo.CurrentCulture);
+            _txtNameAr.Text = record.NameAr;
+            _txtNameEn.Text = record.NameEn;
+            _txtNotes.Text = record.Notes;
+            UpdateBalancesUnavailable();
+            AppHost.Logging?.LogOperation("CostCenterCard", "Load",
+                $"Company={AppState.CurrentCompanyCode}; Code={record.Code}; Outcome=Loaded");
+        }
+        catch (Exception ex)
+        {
+            ReportCostCenterFailure(ex, ErrorCodes.CostCenterLoadFailed, "Load");
+        }
+        finally
+        {
+            _isLoadingRecord = false;
+        }
+    }
+
+    private async Task DeleteCardAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_txtCode.Text))
+        {
+            ReportCostCenterFailure(
+                new CostCenterCardException(ErrorCodes.CostCenterValidationFailed, "Enter a cost-center code first."),
+                ErrorCodes.CostCenterDeleteFailed, "Delete");
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this, T("CostCenter.DeleteConfirmation"), Title,
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes) return;
+
+        try
+        {
+            if (!await CostCenterCardSvc.DeleteAsync(_txtCode.Text))
+            {
+                ReportCostCenterFailure(
+                    new CostCenterCardException(ErrorCodes.CostCenterDeleteRejected,
+                        "The cost center was not found, or it has active child cost centers that must be moved or deleted first."),
+                    ErrorCodes.CostCenterDeleteFailed, "Delete");
+                return;
+            }
+
+            MessageBox.Show(this, T("CostCenter.Deleted"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            ResetCard();
+        }
+        catch (Exception ex)
+        {
+            ReportCostCenterFailure(ex, ErrorCodes.CostCenterDeleteFailed, "Delete");
+        }
+    }
+
+    private void ReportCostCenterFailure(Exception exception, string fallbackCode, string operation)
+    {
+        var code = exception is CostCenterCardException costCenterException
+            ? costCenterException.ErrorCode
+            : fallbackCode;
+        var definition = ErrorCatalog.Resolve(code);
+        AppHost.Logging?.LogError("CostCenterCard",
+            $"{definition.Code}: {definition.Name}; Operation={operation}; Company={AppState.CurrentCompanyCode}; Code={_txtCode.Text.Trim()}",
+            exception);
+        AppHost.Logging?.LogOperation("CostCenterCard", "Failed",
+            $"ErrorCode={definition.Code}; Operation={operation}; Company={AppState.CurrentCompanyCode}; Code={_txtCode.Text.Trim()}");
+        MessageBox.Show(this, $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}",
+            Title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     protected override void ApplyLocalizedText()
