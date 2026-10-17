@@ -119,8 +119,9 @@ public sealed class BnkCard : BaseWin
         _txtBranch.Text = string.Empty;
         _txtAccNo.Text = string.Empty;
         _txtIban.Text = string.Empty;
-        _txtGlAcc.Text = "121201";
-        _lblBal.Text = $"{T("BankCard.Balance")}: 0.00 SAR";
+        _txtCur.Text = string.Empty;
+        _txtGlAcc.Text = string.Empty;
+        UpdateBalanceUnavailable();
     }
 
 
