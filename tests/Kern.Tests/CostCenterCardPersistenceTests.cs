@@ -133,14 +133,29 @@ public sealed class CostCenterCardPersistenceTests
             AppState.CurrentCompanyCode = oldCompany;
             AppState.CurrentUser = oldUser;
             SqliteConnection.ClearAllPools();
-            if (File.Exists(databasePath))
-                File.Delete(databasePath);
+            TryDeleteFile(databasePath);
             foreach (var suffix in new[] { "-wal", "-shm" })
             {
                 var sidecar = databasePath + suffix;
-                if (File.Exists(sidecar))
-                    File.Delete(sidecar);
+                TryDeleteFile(sidecar);
             }
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (IOException)
+        {
+            // SQLite providers can retain pooled handles until the process exits.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Cleanup must not mask the persistence assertions that already ran.
         }
     }
 
