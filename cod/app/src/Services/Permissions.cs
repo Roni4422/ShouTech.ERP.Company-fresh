@@ -961,7 +961,7 @@ ORDER BY p.display_order,p.permission_code;
     {
         await using var c = new SqliteConnection(cs); await c.OpenAsync(ct); await using var tx = c.BeginTransaction();
         await EnsureNotAdministratorSqlite(c, tx, userId, ct);
-        const string baselineSql = "SELECT COUNT(*) FROM role_permissions rp INNER JOIN user_roles ur ON ur.role_id=rp.role_id WHERE ur.user_id=@uid AND rp.permission_id=@pid";
+        const string baselineSql = "SELECT COUNT(*) FROM role_permissions rp INNER JOIN user_roles ur ON ur.role_id=rp.role_id INNER JOIN roles r ON r.role_id=ur.role_id AND r.is_active=1 AND r.is_deleted=0 WHERE ur.user_id=@uid AND rp.permission_id=@pid";
         foreach (var pair in effective)
         {
             await using var b = new SqliteCommand(baselineSql,c,(SqliteTransaction)tx); b.Parameters.AddWithValue("@uid",userId); b.Parameters.AddWithValue("@pid",pair.Key);
@@ -984,7 +984,7 @@ ORDER BY p.display_order,p.permission_code;
         if (!Guid.TryParse(userId, out var uid)) throw new ArgumentException("PostgreSQL UserId must be a GUID.", nameof(userId));
         await using var c = new NpgsqlConnection(cs); await c.OpenAsync(ct); await using var tx = c.BeginTransaction();
         await EnsureNotAdministratorPostgres(c, tx, uid, ct);
-        const string baselineSql = "SELECT COUNT(*) FROM role_permissions rp INNER JOIN user_roles ur ON ur.role_id=rp.role_id WHERE ur.user_id=@uid AND rp.permission_id=@pid";
+        const string baselineSql = "SELECT COUNT(*) FROM role_permissions rp INNER JOIN user_roles ur ON ur.role_id=rp.role_id INNER JOIN roles r ON r.role_id=ur.role_id AND r.is_active=TRUE AND r.is_deleted=FALSE WHERE ur.user_id=@uid AND rp.permission_id=@pid";
         foreach (var pair in effective)
         {
             await using var b = new NpgsqlCommand(baselineSql,c,tx); b.Parameters.Add("@uid",NpgsqlDbType.Uuid).Value=uid; b.Parameters.Add("@pid",NpgsqlDbType.Bigint).Value=pair.Key;
