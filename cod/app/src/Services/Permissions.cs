@@ -718,6 +718,10 @@ public sealed class PermServ : IPermServ
 
     public async Task LoadForUserAsync(string userId, CancellationToken ct = default)
     {
+        // Clear the previous identity before validating anything for the next login.
+        // Invalid input or missing configuration must never preserve old privileges.
+        Clear();
+
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException("UserId is required.", nameof(userId));
 
@@ -725,8 +729,6 @@ public sealed class PermServ : IPermServ
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("Permission loading requires SHOUTECH_CONNECTION_STRING.");
 
-        _perms.Clear();
-        _roleCode = string.Empty;
         _currentUserId = userId.Trim();
 
         try
