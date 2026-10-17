@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Globalization;
 using System.Threading.Tasks;
 using ShouTech.App.Services;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Views;
 
