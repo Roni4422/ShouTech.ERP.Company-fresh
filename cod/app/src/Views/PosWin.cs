@@ -331,7 +331,7 @@ public sealed class PosWin : BaseWin
         }
         var existing = _cart.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
         if (existing is not null) existing.Qty += 1;
-        else _cart.Add(new PosLine { MaterialId = material.Value.Id, Code = code, Name = material.Value.Name, Unit = material.Value.Unit, Price = material.Value.Price, TaxRate = material.Value.TaxRate > 0 ? material.Value.TaxRate : TaxSvc.GetDefaultRate(), Qty = 1 });
+        else _cart.Add(new PosLine { MaterialId = material.Value.Id, Code = code, Name = material.Value.Name, Unit = material.Value.Unit, Price = material.Value.Price, TaxRate = material.Value.TaxRate, Qty = 1 });
         _scan.Clear(); UpdateTotals(); SetStatus($"Added {material.Value.Name} to the sale."); _scan.Focus();
     }
 
