@@ -50,10 +50,10 @@ public static class DocSchema
                     AND name IN ('sales_documents', 'sales_document_lines',
                       'purchase_documents', 'purchase_document_lines', 'party_ledger', 'stock_movements')
                   """;
-            var count = Convert.ToInt32(cmd.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture);
-            if (count != 6)
-                throw new InvalidOperationException(
-                    "Commercial-document schema is incomplete. Apply the provider migrations under dba/mig before using invoices.");
+        var count = Convert.ToInt32(cmd.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture);
+        if (count != 6)
+            throw new InvalidOperationException(
+                "Commercial-document schema is incomplete. Apply the provider migrations under dba/mig before using invoices.");
 
         // Cache only after a successful complete schema check.
         ValidatedDatabases.TryAdd(fingerprint, 0);
