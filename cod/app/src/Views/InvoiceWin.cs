@@ -26,7 +26,7 @@ public sealed class InvoiceWin : BaseWin
     private readonly TextBox _txtPartyCode = new() { Width = 120 };
     private readonly TextBox _txtPartyName = new() { Width = 220 };
     private readonly TextBox _txtTaxRate = new() { Width = 70 };
-    private readonly TextBox _txtCurrency = new() { Width = 70, Text = "SAR" };
+    private readonly TextBox _txtCurrency = new() { Width = 70 };
     private readonly TextBox _txtNotes = new() { Height = 48, AcceptsReturn = true };
     private readonly TextBlock _lblSubtotal = new();
     private readonly TextBlock _lblTax = new();
@@ -53,7 +53,7 @@ public sealed class InvoiceWin : BaseWin
         {
             Kind = kind,
             DefaultTaxRate = TaxSvc.GetDefaultRate(),
-            CurrencyCode = "SAR"
+            CurrencyCode = InvRepo.GetCompanyCurrencyCode()
         };
         Width = 1100;
         Height = 680;
