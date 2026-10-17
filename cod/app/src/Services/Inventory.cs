@@ -110,13 +110,23 @@ public interface IInvServ
             await _lic.EnsureCanWriteAsync(ct);
             await _lic.EnsureModuleAsync(ModKey.Inv, ct);
 
-            if (!_perm.Has(PermKey.InvCreate))
+            if (!_perm.Has(PermCat.Inventory.ItemUpdate))
                 throw new UnauthorizedAccessException("You do not have permission to update items.");
 
             if (id == Guid.Empty)
                 throw new ArgumentException("Invalid item id.");
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Item name is required.");
+            if (string.IsNullOrWhiteSpace(unit))
+                throw new ArgumentException("Item unit is required.");
+            if (cost < 0 || price < 0)
+                throw new ArgumentOutOfRangeException(nameof(cost), "Cost and price cannot be negative.");
+
+            // Never report success when this legacy facade has no persistence repository.
+            // Callers must use IInvRepo, which performs the database update.
+            throw new NotSupportedException(
+                "InvServ is a validation-only legacy facade. " +
+                "Use IInvRepo.UpdateItemAsync for the real update.");
         }
 
         public async Task SoftDeleteItemAsync(Guid id, string userId, CancellationToken ct = default)
@@ -124,11 +134,17 @@ public interface IInvServ
             await _lic.EnsureCanWriteAsync(ct);
             await _lic.EnsureModuleAsync(ModKey.Inv, ct);
 
-            if (!_perm.Has(PermKey.InvDelete))
+            if (!_perm.Has(PermCat.Inventory.ItemDelete))
                 throw new UnauthorizedAccessException("You do not have permission to delete items.");
 
             if (id == Guid.Empty)
                 throw new ArgumentException("Invalid item id.");
+
+            // Never report success when this legacy facade has no persistence repository.
+            // Deletion is soft-delete only; the repository preserves the audit trail.
+            throw new NotSupportedException(
+                "InvServ is a validation-only legacy facade. " +
+                "Use IInvRepo.SoftDeleteItemAsync for the real operation.");
         }
 
         public async Task<bool> ItemCodeExistsAsync(string code, Guid? excludeId = null, CancellationToken ct = default)
