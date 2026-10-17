@@ -645,8 +645,8 @@ public sealed class CshWin : BaseWin
             "DatabaseOperationFailed",
             $"Code={definition.Code}; {context}; Error={exception.Message}");
         MessageBox.Show(this,
-            $"لم تنجح العملية ولم تُعرض كنجاح.\n[{definition.Code}] {exception.Message}",
-            "فشل حفظ السند",
+            $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}\nThe operation failed. No data was saved.",
+            "Voucher Save Failed",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
     }
