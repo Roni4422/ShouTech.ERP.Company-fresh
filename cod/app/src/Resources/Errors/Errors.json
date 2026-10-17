@@ -1531,5 +1531,14 @@
     "severity": "Error",
     "catalogRef": "COMPANY.CREATE.DATABASE.001",
     "location": "COMPANY.CREATE.DATABASE"
+  },
+  "CO-CREATE-001": {
+    "type": "System",
+    "name": "CompanyCreationFailed",
+    "message": "The company could not be created. Check the application log for details, correct the reported issue, and retry.",
+    "messageKey": "Errors.CO-CREATE-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.CREATE.001",
+    "location": "COMPANY.CREATE"
   }
 }
