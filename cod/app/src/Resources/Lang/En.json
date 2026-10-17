@@ -814,7 +814,7 @@
     "CompleteSale": "Complete sale",
     "ConfirmSale": "Complete and post this POS sale?",
     "SalePosted": "POS sale posted.",
-    "PaymentPostingNotice": "The selected payment method is recorded in the sale notes; payment ledger posting is not implemented yet.",
+    "PaymentPostingNotice": "Cash sales debit CASH, Visa/K-Net debit BANK, and credit sales debit RECEIVABLES. Configure the matching account mappings before posting.",
     "CustomerNotFound": "The entered customer code could not be found.",
     "CreditNeedsCustomer": "Select a customer before completing a credit sale.",
     "CashDrawerOptionsTitle": "POS Cash Drawer Options"
