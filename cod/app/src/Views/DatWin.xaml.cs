@@ -229,7 +229,7 @@ public partial class DatWin : Window
         {
             LogError("DEX-UI-001: Failed to load available data exchange datasets.", ex);
             ResultStatusText.Text = "Error";
-            ResultTextBox.Text = ErrorCatalog.Get("DEX-UI-001");
+            ResultTextBox.Text = ErrorCatalog.Get(ErrorCodes.DataExchangeDatasetLoadFailed);
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
         }
@@ -346,7 +346,7 @@ public partial class DatWin : Window
         {
             LogError("DEX-UI-002: Workbook preview validation failed.", ex);
             ResultStatusText.Text = "Error";
-            ResultTextBox.Text = ErrorCatalog.Get("DEX-UI-002");
+            ResultTextBox.Text = ErrorCatalog.Get(ErrorCodes.DataExchangeWorkbookPreviewFailed);
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
         }
@@ -636,7 +636,7 @@ public partial class DatWin : Window
         {
             export ? L("ExportResult", "Export result") : L("ImportResult", "Import result"),
             new string('─', 42),
-            $"{L("Message", "Message")}: {(result.Success && result.Errors.Count == 0 ? result.Message : ErrorCatalog.Get("DEX-UI-004"))}",
+            $"{L("Message", "Message")}: {(result.Success && result.Errors.Count == 0 ? result.Message : ErrorCatalog.Get(ErrorCodes.DataExchangeRowsFailed))}",
             $"{L("Rows", "Rows")}: {result.Rows.ToString("N0", CultureInfo.InvariantCulture)}",
             $"{L("FailedRows", "Failed rows")}: {result.FailedRows.ToString("N0", CultureInfo.InvariantCulture)}",
             $"{L("Tables", "Tables")}: {result.Tables.ToString(CultureInfo.InvariantCulture)}",
@@ -653,7 +653,7 @@ public partial class DatWin : Window
         {
             lines.Add(string.Empty);
             lines.Add(L("Errors", "Details"));
-            lines.Add(ErrorCatalog.Get("DEX-UI-004"));
+            lines.Add(ErrorCatalog.Get(ErrorCodes.DataExchangeRowsFailed));
             if (result.Errors.Count > 20) lines.Add($"... +{result.Errors.Count - 20} {L("More", "more")}");
         }
         ResultTextBox.Text = string.Join(Environment.NewLine, lines);
