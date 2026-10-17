@@ -127,14 +127,16 @@ public static class TaxSvc
             {
                 cmd.CommandText = $"""
                     SELECT customer_id, customer_name_ar FROM customers
-                    WHERE company_id=$c AND customer_code=$code AND {activeRowPredicate} LIMIT 1;
+                    WHERE company_id = (SELECT company_id FROM companies WHERE company_code=$c LIMIT 1)
+                      AND customer_code=$code AND {activeRowPredicate} LIMIT 1;
                     """;
             }
             else
             {
                 cmd.CommandText = $"""
                     SELECT supplier_id, supplier_name_ar FROM suppliers
-                    WHERE company_id=$c AND supplier_code=$code AND {activeRowPredicate} LIMIT 1;
+                    WHERE company_id = (SELECT company_id FROM companies WHERE company_code=$c LIMIT 1)
+                      AND supplier_code=$code AND {activeRowPredicate} LIMIT 1;
                     """;
             }
             Add(cmd, "$c", company);
@@ -175,7 +177,7 @@ public static class TaxSvc
                        COALESCE(default_unit, unit1, ''),
                        tax_rate, is_taxable, is_zero_rated
                 FROM materials
-                WHERE company_id=$c
+                WHERE company_id = (SELECT company_id FROM companies WHERE company_code=$c LIMIT 1)
                   AND {activeMaterialPredicate}
                   AND (
                     code=$code OR alt_code=$code OR old_code=$code OR gtin=$code OR sku_external=$code
