@@ -20,6 +20,7 @@ using Npgsql;
 using NpgsqlTypes;
 using ShouTech.App.Common;
 using ShouTech.App.Configuration;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Services
 {
@@ -976,7 +977,7 @@ public sealed class CoCreateSvc : ICoCreateSvc
             var savedToDb = await TrySaveToDatabaseAsync(record, request);
             await CoLocalStore.SaveCompanyAsync(record);
 
-            var defaultWarehouseCreated = string.IsNullOrWhiteSpace(record.DbPath);
+            var defaultWarehouseCreated = false;
             var defaultWarehouseError = string.Empty;
             if (!string.IsNullOrWhiteSpace(record.DbPath))
             {
@@ -997,6 +998,14 @@ public sealed class CoCreateSvc : ICoCreateSvc
                         "DefaultWarehouseCreationFailed",
                         $"CO-CREATE-WH-001; company={code}");
                 }
+            }
+            else
+            {
+                defaultWarehouseError = "CO-CREATE-WH-001";
+                AppHost.Logging?.LogOperation(
+                    "CompanyCreation",
+                    "DefaultWarehouseCreationFailed",
+                    $"CO-CREATE-WH-001; company={code}; database path is missing.");
             }
 
             var partialFailure = !savedToDb || !defaultWarehouseCreated;
