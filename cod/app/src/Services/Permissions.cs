@@ -960,12 +960,19 @@ public sealed class PermAdminSvc
         await using var c = new SqliteConnection(cs); await c.OpenAsync(ct);
         const string sql = @"
 SELECT p.permission_id,p.permission_code,p.feature_code,p.operation_code,p.name_ar,p.name_en,p.is_sensitive,
-       CASE WHEN rp.permission_id IS NULL THEN 0 ELSE 1 END AS baseline_allowed,
-       CASE WHEN up.effect IS NULL THEN CASE WHEN rp.permission_id IS NULL THEN 0 ELSE 1 END ELSE up.effect END AS effective_allowed
+       CASE WHEN EXISTS (
+           SELECT 1 FROM user_roles ur
+           INNER JOIN roles r ON r.role_id=ur.role_id AND r.is_active=1 AND r.is_deleted=0
+           INNER JOIN role_permissions rp ON rp.role_id=r.role_id AND rp.permission_id=p.permission_id
+           WHERE ur.user_id=@uid
+       ) THEN 1 ELSE 0 END AS baseline_allowed,
+       CASE WHEN up.effect IS NULL THEN CASE WHEN EXISTS (
+           SELECT 1 FROM user_roles ur
+           INNER JOIN roles r ON r.role_id=ur.role_id AND r.is_active=1 AND r.is_deleted=0
+           INNER JOIN role_permissions rp ON rp.role_id=r.role_id AND rp.permission_id=p.permission_id
+           WHERE ur.user_id=@uid
+       ) THEN 1 ELSE 0 END ELSE up.effect END AS effective_allowed
 FROM permissions p
-LEFT JOIN user_roles ur ON ur.user_id=@uid
-LEFT JOIN roles r ON r.role_id=ur.role_id AND r.is_active=1 AND r.is_deleted=0
-LEFT JOIN role_permissions rp ON rp.role_id=r.role_id AND rp.permission_id=p.permission_id
 LEFT JOIN user_permissions up ON up.user_id=@uid AND up.permission_id=p.permission_id
 WHERE p.is_active=1
 ORDER BY p.display_order,p.permission_code;
@@ -983,12 +990,19 @@ ORDER BY p.display_order,p.permission_code;
         await using var c = new NpgsqlConnection(cs); await c.OpenAsync(ct);
         const string sql = @"
 SELECT p.permission_id,p.permission_code,p.feature_code,p.operation_code,p.name_ar,p.name_en,p.is_sensitive,
-       CASE WHEN rp.permission_id IS NULL THEN FALSE ELSE TRUE END AS baseline_allowed,
-       CASE WHEN up.effect IS NULL THEN CASE WHEN rp.permission_id IS NULL THEN FALSE ELSE TRUE END ELSE up.effect END AS effective_allowed
+       EXISTS (
+           SELECT 1 FROM user_roles ur
+           INNER JOIN roles r ON r.role_id=ur.role_id AND r.is_active=TRUE AND r.is_deleted=FALSE
+           INNER JOIN role_permissions rp ON rp.role_id=r.role_id AND rp.permission_id=p.permission_id
+           WHERE ur.user_id=@uid
+       ) AS baseline_allowed,
+       CASE WHEN up.effect IS NULL THEN EXISTS (
+           SELECT 1 FROM user_roles ur
+           INNER JOIN roles r ON r.role_id=ur.role_id AND r.is_active=TRUE AND r.is_deleted=FALSE
+           INNER JOIN role_permissions rp ON rp.role_id=r.role_id AND rp.permission_id=p.permission_id
+           WHERE ur.user_id=@uid
+       ) ELSE up.effect END AS effective_allowed
 FROM permissions p
-LEFT JOIN user_roles ur ON ur.user_id=@uid
-LEFT JOIN roles r ON r.role_id=ur.role_id AND r.is_active=TRUE AND r.is_deleted=FALSE
-LEFT JOIN role_permissions rp ON rp.role_id=r.role_id AND rp.permission_id=p.permission_id
 LEFT JOIN user_permissions up ON up.user_id=@uid AND up.permission_id=p.permission_id
 WHERE p.is_active=TRUE
 ORDER BY p.display_order,p.permission_code;
