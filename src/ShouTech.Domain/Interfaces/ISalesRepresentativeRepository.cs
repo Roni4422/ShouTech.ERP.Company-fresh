@@ -40,12 +40,12 @@ public interface ISalesRepresentativeRepository
     /// <summary>
     /// Soft deletes a sales representative.
     /// </summary>
-    Task<bool> DeleteAsync(Guid id, string deletedBy, string? reason = null, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, Guid companyId, string deletedBy, string? reason = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Restores a soft-deleted sales representative.
     /// </summary>
-    Task<bool> RestoreAsync(Guid id, string restoredBy, CancellationToken cancellationToken = default);
+    Task<bool> RestoreAsync(Guid id, Guid companyId, string restoredBy, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a sales representative code already exists for a company.
