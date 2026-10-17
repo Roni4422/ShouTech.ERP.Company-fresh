@@ -83,10 +83,18 @@ namespace ShouTech.App.Views.Modules
 
                 foreach (var col in _vm.Definition.VisibleColumns)
                 {
+                    var isArabic = string.Equals(
+                        App.CurrentLanguageCode?.Trim(),
+                        "ar",
+                        System.StringComparison.OrdinalIgnoreCase);
+                    var localizedCaption = isArabic
+                        ? (string.IsNullOrWhiteSpace(col.CaptionAR) ? col.CaptionEN : col.CaptionAR)
+                        : (string.IsNullOrWhiteSpace(col.CaptionEN) ? col.CaptionAR : col.CaptionEN);
+
                     var gridCol = new DataGridTextColumn
                     {
-                        Header = string.IsNullOrWhiteSpace(col.CaptionAR)
-                            ? col.FieldKey : col.CaptionAR,
+                        Header = string.IsNullOrWhiteSpace(localizedCaption)
+                            ? col.FieldKey : localizedCaption,
                         Width = new DataGridLength(col.ColumnWidth, DataGridLengthUnitType.Pixel),
                         CanUserResize = !col.IsLocked,
                         Binding = CreateBinding(col)
