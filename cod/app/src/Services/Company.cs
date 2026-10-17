@@ -1010,10 +1010,10 @@ public sealed class CoCreateSvc : ICoCreateSvc
 
             var partialFailure = !savedToDb || !defaultWarehouseCreated;
             var errorCode = !savedToDb
-                ? "COM-SAVE-001"
+                ? "CO-CREATE-DB-001"
                 : defaultWarehouseError;
             var message = !savedToDb
-                ? "The company was added to the local registry, but saving it to the active database failed. Verify the database before using this company."
+                ? ErrorCatalog.Get(ErrorCodes.CompanyDatabaseRegistrationFailed)
                 : !defaultWarehouseCreated
                     ? ErrorCatalog.Get(ErrorCodes.CompanyDefaultWarehouseFailed)
                     : "Company and default warehouse created successfully.";
