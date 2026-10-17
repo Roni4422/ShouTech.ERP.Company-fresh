@@ -2269,5 +2269,14 @@
     "severity": "Warning",
     "catalogRef": "CHEQUE_BATCH.CHQ-VAL-004",
     "location": "CHEQUE_BATCH.POSTED_EDIT"
+  },
+  "POS-POST-001": {
+    "type": "System",
+    "name": "PosSalePostingFailed",
+    "message": "The point-of-sale transaction could not be saved and posted. No successful sale should be reported.",
+    "messageKey": "Errors.POS-POST-001",
+    "severity": "Error",
+    "catalogRef": "POS.SALE.POST.001",
+    "location": "POS.SALE.POST"
   }
 }
