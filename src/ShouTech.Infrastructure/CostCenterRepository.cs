@@ -141,7 +141,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
                    is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM cost_centers
-            WHERE cost_center_id = @id";
+            WHERE cost_center_id = @id");
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -433,7 +433,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
             FROM cost_centers
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (cost_center_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search)
+            @" AND (cost_center_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search)
             ORDER BY name_ar
             LIMIT @limit";
 

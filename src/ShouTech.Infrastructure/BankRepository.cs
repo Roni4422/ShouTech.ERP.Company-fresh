@@ -144,7 +144,7 @@ public sealed class BankRepository : IBankRepository
                    gl_account_id, account_number, address, phone, is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM banks
-            WHERE bank_id = @id";
+            WHERE bank_id = @id");
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -447,7 +447,7 @@ public sealed class BankRepository : IBankRepository
             FROM banks
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (bank_code LIKE @search OR name LIKE @search OR account_number LIKE @search)
+            @" AND (bank_code LIKE @search OR name LIKE @search OR account_number LIKE @search)
             ORDER BY name
             LIMIT @limit";
 

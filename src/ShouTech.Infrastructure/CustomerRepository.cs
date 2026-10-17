@@ -154,7 +154,7 @@ public sealed class CustomerRepository : ICustomerRepository
                    phone, mobile, email, address, is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM customers
-            WHERE customer_id = @id";
+            WHERE customer_id = @id");
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -475,7 +475,7 @@ public sealed class CustomerRepository : ICustomerRepository
             FROM customers
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (customer_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search OR phone LIKE @search OR mobile LIKE @search)
+            @" AND (customer_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search OR phone LIKE @search OR mobile LIKE @search)
             ORDER BY name_ar
             LIMIT @limit";
 

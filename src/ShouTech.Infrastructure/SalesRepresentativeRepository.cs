@@ -142,7 +142,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
                    phone, is_active, is_deleted,
                    created_at, created_by, modified_at, modified_by
             FROM sales_representatives
-            WHERE rep_id = @id";
+            WHERE rep_id = @id");
 
         Add(command, "@id", FormatGuid(id));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
@@ -441,7 +441,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
             FROM sales_representatives
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (rep_code LIKE @search OR name LIKE @search OR area LIKE @search OR phone LIKE @search)
+            @" AND (rep_code LIKE @search OR name LIKE @search OR area LIKE @search OR phone LIKE @search)
             ORDER BY name
             LIMIT @limit";
 
