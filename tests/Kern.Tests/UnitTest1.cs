@@ -1046,9 +1046,7 @@ namespace Kern.Tests
         {
             var databasePath = Path.Combine(Path.GetTempPath(), $"shoutech-merge-{Guid.NewGuid():N}.sqlite3");
             var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
-            var schemaReadyField = typeof(DocSchema).GetField("_validated", BindingFlags.NonPublic | BindingFlags.Static)!;
             var oldSettings = settingsField.GetValue(null);
-            var oldSchemaReady = schemaReadyField.GetValue(null);
             var oldCompany = AppState.CurrentCompanyCode;
             const string company = "TEST-MERGE";
             try
@@ -1067,7 +1065,6 @@ namespace Kern.Tests
                 });
                 AppState.CurrentCompanyCode = company;
 
-                schemaReadyField.SetValue(null, false);
                 ApplySqliteMigrations(databasePath);
                 typeof(StkPost).Assembly
                     .GetType("ShouTech.App.Services.MatRepo")!
@@ -1170,7 +1167,6 @@ namespace Kern.Tests
             finally
             {
                 settingsField.SetValue(null, oldSettings);
-                schemaReadyField.SetValue(null, oldSchemaReady);
                 AppState.CurrentCompanyCode = oldCompany;
                 SqliteConnection.ClearAllPools();
                 if (File.Exists(databasePath))
