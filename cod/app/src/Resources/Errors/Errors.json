@@ -2337,5 +2337,59 @@
     "messageKey": "Errors.TAX-LOOKUP-001",
     "severity": "Error",
     "location": "TAX.DATA.LOOKUP"
+  },
+  "SPL-CFG-001": {
+    "type": "System",
+    "name": "StartupConfigurationPathValidationFailed",
+    "message": "The application configuration path could not be validated. Review the application log.",
+    "messageKey": "Errors.SPL-CFG-001",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.CONFIG.PATH.001",
+    "location": "STARTUP.CONFIGURATION"
+  },
+  "SPL-CFG-002": {
+    "type": "System",
+    "name": "StartupPreferencesLoadFailed",
+    "message": "User preferences could not be loaded and may need to be recreated. Review the application log.",
+    "messageKey": "Errors.SPL-CFG-002",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.PREFERENCES.002",
+    "location": "STARTUP.PREFERENCES"
+  },
+  "SPL-LIC-001": {
+    "type": "System",
+    "name": "StartupLicenseServiceMissing",
+    "message": "The license service is not configured. License initialization was skipped.",
+    "messageKey": "Errors.SPL-LIC-001",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.LICENSE.001",
+    "location": "STARTUP.LICENSE"
+  },
+  "SPL-SYNC-001": {
+    "type": "System",
+    "name": "StartupUserSnapshotServiceMissing",
+    "message": "The user-data snapshot service is not configured. The startup snapshot was skipped.",
+    "messageKey": "Errors.SPL-SYNC-001",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.SYNC.001",
+    "location": "STARTUP.SYNC"
+  },
+  "SPL-SVC-001": {
+    "type": "System",
+    "name": "StartupBackgroundServiceMissing",
+    "message": "The online coordinator is not configured. Background synchronization was not started.",
+    "messageKey": "Errors.SPL-SVC-001",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.SERVICE.001",
+    "location": "STARTUP.SERVICES"
+  },
+  "SPL-SEC-002": {
+    "type": "System",
+    "name": "StartupDirectoryInspectionFailed",
+    "message": "A startup directory security inspection could not be completed. Review the application log.",
+    "messageKey": "Errors.SPL-SEC-002",
+    "severity": "Warning",
+    "catalogRef": "STARTUP.SECURITY.002",
+    "location": "STARTUP.SECURITY"
   }
 }
