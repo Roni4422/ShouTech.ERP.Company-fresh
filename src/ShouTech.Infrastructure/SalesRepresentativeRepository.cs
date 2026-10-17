@@ -83,15 +83,21 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
 
         try
         {
-            // Check for duplicate code
+            // The unique key reserves a code even when a record is soft-deleted. Report that state explicitly.
             await using var checkCmd = CreateCommand(connection, transaction,
-                "SELECT COUNT(*) FROM sales_representatives WHERE company_id=@company AND rep_code=@code AND is_deleted=" +
-                (_provider == "PostgreSQL" ? "false" : "0"));
+                "SELECT is_deleted FROM sales_representatives WHERE company_id=@company AND rep_code=@code LIMIT 1");
             Add(checkCmd, "@company", FormatGuid(representative.CompanyId));
             Add(checkCmd, "@code", representative.Code);
-
-            if (Convert.ToInt64(await checkCmd.ExecuteScalarAsync(ct).ConfigureAwait(false), CultureInfo.InvariantCulture) > 0)
-                throw new InvalidOperationException($"Sales representative code '{representative.Code}' already exists for this company.");
+            var existingDeleted = await checkCmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
+            if (existingDeleted is not null and not DBNull)
+            {
+                var deleted = Convert.ToBoolean(existingDeleted, CultureInfo.InvariantCulture);
+                if (deleted)
+                    throw new InvalidOperationException(
+                        $"Sales representative code '{representative.Code}' belongs to a deleted record. Restore it before reusing the code.");
+                throw new InvalidOperationException(
+                    $"Sales representative code '{representative.Code}' already exists for this company.");
+            }
 
             // Insert sales representative
             await using var insertCmd = CreateCommand(connection, transaction, @"
@@ -177,6 +183,33 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
         return MapSalesRepresentativeSnapshot(reader);
     }
 
+    public async Task<SalesRepresentativeSnapshot?> FindByCodeIncludingDeletedAsync(
+        Guid companyId, string code, CancellationToken ct = default)
+    {
+        if (companyId == Guid.Empty)
+            throw new ArgumentException("Company ID is required.", nameof(companyId));
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Representative code is required.", nameof(code));
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(ct).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT rep_id, company_id, rep_code, name, area, commission_rate,
+                   phone, is_active, is_deleted,
+                   created_at, created_by, modified_at, modified_by
+            FROM sales_representatives
+            WHERE company_id=@company AND rep_code=@code
+            LIMIT 1;
+            """;
+        Add(command, "@company", FormatGuid(companyId));
+        Add(command, "@code", code.Trim());
+        await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        if (!await reader.ReadAsync(ct).ConfigureAwait(false))
+            return null;
+        return MapSalesRepresentativeSnapshot(reader);
+    }
+
     public async Task<IReadOnlyList<SalesRepresentativeSnapshot>> GetAllAsync(Guid companyId, CancellationToken ct = default)
     {
         var results = new List<SalesRepresentativeSnapshot>();
@@ -227,7 +260,7 @@ public sealed class SalesRepresentativeRepository : ISalesRepresentativeReposito
             Add(updateCmd, "@commissionRate", representative.CommissionRate);
             Add(updateCmd, "@phone", representative.Phone);
             Add(updateCmd, "@isActive", representative.IsActive);
-            Add(updateCmd, "@modifiedAt", representative.ModifiedAt);
+            Add(updateCmd, "@modifiedAt", DateTime.UtcNow);
             Add(updateCmd, "@modifiedBy", userId.Trim());
 
             var rowsAffected = await updateCmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
