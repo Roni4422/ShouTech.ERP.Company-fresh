@@ -19,7 +19,7 @@ public sealed class MfgWin : BaseWin
     /// <summary>Reports that persistence is not implemented instead of claiming success.</summary>
     private void ShowPersistenceUnavailable()
     {
-        const string errorCode = "APP-2010";
+        const string errorCode = "MFG-PER-001";
         const string context = "This window has no database persistence implementation.";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var exception = new NotSupportedException(context);
