@@ -600,7 +600,7 @@ public partial class DatWin : Window
         }
         catch (Exception ex)
         {
-            ResultStatusText.Text = L("Failed", "Operation failed");
+            ResultStatusText.Text = "Error";
             ResultTextBox.Text = BuildFailureText("DEX-UI-003");
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
