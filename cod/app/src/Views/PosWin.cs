@@ -111,7 +111,7 @@ public sealed class PosWin : BaseWin
         { _cart.Remove(selected); UpdateTotals(); e.Handled = true; }
         else if (e.Key == Key.Escape && _cart.Count > 0)
         {
-            if (MessageBox.Show(this, "Clear all items from this sale?", "Clear sale", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show(this, Local("ClearConfirm", "Clear all items from this sale?"), Local("ClearSale", "Clear sale"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             { _cart.Clear(); UpdateTotals(); }
             e.Handled = true;
         }
@@ -273,11 +273,11 @@ public sealed class PosWin : BaseWin
             if (method.Equals("Cash", StringComparison.OrdinalIgnoreCase))
             {
                 var opened = CashDrawerService.TryOpenDrawer(out var drawerMessage);
-                SetStatus($"Payment method selected: {method}. {drawerMessage}", !opened);
+                SetStatus(string.Format(CultureInfo.CurrentCulture, Local("StPayMethod", "Payment method selected: {0}."), method) + " " + drawerMessage, !opened);
             }
             else
             {
-                SetStatus($"Payment method selected: {method}.");
+                SetStatus(string.Format(CultureInfo.CurrentCulture, Local("StPayMethod", "Payment method selected: {0}."), method));
             }
         };
         _paymentButtons[method] = button;
@@ -332,7 +332,7 @@ public sealed class PosWin : BaseWin
         var existing = _cart.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
         if (existing is not null) existing.Qty += 1;
         else _cart.Add(new PosLine { MaterialId = material.Value.Id, Code = code, Name = material.Value.Name, Unit = material.Value.Unit, Price = material.Value.Price, TaxRate = material.Value.TaxRate > 0 ? material.Value.TaxRate : TaxSvc.GetDefaultRate(), Qty = 1 });
-        _scan.Clear(); UpdateTotals(); SetStatus($"Added {material.Value.Name} to the sale."); _scan.Focus();
+        _scan.Clear(); UpdateTotals(); SetStatus(string.Format(CultureInfo.CurrentCulture, Local("StAdded", "Added {0} to the sale."), material.Value.Name)); _scan.Focus();
     }
 
     private void UpdateTotals()
@@ -345,7 +345,7 @@ public sealed class PosWin : BaseWin
         _tax.Text = $"{tax:N2} {currency}";
         _total.Text = $"{total:N2} {currency}";
         _count.Text = $"{_cart.Count} line(s)  ·  {_cart.Sum(x => x.Qty):N3} item(s)";
-        if (_cart.Count == 0) SetStatus("Scan a barcode or enter an item code or name to begin.");
+        if (_cart.Count == 0) SetStatus(Local("StBegin", "Scan a barcode or enter an item code or name to begin."));
     }
 
     private static int? KeyToDigit(Key key)
@@ -376,9 +376,9 @@ public sealed class PosWin : BaseWin
         _shortcutDigits = string.Empty;
         _shortcutHint.Text = string.Empty;
         if (_grid.SelectedItem is not PosLine line)
-        { SetStatus("Select a material line first.", true); return; }
+        { SetStatus(Local("StSelectLine", "Select a material line first."), true); return; }
         if (!decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) || value < 0 || (command == '*' && value <= 0))
-        { SetStatus("Enter a valid positive quantity or non-negative price.", true); return; }
+        { SetStatus(Local("StBadQty", "Enter a valid positive quantity or non-negative price."), true); return; }
         if (command == '*') line.Qty = value;
         else if (command == '+') line.Price = value;
         _grid.Items.Refresh();
@@ -391,9 +391,9 @@ public sealed class PosWin : BaseWin
     private void OpenUnitChooser()
     {
         if (_grid.SelectedItem is not PosLine line)
-        { SetStatus("Select a material line first.", true); return; }
+        { SetStatus(Local("StSelectLine", "Select a material line first."), true); return; }
         if (line.MaterialId is not long materialId)
-        { SetStatus("The selected material has no valid identifier.", true); return; }
+        { SetStatus(Local("StNoId", "The selected material has no valid identifier."), true); return; }
 
         try
         {
@@ -415,7 +415,7 @@ public sealed class PosWin : BaseWin
             }
             units = units.Where(u => !string.IsNullOrWhiteSpace(u.UnitName)).ToList();
             if (units.Count == 0)
-            { SetStatus("No units are configured for this material.", true); return; }
+            { SetStatus(Local("StNoUnits", "No units are configured for this material."), true); return; }
 
             var dlg = new Window { Title = Local("UnitChooserTitle", "Choose material unit"), Width = 520, Height = 360, MinWidth = 420, MinHeight = 260, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.CanResize, Background = Brushes.White, FlowDirection = FlowDirection };
             var layout = new DockPanel { Margin = new Thickness(14) };
@@ -440,7 +440,7 @@ public sealed class PosWin : BaseWin
         catch (Exception ex)
         {
             LogPosEvent($"Unit chooser failed for material '{line.Code}': {ex.GetType().Name}: {ex.Message}");
-            SetStatus("Unable to load units for the selected material. See application log.", true);
+            SetStatus(Local("StUnitsFail", "Unable to load units for the selected material. See application log."), true);
         }
     }
 
@@ -450,7 +450,7 @@ public sealed class PosWin : BaseWin
         if (unit.PriceSale.HasValue && unit.PriceSale.Value >= 0) line.Price = unit.PriceSale.Value;
         _grid.Items.Refresh();
         UpdateTotals();
-        SetStatus($"Unit '{unit.UnitName}' selected for {line.Name}.");
+        SetStatus(string.Format(CultureInfo.CurrentCulture, Local("StUnitSel", "Unit '{0}' selected for {1}."), unit.UnitName, line.Name));
         _scan.Focus();
     }
 
@@ -560,8 +560,8 @@ public sealed class PosWin : BaseWin
     private void ClearSale()
     {
         if (_cart.Count == 0) return;
-        if (MessageBox.Show(this, "Clear all items from this sale?", "Clear sale", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-        { _cart.Clear(); UpdateTotals(); SetStatus("Sale cleared."); }
+        if (MessageBox.Show(this, Local("ClearConfirm", "Clear all items from this sale?"), Local("ClearSale", "Clear sale"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        { _cart.Clear(); UpdateTotals(); SetStatus(Local("StCleared", "Sale cleared.")); }
         _scan.Focus();
     }
 
@@ -584,11 +584,11 @@ public sealed class PosWin : BaseWin
     {
         _grid.CommitEdit(DataGridEditingUnit.Cell, true);
         _grid.CommitEdit(DataGridEditingUnit.Row, true);
-        if (_cart.Count == 0) { SetStatus("Add at least one item before continuing.", true); _scan.Focus(); return; }
+        if (_cart.Count == 0) { SetStatus(Local("StAddItem", "Add at least one item before continuing."), true); _scan.Focus(); return; }
         var invalid = _cart.FirstOrDefault(x => x.Qty <= 0 || x.Price < 0 || x.TaxRate < 0);
         if (invalid is not null)
         {
-            SetStatus($"Check quantity, price, or tax for '{invalid.Name}'. Quantity must be greater than zero.", true);
+            SetStatus(string.Format(CultureInfo.CurrentCulture, Local("StCheckLine", "Check quantity, price, or tax for '{0}'. Quantity must be greater than zero."), invalid.Name), true);
             _grid.SelectedItem = invalid; _grid.ScrollIntoView(invalid); _grid.Focus(); return;
         }
         var lines = _cart.Select((x, i) => new InvLine { LineNo = i + 1, MaterialId = x.MaterialId, MaterialCode = x.Code, Description = x.Name, Unit = x.Unit, Qty = x.Qty, UnitPrice = x.Price, TaxRate = x.TaxRate }).ToList();
