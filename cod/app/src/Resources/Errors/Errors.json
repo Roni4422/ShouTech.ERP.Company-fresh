@@ -2035,5 +2035,77 @@
     "severity": "Warning",
     "catalogRef": "BANK.BNK-VAL-003",
     "location": "BANK.LOAD"
+  },
+  "CCTR-DB-001": {
+    "type": "Database",
+    "name": "CostCenterCompanyContextFailed",
+    "message": "The active company could not be verified in the connected database. No data was changed.",
+    "messageKey": "Errors.CCTR-DB-001",
+    "severity": "Error",
+    "catalogRef": "COST_CENTER.CCTR-DB-001",
+    "location": "COST_CENTER.CONTEXT"
+  },
+  "CCTR-DB-002": {
+    "type": "Database",
+    "name": "CostCenterSaveFailed",
+    "message": "The cost center could not be saved. Check the database log for details.",
+    "messageKey": "Errors.CCTR-DB-002",
+    "severity": "Error",
+    "catalogRef": "COST_CENTER.CCTR-DB-002",
+    "location": "COST_CENTER.SAVE"
+  },
+  "CCTR-DB-003": {
+    "type": "Database",
+    "name": "CostCenterLoadFailed",
+    "message": "The cost center could not be loaded. Check the database log for details.",
+    "messageKey": "Errors.CCTR-DB-003",
+    "severity": "Error",
+    "catalogRef": "COST_CENTER.CCTR-DB-003",
+    "location": "COST_CENTER.LOAD"
+  },
+  "CCTR-DEL-001": {
+    "type": "Database",
+    "name": "CostCenterSoftDeleteFailed",
+    "message": "The cost center could not be moved to the Recycle Bin. No permanent deletion was attempted.",
+    "messageKey": "Errors.CCTR-DEL-001",
+    "severity": "Error",
+    "catalogRef": "COST_CENTER.CCTR-DEL-001",
+    "location": "COST_CENTER.DELETE"
+  },
+  "CCTR-DEL-002": {
+    "type": "Validation",
+    "name": "CostCenterDeleteRejected",
+    "message": "The cost center was not found, or it has active child cost centers that must be moved or deleted first.",
+    "messageKey": "Errors.CCTR-DEL-002",
+    "severity": "Warning",
+    "catalogRef": "COST_CENTER.CCTR-DEL-002",
+    "location": "COST_CENTER.DELETE"
+  },
+  "CCTR-VAL-001": {
+    "type": "Validation",
+    "name": "CostCenterInputInvalid",
+    "message": "One or more cost-center fields or hierarchy relationships are invalid. Review the values and try again.",
+    "messageKey": "Errors.CCTR-VAL-001",
+    "severity": "Warning",
+    "catalogRef": "COST_CENTER.CCTR-VAL-001",
+    "location": "COST_CENTER.VALIDATION"
+  },
+  "CCTR-VAL-002": {
+    "type": "Validation",
+    "name": "CostCenterCodeRequiresRestore",
+    "message": "This cost-center code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.",
+    "messageKey": "Errors.CCTR-VAL-002",
+    "severity": "Warning",
+    "catalogRef": "COST_CENTER.CCTR-VAL-002",
+    "location": "COST_CENTER.RESTORE_REQUIRED"
+  },
+  "CCTR-VAL-003": {
+    "type": "Validation",
+    "name": "CostCenterNotFound",
+    "message": "No active cost center was found in the selected company for this code.",
+    "messageKey": "Errors.CCTR-VAL-003",
+    "severity": "Warning",
+    "catalogRef": "COST_CENTER.CCTR-VAL-003",
+    "location": "COST_CENTER.LOAD"
   }
 }
