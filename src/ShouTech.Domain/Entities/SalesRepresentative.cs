@@ -91,6 +91,23 @@ public sealed class SalesRepresentative : EntBase
         if (modifiedBy != default)
             Touch(modifiedBy);
     }
+    /// <summary>Recreates a domain entity from persisted data without exposing audit setters.</summary>
+    public static SalesRepresentative Rehydrate(SalesRepresentativeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Id == Guid.Empty)
+            throw new ArgumentException("A persisted sales-representative snapshot must have a valid identifier.", nameof(snapshot));
+
+        var entity = new SalesRepresentative(snapshot.CompanyId, snapshot.Code, snapshot.Name,
+            snapshot.Area, snapshot.CommissionRate, snapshot.Phone, snapshot.IsActive);
+        entity.Id = snapshot.Id;
+        entity.IsDeleted = snapshot.IsDeleted;
+        entity.CreatedAt = snapshot.CreatedAt;
+        entity.CreatedBy = snapshot.CreatedBy;
+        entity.ModifiedAt = snapshot.ModifiedAt;
+        entity.ModifiedBy = snapshot.ModifiedBy;
+        return entity;
+    }
 }
 
 /// <summary>
