@@ -496,13 +496,11 @@ public static class RecycleBinSvc
             throw new InvalidOperationException(
                 "Deletion-audit schema is missing. Apply the provider migrations under dba/mig.");
 
-        // Trigger installation remains a separate compatibility step; table definitions are
-        // owned by DBA migrations, not by this service.
+        // SQLite delete-audit triggers are defined by dba/mig/sqlite/025_deletion_audit_triggers.sql.
+        // PostgreSQL triggers are still installed here until an equivalent migration is verified.
         try
         {
-            if (connection is SqliteConnection)
-                await EnsureSqliteDeletionTriggersAsync(connection, cancellationToken).ConfigureAwait(false);
-            else if (connection is NpgsqlConnection)
+            if (connection is NpgsqlConnection)
                 await EnsurePostgresDeletionTriggersAsync(connection, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -613,104 +611,6 @@ public static class RecycleBinSvc
                 LogWarning($"PostgreSQL audit trigger skipped for '{table}': {ex.Message}");
             }
         }
-    }
-
-    private static async Task EnsureSqliteDeletionTriggersAsync(
-        DbConnection connection, CancellationToken cancellationToken)
-    {
-        var tables = await GetTableNamesAsync(connection, cancellationToken).ConfigureAwait(false);
-        foreach (var table in tables)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (table.Equals("deletion_audit_log", StringComparison.OrdinalIgnoreCase) ||
-                table.StartsWith("sqlite_", StringComparison.OrdinalIgnoreCase) ||
-                !SafeIdentifier.IsMatch(table))
-                continue;
-
-            IReadOnlyList<string> columns;
-            try
-            {
-                columns = await GetColumnNamesAsync(connection, table, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                LogWarning($"Audit trigger skipped for '{table}': {ex.Message}");
-                continue;
-            }
-
-            var companyColumn = FindColumn(columns, "company_id") ?? FindColumn(columns, "companyid");
-            var primaryKey = InferPrimaryKey(table, columns);
-            if (companyColumn is null || primaryKey is null)
-                continue;
-
-            var deletedByColumn = FindColumn(columns, "deleted_by");
-            var snapshotNew = BuildSqliteSnapshot(columns, "NEW");
-            var snapshotOld = BuildSqliteSnapshot(columns, "OLD");
-            var companyNew = $"CAST(NEW.{Quote(companyColumn)} AS TEXT)";
-            var companyOld = $"CAST(OLD.{Quote(companyColumn)} AS TEXT)";
-            var keyNew = $"CAST(NEW.{Quote(primaryKey)} AS TEXT)";
-            var keyOld = $"CAST(OLD.{Quote(primaryKey)} AS TEXT)";
-            var actorNew = deletedByColumn is null
-                ? "'database-trigger'"
-                : $"COALESCE(CAST(NEW.{Quote(deletedByColumn)} AS TEXT), 'database-trigger')";
-            var tableLiteral = table.Replace("'", "''", StringComparison.Ordinal);
-
-            if (FindColumn(columns, "is_deleted") is { } softDeleteColumn)
-            {
-                var triggerName = Quote("trg_audit_soft_delete_" + table);
-                await ExecuteSqliteAuditDdlAsync(connection, $"""
-                    CREATE TRIGGER IF NOT EXISTS {triggerName}
-                    AFTER UPDATE OF {Quote(softDeleteColumn)} ON {Quote(table)}
-                    WHEN COALESCE(OLD.{Quote(softDeleteColumn)}, 0) = 0
-                         AND COALESCE(NEW.{Quote(softDeleteColumn)}, 0) <> 0
-                    BEGIN
-                        INSERT INTO deletion_audit_log
-                            (event_id, company_code, table_name, record_key, action_type, actor,
-                             occurred_at, method, reason, record_snapshot)
-                        VALUES
-                            (lower(hex(randomblob(16))), {companyNew}, '{tableLiteral}', {keyNew},
-                             'DELETE', {actorNew}, strftime('%Y-%m-%dT%H:%M:%fZ','now'),
-                             'SOFT_DELETE_TRIGGER',
-                             'Captured by database trigger; caller did not provide a reason',
-                             {snapshotNew});
-                    END;
-                    """, cancellationToken).ConfigureAwait(false);
-            }
-
-            var hardDeleteTrigger = Quote("trg_audit_hard_delete_" + table);
-            await ExecuteSqliteAuditDdlAsync(connection, $"""
-                CREATE TRIGGER IF NOT EXISTS {hardDeleteTrigger}
-                AFTER DELETE ON {Quote(table)}
-                BEGIN
-                    INSERT INTO deletion_audit_log
-                        (event_id, company_code, table_name, record_key, action_type, actor,
-                         occurred_at, method, reason, record_snapshot)
-                    VALUES
-                        (lower(hex(randomblob(16))), {companyOld}, '{tableLiteral}', {keyOld},
-                         'DELETE', 'database-trigger', strftime('%Y-%m-%dT%H:%M:%fZ','now'),
-                         'HARD_DELETE_TRIGGER',
-                         'Captured by database trigger; caller did not provide a reason',
-                         {snapshotOld});
-                END;
-                """, cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    private static string BuildSqliteSnapshot(IReadOnlyList<string> columns, string rowAlias)
-    {
-        // Keep each json_object call below SQLite's function-argument limit even for
-        // wide inventory/material tables, then merge chunks into one JSON snapshot.
-        var objects = columns.Chunk(20).Select(chunk =>
-        {
-            var pairs = chunk.SelectMany(column => new[]
-            {
-                "'" + column.Replace("'", "''", StringComparison.Ordinal) + "'",
-                $"{rowAlias}.{Quote(column)}"
-            });
-            return "json_object(" + string.Join(", ", pairs) + ")";
-        }).ToList();
-
-        return objects.Aggregate((left, right) => $"json_patch({left}, {right})");
     }
 
     private static async Task ExecuteSqliteAuditDdlAsync(

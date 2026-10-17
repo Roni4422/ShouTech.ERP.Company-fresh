@@ -75,6 +75,10 @@ jobs:
               found = {row[1] for row in con.execute(f"PRAGMA table_info({table})")}
               if not cols <= found:
                   raise SystemExit(f"SQLite {table} columns are missing: {sorted(cols - found)}")
+          triggers = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='trigger'")}
+          for t in ("trg_audit_soft_delete_lookup_items", "trg_audit_hard_delete_customers", "trg_audit_hard_delete_materials"):
+              if t not in triggers:
+                  raise SystemExit(f"SQLite delete-audit trigger is missing: {t}")
           print("SQLite journal, cash voucher, and currency schemas verified.")
           PY
       - name: Test existing SQLite migration-history table

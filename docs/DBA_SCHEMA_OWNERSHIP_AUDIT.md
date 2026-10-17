@@ -92,3 +92,7 @@ Do not mark schema ownership complete until that migration and both-provider int
 ### Re-verification (migrations 023–024)
 
 A repository-wide search of `.cs`/`.py` sources found no `CREATE TABLE`/`ALTER TABLE` in application code outside `tools/SqlMigrator` (ledger bootstrap) and test fixtures. `company_features` (023) and `lookup_items` (024) are defined only in `dba/mig/{sqlite,postgresql}` and asserted by the SQLite migration smoke workflow. The `RecycleBinSvc.cs` trigger item above remains open.
+
+### Update — SQLite audit triggers migrated
+
+`dba/mig/sqlite/025_deletion_audit_triggers.sql` now defines the delete-audit triggers explicitly for the 37 company-scoped SQLite tables (names identical to the former runtime-installed triggers, so upgraded databases are unaffected). `RecycleBinSvc` no longer creates SQLite triggers. **Still open:** the PostgreSQL trigger function and per-table triggers are still installed at runtime; a matching `postgresql/` migration must be written and verified on a PostgreSQL server (none was available in this environment). Tables added after migration 025 need their own forward-only trigger migration.
