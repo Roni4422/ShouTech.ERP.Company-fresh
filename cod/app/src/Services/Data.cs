@@ -71,7 +71,7 @@ public sealed class DataServ : IDataServ
         if (count <= 0) return new List<RecentDocument>();
 
         var companyId = GetActiveCompanyId();
-        var activePredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted = FALSE" : "is_deleted = 0";
+        var activePredicate = "is_deleted = 0";
         var sql = $"""
             SELECT doc_no, doc_kind, doc_date, COALESCE(party_name, ''),
                    COALESCE(grand_total, 0), COALESCE(status, '')
