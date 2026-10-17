@@ -347,7 +347,7 @@ public static class RecycleBinSvc
             }
 
             // Cheque batches own line-version history with an FK that intentionally does not cascade.
-            // Purging a draft parent must remove all child versions in the same transaction or retain both.
+            // Purging a draft parent removes every child version in the same transaction or retains both.
             if (item.TableName.Equals("cheque_batches", StringComparison.OrdinalIgnoreCase))
             {
                 var tables = await GetTableNamesAsync(connection, cancellationToken).ConfigureAwait(false);
