@@ -119,6 +119,15 @@
 
         </UniformGrid>
 
+        <TextBlock x:Name="DashboardError"
+                   Visibility="Collapsed"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   Foreground="{DynamicResource ErrorBrush}"
+                   FontSize="13"
+                   Margin="8,4,8,12"/>
+
     </StackPanel>
 
 </ScrollViewer>
