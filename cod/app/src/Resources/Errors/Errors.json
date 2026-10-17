@@ -1405,5 +1405,32 @@
     "severity": "Error",
     "catalogRef": "DATA_EXCHANGE.UI.RESULT.001",
     "location": "DATA_EXCHANGE.UI.RESULT"
+  },
+  "RCO-LOAD-001": {
+    "type": "System",
+    "name": "DeletedCompanyLoadFailed",
+    "message": "Deleted companies could not be loaded. Check the application log for details.",
+    "messageKey": "Errors.RCO-LOAD-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY_RESTORE.LOAD.001",
+    "location": "COMPANY_RESTORE.LOAD"
+  },
+  "RCO-RESTORE-001": {
+    "type": "System",
+    "name": "DeletedCompanyRestoreFailed",
+    "message": "The company could not be restored. Check the application log for details.",
+    "messageKey": "Errors.RCO-RESTORE-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY_RESTORE.RESTORE.001",
+    "location": "COMPANY_RESTORE.RESTORE"
+  },
+  "RCO-RESTORE-002": {
+    "type": "System",
+    "name": "DeletedCompanyRestoreRejected",
+    "message": "The company restore operation was not completed. Check the application log for details.",
+    "messageKey": "Errors.RCO-RESTORE-002",
+    "severity": "Error",
+    "catalogRef": "COMPANY_RESTORE.RESTORE.002",
+    "location": "COMPANY_RESTORE.RESTORE"
   }
 }
