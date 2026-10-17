@@ -32,6 +32,7 @@ public sealed class SalListWin : RptBase
         {
             new() { Key = "From", LabelTextKey = "Reports.Filter.DateFrom", Kind = RptFltKind.DateFrom, DefaultValue = new DateTime(DateTime.Today.Year, 1, 1) },
             new() { Key = "To", LabelTextKey = "Reports.Filter.DateTo", Kind = RptFltKind.DateTo, DefaultValue = DateTime.Today },
+            new() { Key = "Search", LabelTextKey = "Common.Search", Kind = RptFltKind.Text },
         }
     };
 
@@ -39,7 +40,11 @@ public sealed class SalListWin : RptBase
     {
         var from = filters.GetDateOr("From", new DateTime(DateTime.Today.Year, 1, 1));
         var to = filters.GetDateOr("To", DateTime.Today);
-        var raw = await RptQuery.SalesInvoiceListAsync(from, to, ct);
+        if (from.Date > to.Date)
+            throw new ArgumentException("The report start date must not be after its end date.", nameof(filters));
+
+        var search = filters.GetString("Search");
+        var raw = await RptQuery.SalesInvoiceListAsync(from, to, search, ct);
         var rows = raw.Select(r => (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>
         {
             ["DocDate"] = r.GetValueOrDefault("DocDate"),
