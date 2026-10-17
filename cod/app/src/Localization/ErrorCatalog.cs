@@ -6,6 +6,37 @@ using System.Text.Json.Serialization;
 
 namespace ShouTech.App.Localization
 {
+    /// <summary>Stable identifiers shared by application code and the JSON error catalog.</summary>
+    public static class ErrorCodes
+    {
+        public const string DashboardDatabaseLoadFailed = "DSH-DB-001";
+        public const string ReportSaveFailed = "RPT-SAVE-001";
+        public const string ReportSaveAsFailed = "RPT-SAVE-002";
+        public const string ReportFormulaCompileFailed = "RPT-FORMULA-001";
+        public const string ReportEditNotAllowed = "RPT-OWNER-001";
+        public const string DuplicateReportColumnKey = "RPT-VALIDATE-001";
+        public const string EmptyReportFormula = "RPT-VALIDATE-002";
+        public const string InvalidReportFormula = "RPT-VALIDATE-003";
+        public const string ReportNameRequired = "RPT-VALIDATE-004";
+        public const string ExcelReportExportFailed = "XPT-EXP-001";
+        public const string PdfReportExportFailed = "XPT-EXP-002";
+        public const string EncryptedReportExportFailed = "XPT-EXP-003";
+        public const string ReportPrintFailed = "XPT-EXP-004";
+        public const string BackupEncryptionKeyUnavailable = "BKP-KEY-001";
+        public const string BackupCreationFailed = "BKP-CREATE-001";
+        public const string BackupRestoreFailed = "BKP-RESTORE-001";
+        public const string BackgroundBackupFailed = "BKP-ROTATE-001";
+        public const string BackupCycleFailed = "BKP-CYCLE-001";
+        public const string BackupCreationUiFailed = "BKP-UI-001";
+        public const string BackupRestoreUiFailed = "BKP-UI-002";
+        public const string BackupFolderOpenFailed = "BKP-UI-003";
+        public const string RestoreLoginHandoffFailed = "BKP-UI-004";
+        public const string DataExchangeDatasetLoadFailed = "DEX-UI-001";
+        public const string DataExchangeWorkbookPreviewFailed = "DEX-UI-002";
+        public const string DataExchangeOperationFailed = "DEX-UI-003";
+        public const string DataExchangeRowsFailed = "DEX-UI-004";
+    }
+
     public static class ErrorCatalog
     {
         private sealed class RawEntry
