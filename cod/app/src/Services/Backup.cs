@@ -789,7 +789,7 @@ internal static class SteiSvc
                             "BKP-KEY-001: The stored backup encryption key could not be recovered. The existing key file was preserved.",
                             ex);
                         throw new InvalidDataException(
-                            ErrorCatalog.Get("BKP-KEY-001"),
+                            ErrorCatalog.Get(ErrorCodes.BackupEncryptionKeyUnavailable),
                             ex);
                     }
                 }
@@ -882,7 +882,7 @@ internal static class SteiSvc
                 if (!result.Success)
                 {
                     _log.LogError("Backup", $"Export failed: {result.Message}");
-                    throw new InvalidOperationException(ErrorCatalog.Get("BKP-CREATE-001"));
+                    throw new InvalidOperationException(ErrorCatalog.Get(ErrorCodes.BackupCreationFailed));
                 }
 
                
@@ -963,7 +963,7 @@ internal static class SteiSvc
             {
                 _log.LogError("Backup",
                     $"Restore failed: {result.Message} ({result.FailedTables} tables, {result.FailedRows} rows)");
-                throw new InvalidOperationException(ErrorCatalog.Get("BKP-RESTORE-001"));
+                throw new InvalidOperationException(ErrorCatalog.Get(ErrorCodes.BackupRestoreFailed));
             }
 
             _log.LogInfo("Backup",
@@ -993,7 +993,7 @@ internal static class SteiSvc
         {
             var companyCode = ShouTech.App.AppState.CurrentCompanyCode?.Trim();
             if (string.IsNullOrWhiteSpace(companyCode))
-                throw new InvalidOperationException(ErrorCatalog.Get("BKP-CYCLE-001"));
+                throw new InvalidOperationException(ErrorCatalog.Get(ErrorCodes.BackupCycleFailed));
             return companyCode;
         }
 
@@ -1025,7 +1025,7 @@ internal static class SteiSvc
             catch (Exception ex)
             {
                 _log.LogError("Backup", "PerformRotatedBackup failed", ex);
-                return new BackupResult { Success = false, Message = ErrorCatalog.Get("BKP-ROTATE-001") };
+                return new BackupResult { Success = false, Message = ErrorCatalog.Get(ErrorCodes.BackgroundBackupFailed) };
             }
         }
 
@@ -1094,7 +1094,7 @@ internal static class SteiSvc
             catch (Exception ex)
             {
                 _log.LogError("Backup", "RunOnlineBackupCycleAsync failed", ex);
-                return new BackupResult { Success = false, Message = ErrorCatalog.Get("BKP-CYCLE-001") };
+                return new BackupResult { Success = false, Message = ErrorCatalog.Get(ErrorCodes.BackupCycleFailed) };
             }
         }
 
