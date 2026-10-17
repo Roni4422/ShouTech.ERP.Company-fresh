@@ -617,11 +617,19 @@ public static class CoLocalStore
             if (string.IsNullOrWhiteSpace(companyCode))
                 return false;
 
-            _ = await TryRestoreInDatabaseAsync(companyCode);
+            var restoredInDatabase = await TryRestoreInDatabaseAsync(companyCode);
+            if (!restoredInDatabase)
+            {
+                AppHost.Logging?.LogOperation(
+                    "CompanyRestore",
+                    "RestoreFailed",
+                    $"RCO-RESTORE-001; company={companyCode}; database restore returned false.");
+                return false;
+            }
+
             await CoLocalStore.RestoreInIndexAsync(companyCode);
-            // Rebuild merges active DB rows; preserves restored local entry.
+            // Rebuild the index only after the authoritative database restore succeeds.
             await RebuildCompanyIndexAsync();
-            // If only local-disabled (never soft-deleted in DB), still success.
             return true;
         }
 
@@ -659,8 +667,12 @@ public static class CoLocalStore
                     return await cmd.ExecuteNonQueryAsync() > 0;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppHost.Logging?.LogError(
+                    "CompanyRestore",
+                    $"RCO-RESTORE-001: Database restore failed for company '{companyCode}'.",
+                    ex);
                 return false;
             }
 
