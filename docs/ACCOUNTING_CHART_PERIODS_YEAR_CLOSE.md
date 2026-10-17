@@ -1,5 +1,14 @@
 # Chart of Accounts, Fiscal Periods, and Year-End Controls
 
+## Financial statements and closing entry
+
+- `GetTrialBalanceAsync(companyId, from, to)` returns opening balance, period debit/credit and closing balance per account, plus an `IsBalanced` flag.
+- `GetIncomeStatementAsync(companyId, from, to)` returns revenue and expense lines and net income.
+- `GetBalanceSheetAsync(companyId, asOf)` returns assets, liabilities and equity. Revenue and expense activity not yet closed is shown as current earnings, so the sheet balances before and after closing.
+- All three read the `v_posted_gl_lines` view (migration 022), which counts posted and reversed entries together so a reversal pair nets to zero. Drafts never count.
+- `PostYearEndClosingEntryAsync` clears every revenue/expense balance for the year into the supplied EQUITY account and posts the entry in the last open period. Run it before closing the final period; it returns null when there is nothing to close.
+- The year-close revenue/expense check now counts reversed entries too (status 2), so a reversed entry no longer blocks year closure.
+
 ## Scope
 
 This phase adds a provider-neutral accounting structure for SQLite and PostgreSQL. It does not delete existing business records. Legacy journal rows are assigned to generated monthly periods where their dates fall within a fiscal year.
@@ -30,7 +39,7 @@ The database trigger independently prevents a journal from being posted into a c
 
 ## Closing a fiscal year
 
-Call `AccountingStructureRepository.CloseFiscalYearAsync(fiscalYearId, actor)` only after all twelve periods are `CLOSED` or `LOCKED`. It refuses closure if drafts remain, posted journals are unbalanced, or any active revenue/expense account retains a non-zero net balance. This last check requires an approved income-statement closing journal to have been posted first; this repository does not automatically choose retained-earnings accounts or create that closing journal because those mappings are company/accounting-policy specific.
+Call `AccountingStructureRepository.CloseFiscalYearAsync(fiscalYearId, actor)` only after all twelve periods are `CLOSED` or `LOCKED`. It refuses closure if drafts remain, posted journals are unbalanced, or any active revenue/expense account retains a non-zero net balance. This last check requires an approved income-statement closing journal to have been posted first; the repository never guesses a retained-earnings account, so the caller supplies it. `PostYearEndClosingEntryAsync(fiscalYearId, retainedEarningsAccountId, actor)` creates and posts that closing journal.
 
 A closed fiscal year cannot accept new journal postings. There is intentionally no automatic reopen method; reopening requires a separately authorized and audited workflow.
 

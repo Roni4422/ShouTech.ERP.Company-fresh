@@ -85,6 +85,49 @@ def main() -> int:
     entry("sale_rev", 1, [("rev", 100, 0), ("cash", 0, 100)])
     net = db.execute("SELECT SUM(natural_amount) FROM v_posted_gl_lines WHERE account_id='rev'").fetchone()[0]
     assert net == 0, net
+
+    # --- Year-end closing entry (same SQL as AccountingStructureRepository.PostYearEndClosingEntryAsync) ---
+    db.execute("INSERT INTO chart_of_accounts(account_id, company_id, account_code, account_name, account_type) VALUES ('re','c1','3000','Retained','EQUITY')")
+    year_id = db.execute("SELECT fiscal_year_id FROM fiscal_years WHERE company_id='c1'").fetchone()[0]
+    # The pre-close P&L check must see the reversed pair (status 2 + 1) as zero revenue, 40 expense.
+    unclosed = db.execute(
+        "SELECT COUNT(*) FROM (SELECT a.account_id FROM fiscal_years fy JOIN journal_entries e ON e.company_id=fy.company_id "
+        "AND e.entry_date BETWEEN fy.start_date AND fy.end_date AND e.status IN (1,2) "
+        "JOIN journal_entry_lines l ON l.journal_entry_id=e.journal_entry_id JOIN chart_of_accounts a ON a.account_id=l.account_id "
+        "AND a.company_id=e.company_id WHERE fy.fiscal_year_id=? AND a.account_type IN ('REVENUE','EXPENSE') "
+        "GROUP BY a.account_id HAVING ABS(SUM(l.debit-l.credit)) > 0.0001) x", (year_id,)).fetchone()[0]
+    assert unclosed == 1, unclosed  # only the expense account remains; reversed revenue nets to zero
+
+    balances = db.execute(
+        "SELECT v.account_id, SUM(v.debit - v.credit) FROM v_posted_gl_lines v "
+        "JOIN fiscal_years fy ON fy.company_id=v.company_id AND v.entry_date >= fy.start_date AND v.entry_date <= fy.end_date "
+        "WHERE fy.fiscal_year_id=? AND v.account_type IN ('REVENUE','EXPENSE') "
+        "GROUP BY v.account_id HAVING ABS(SUM(v.debit - v.credit)) > 0.0001", (year_id,)).fetchall()
+    assert balances == [("exp", 40)], balances
+    period = db.execute("SELECT fiscal_period_id FROM fiscal_periods WHERE fiscal_year_id=? AND status='OPEN' ORDER BY period_number DESC LIMIT 1", (year_id,)).fetchone()[0]
+    db.execute(
+        "INSERT INTO journal_entries(journal_entry_id, company_id, entry_date, description, status, created_by, fiscal_period_id, document_number) "
+        "SELECT 'close1', fp.company_id, fp.end_date, 'Year-end closing entry', 0, 'u', fp.fiscal_period_id, 'YE-CLOSE-1' "
+        "FROM fiscal_periods fp WHERE fp.fiscal_period_id=?", (period,))
+    net = 0
+    for n, (acc, bal) in enumerate(balances, 1):
+        net += bal
+        db.execute("INSERT INTO journal_entry_lines(journal_entry_id, line_number, account_id, debit, credit, note) VALUES ('close1', ?, ?, ?, ?, 'Year-end closing')",
+                   (n, acc, 0 if bal > 0 else -bal, bal if bal > 0 else 0))
+    db.execute("INSERT INTO journal_entry_lines(journal_entry_id, line_number, account_id, debit, credit, note) VALUES ('close1', ?, 're', ?, ?, 'Year-end closing')",
+               (len(balances) + 1, net if net > 0 else 0, 0 if net > 0 else -net))
+    db.execute("UPDATE journal_entries SET status=1 WHERE journal_entry_id='close1' AND status=0")  # fires the posting triggers
+    left = db.execute("SELECT COUNT(*) FROM v_posted_gl_lines WHERE account_type IN ('REVENUE','EXPENSE') GROUP BY account_id HAVING ABS(SUM(debit-credit)) > 0.0001").fetchall()
+    assert left == [], left
+    re_bal = db.execute("SELECT SUM(debit-credit) FROM v_posted_gl_lines WHERE account_id='re'").fetchone()[0]
+    assert re_bal == 40, re_bal  # the 40 expense (a loss) is a debit to retained earnings
+    # Trial balance stays balanced and a second close finds nothing left to close.
+    dr, cr = db.execute("SELECT SUM(debit), SUM(credit) FROM v_posted_gl_lines").fetchone()
+    assert dr == cr, (dr, cr)
+    # Balance sheet: assets equal liabilities + equity once earnings are closed (cash is -40 in this fixture).
+    assets = db.execute("SELECT COALESCE(SUM(natural_amount),0) FROM v_posted_gl_lines WHERE account_type='ASSET'").fetchone()[0]
+    eq = db.execute("SELECT COALESCE(SUM(natural_amount),0) FROM v_posted_gl_lines WHERE account_type IN ('LIABILITY','EQUITY')").fetchone()[0]
+    assert assets == eq == -40, (assets, eq)
     print("OK: financial report view verified against all SQLite migrations")
     return 0
 
