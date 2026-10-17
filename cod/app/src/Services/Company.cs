@@ -455,8 +455,11 @@ public static class CoLocalStore
                 return false;
 
             var deletedInDb = await TrySoftDeleteInDatabaseAsync(companyCode);
+            if (!deletedInDb)
+                return false;
+
             await CoLocalStore.RemoveFromIndexAsync(companyCode);
-            return deletedInDb;
+            return true;
         }
 
         private static async Task<bool> TrySoftDeleteInDatabaseAsync(string companyCode)
@@ -697,7 +700,7 @@ public static class CoLocalStore
                 await CoLocalStore.SaveCompanyAsync(profile);
             }
 
-            return dbOk || true; // local save succeeded
+            return dbOk;
         }
 
         private static async Task<bool> TryUpdateInDatabaseAsync(StoredCoRec profile)
