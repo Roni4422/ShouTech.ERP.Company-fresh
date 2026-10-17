@@ -13,7 +13,7 @@ public sealed class CstCard : BaseWin
     /// <summary>Logs unavailable operations instead of reporting a false success.</summary>
     private void ShowOperationUnavailable(string operation)
     {
-        const string errorCode = "APP-2011";
+        const string errorCode = "CUS-OPS-001";
         var context = $"Operation={operation} is not implemented in window {GetType().Name}.";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var exception = new NotSupportedException(context);
@@ -42,7 +42,7 @@ public sealed class CstCard : BaseWin
     /// </summary>
     private void ShowPersistenceUnavailable()
     {
-        const string errorCode = "APP-2010";
+        const string errorCode = "CUS-PER-001";
         const string context = "This window has no database persistence implementation.";
         var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
         var exception = new NotSupportedException(context);
