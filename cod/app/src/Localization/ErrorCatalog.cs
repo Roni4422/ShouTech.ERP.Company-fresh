@@ -10,6 +10,14 @@ namespace ShouTech.App.Localization
     public static class ErrorCodes
     {
         public const string DashboardDatabaseLoadFailed = "DSH-DB-001";
+        public const string CustomerContextFailed = "CUS-DB-001";
+        public const string CustomerSaveFailed = "CUS-DB-002";
+        public const string CustomerLoadFailed = "CUS-DB-003";
+        public const string CustomerDeleteFailed = "CUS-DEL-001";
+        public const string CustomerDeleteNotFound = "CUS-DEL-002";
+        public const string CustomerValidationFailed = "CUS-VAL-001";
+        public const string CustomerCodeRequiresRestore = "CUS-VAL-002";
+        public const string CustomerNotFound = "CUS-VAL-003";
         public const string ReportSaveFailed = "RPT-SAVE-001";
         public const string ReportSaveAsFailed = "RPT-SAVE-002";
         public const string ReportFormulaCompileFailed = "RPT-FORMULA-001";
