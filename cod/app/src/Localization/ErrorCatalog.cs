@@ -102,6 +102,7 @@ namespace ShouTech.App.Localization
         public const string RecycleBinMutationFailed = "BIN-OP-001";
         public const string TaxConfigurationLoadFailed = "TAX-DB-001";
         public const string TaxRateNotConfigured = "TAX-RATE-001";
+        public const string TaxLookupFailed = "TAX-LOOKUP-001";
         public const string ApplicationSchemaBootstrapFailed = "APP-START-001";
         public const string UnhandledApplicationException = "APP-START-002";
         public const string ApplicationStartupFailed = "APP-START-003";
