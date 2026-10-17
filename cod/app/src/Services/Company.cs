@@ -578,9 +578,13 @@ public static class CoLocalStore
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // continue with local disabled entries
+                AppHost.Logging?.LogError(
+                    "CompanyRestore",
+                    "RCO-LOAD-001: Failed to query deleted companies from the active database.",
+                    ex);
+                throw;
             }
 
             // 2) Local index entries marked Enabled=false (delete from window)
@@ -600,8 +604,13 @@ public static class CoLocalStore
                     };
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppHost.Logging?.LogError(
+                    "CompanyRestore",
+                    "RCO-LOAD-001: Failed to load locally disabled company entries.",
+                    ex);
+                throw;
             }
 
             return merged.Values
