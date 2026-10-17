@@ -1350,7 +1350,16 @@
     "Posted": "تم ترحيل السند بنجاح",
     "MustBalance": "لا يمكن ترحيل سند قيد غير متوازن",
     "NeedLines": "أضف سطراً واحداً على الأقل",
-    "ConfirmPost": "هل تريد ترحيل السند؟ لا يمكن تعديله بعد الترحيل."
+    "ConfirmPost": "هل تريد ترحيل السند؟ لا يمكن تعديله بعد الترحيل.",
+    "LoadChequeBatch": "تحميل الدفعة",
+    "SaveChequeBatch": "حفظ الدفعة",
+    "DeleteChequeBatch": "حذف الدفعة",
+    "ChequeBatchSaved": "تم حفظ دفعة الشيكات بنجاح.",
+    "ChequeBatchLoaded": "تم تحميل دفعة الشيكات بنجاح.",
+    "ConfirmChequeBatchDelete": "هل تريد نقل دفعة الشيكات المسودة إلى سلة المحذوفات؟ يمكن استعادتها لاحقًا.",
+    "ChequeBatchDeleted": "تم نقل دفعة الشيكات إلى سلة المحذوفات.",
+    "AddChequeLine": "إضافة شيك",
+    "ChequeBatchCode": "رمز الدفعة"
   },
   "CustCard": {
     "Title": "بطاقة عميل ومورد",
