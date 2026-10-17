@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using ShouTech.App.Reporting;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Services;
 
@@ -77,7 +78,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex);
+            NotifyFailure(owner, ex, "XPT-EXP-001");
             return false;
         }
     }
@@ -122,7 +123,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex);
+            NotifyFailure(owner, ex, "XPT-EXP-002");
             return false;
         }
     }
@@ -167,7 +168,7 @@ public static class XptServ
         }
         catch (Exception ex)
         {
-            NotifyFailure(owner, ex);
+            NotifyFailure(owner, ex, "XPT-EXP-003");
             return false;
         }
     }
@@ -178,14 +179,21 @@ public static class XptServ
 
     public static void Print(Window owner, ExportModel model)
     {
-        var dialog = new PrintDialog();
-        if (dialog.ShowDialog() != true)
-            return;
+        try
+        {
+            var dialog = new PrintDialog();
+            if (dialog.ShowDialog() != true)
+                return;
 
-        var pageCount = PageCount(model);
-        var paginator = new RptPaginator(pageCount, i =>
-            RptRend.BuildPage(BuildPageModel(model, i, pageCount)));
-        dialog.PrintDocument(paginator, $"{model.Title} - {model.CompanyName}");
+            var pageCount = PageCount(model);
+            var paginator = new RptPaginator(pageCount, i =>
+                RptRend.BuildPage(BuildPageModel(model, i, pageCount)));
+            dialog.PrintDocument(paginator, $"{model.Title} - {model.CompanyName}");
+        }
+        catch (Exception ex)
+        {
+            NotifyFailure(owner, ex, "XPT-EXP-004");
+        }
     }
 
     // ------------------------------------------------------------------
@@ -262,13 +270,22 @@ public static class XptServ
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private static void NotifyFailure(Window owner, Exception exception)
+    private static void NotifyFailure(Window owner, Exception exception, string errorCode)
     {
-        var app = System.Windows.Application.Current as App;
-        var loc = app?.Localization;
-        MessageBox.Show(owner,
-            $"{loc?.GetString("Export.Failed") ?? "Export failed."}{Environment.NewLine}{Environment.NewLine}{exception.Message}",
-            loc?.GetString("Common.Error") ?? string.Empty,
-            MessageBoxButton.OK, MessageBoxImage.Error);
+        AppHost.Logging?.LogError(
+            "ReportExport",
+            $"{errorCode}: Report export or printing failed.",
+            exception);
+        AppHost.Logging?.LogOperation(
+            "ReportExport",
+            "OperationFailed",
+            $"{errorCode}; export or printing was not confirmed as successful.");
+
+        MessageBox.Show(
+            owner,
+            ErrorCatalog.Get(errorCode),
+            "Error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
     }
 }
