@@ -63,7 +63,8 @@ public abstract class BaseWin : Window
     protected static string CurrentCompanyCode => AppState.CurrentCompanyCode ?? string.Empty;
 
     /// <summary>Active database provider (sqlite or postgresql).</summary>
-    protected static string CurrentDatabaseProvider => AppState.CurrentDatabaseProvider ?? "sqlite";
+    protected static string CurrentDatabaseProvider =>
+        DatabaseRuntime.IsPostgreSql() ? "postgresql" : "sqlite";
 
     /// <summary>Active user ID for audit and context purposes.</summary>
     protected static string CurrentUserId => AppState.CurrentUser?.Username ?? string.Empty;
@@ -225,17 +226,13 @@ public abstract class BaseWin : Window
         }
     }
 
-    private async Task RegisterWithSqliteAsync(string windowType, string companyCode, string userId)
-    {
-        // Implementation for SQLite registration
-        // This would use your existing SQLite infrastructure
-    }
+    // These callbacks intentionally remain no-op until a DBA-owned window-registration
+    // schema and an auditable persistence contract are defined.
+    private static Task RegisterWithSqliteAsync(string windowType, string companyCode, string userId) =>
+        Task.CompletedTask;
 
-    private async Task RegisterWithPostgreSqlAsync(string windowType, string companyCode, string userId)
-    {
-        // Implementation for PostgreSQL registration
-        // This would use your existing PostgreSQL infrastructure
-    }
+    private static Task RegisterWithPostgreSqlAsync(string windowType, string companyCode, string userId) =>
+        Task.CompletedTask;
 
 
 }
