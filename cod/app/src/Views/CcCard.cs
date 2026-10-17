@@ -29,6 +29,7 @@ public sealed class CcCard : BaseWin
     private readonly Button _btnNew = new();
     private readonly Button _btnSave = new();
     private readonly Button _btnDelete = new();
+    private bool _isLoadingRecord;
 
     public CcCard()
     {
@@ -127,12 +128,12 @@ public sealed class CcCard : BaseWin
         UpdateBalancesUnavailable();
     }
 
-    private void UpdateBalances(decimal debit, decimal credit)
+    private void UpdateBalancesUnavailable()
     {
-        _lblDr.Text = $"{T("CostCenter.Debit")}: {debit:N2} SAR";
-        _lblCr.Text = $"{T("CostCenter.Credit")}: {credit:N2} SAR";
-        var bal = debit - credit;
-        _lblBal.Text = $"{T("CostCenter.Balance")}: {bal:N2} SAR";
+        // Cost-center ledger summaries are not connected to this card; do not display fabricated zero balances.
+        _lblDr.Text = $"{T("CostCenter.Debit")}: —";
+        _lblCr.Text = $"{T("CostCenter.Credit")}: —";
+        _lblBal.Text = $"{T("CostCenter.Balance")}: —";
         _lblBal.FontWeight = FontWeights.Bold;
     }
 
@@ -259,7 +260,7 @@ public sealed class CcCard : BaseWin
     {
         Title = T("CostCenter.Title");
         RefreshLocalizedContent(Content as DependencyObject);
-        UpdateBalances(0, 0);
+        UpdateBalancesUnavailable();
     }
 
     private static void RefreshLocalizedContent(DependencyObject? parent)
