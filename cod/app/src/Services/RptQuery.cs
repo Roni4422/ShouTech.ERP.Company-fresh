@@ -155,7 +155,8 @@ public static class RptQuery
             ("$company", Company),
             ("$account", accountCode ?? string.Empty),
             ("$from", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            ("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            ("$search", string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim().ToLowerInvariant()}%"));
     }
 
     public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> JournalListAsync(
@@ -367,7 +368,7 @@ public static class RptQuery
     }
 
     public static async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> SalesInvoiceListAsync(
-        DateTime from, DateTime to, CancellationToken ct)
+        DateTime from, DateTime to, string? search, CancellationToken ct)
     {
         DocSchema.Ensure();
         const string sql = """
@@ -387,6 +388,12 @@ public static class RptQuery
               AND d.doc_date >= $from
               AND d.doc_date <= $to
               AND d.is_deleted = 0
+              AND ($search IS NULL
+                   OR LOWER(COALESCE(d.doc_no, '')) LIKE $search
+                   OR LOWER(COALESCE(c.customer_code, '')) LIKE $search
+                   OR LOWER(COALESCE(c.customer_name_ar, d.party_name, '')) LIKE $search
+                   OR LOWER(COALESCE(d.status, '')) LIKE $search
+                   OR LOWER(COALESCE(d.currency_code, '')) LIKE $search)
             ORDER BY d.doc_date DESC, d.doc_no DESC;
             """;
         return await QueryAsync(sql, ct,
