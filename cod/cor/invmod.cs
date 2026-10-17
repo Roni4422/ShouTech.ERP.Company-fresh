@@ -25,21 +25,28 @@ namespace ShouTech.Core.Inv
 
         public async Task<bool> ProcessPOSSaleAsync(POSSaleRequest req)
         {
+            ArgumentNullException.ThrowIfNull(req);
+
+            if (req.UserId == Guid.Empty || req.CompanyId == Guid.Empty)
+                throw new ArgumentException("A valid user and company are required.", nameof(req));
+            if (string.IsNullOrWhiteSpace(req.Barcode))
+                throw new ArgumentException("A barcode is required.", nameof(req));
+            if (req.WarehouseId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(req.WarehouseId));
+            if (req.Quantity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(req.Quantity));
+            if (req.UnitPrice < 0)
+                throw new ArgumentOutOfRangeException(nameof(req.UnitPrice));
+
             await _security.ValidatePermissionAsync(req.UserId, "POS.ProcessSale");
 
-            _uow.Begin();
-            try
-            {
-                _uow.Commit();
-                _logger.LogInformation("POS Sale Completed Successfully");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _uow.Rollback();
-                _logger.LogError(ex, "POS Sale Failed");
-                throw;
-            }
+            // This legacy module has no sale-line, stock, payment, or ledger persistence.
+            // Do not open and commit an empty transaction or claim that a sale was posted.
+            _logger.LogError(
+                "POS sale rejected: persistence is not implemented in the legacy InventoryModule. CompanyId={CompanyId}, UserId={UserId}",
+                req.CompanyId, req.UserId);
+            throw new NotSupportedException(
+                "POS sale processing is unavailable in the legacy InventoryModule because transactional sale persistence is not implemented.");
         }
 
         public void Dispose() => _uow?.Dispose();
