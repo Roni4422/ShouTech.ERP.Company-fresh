@@ -24,6 +24,36 @@ namespace Kern.Tests
     public class UnitTest1
     {
         [Fact]
+        public async Task PermServ_ShouldClearPreviousGrantsBeforeRejectingInvalidUser()
+        {
+            var service = new PermServ();
+            var permissionsField = typeof(PermServ).GetField("_perms", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            var permissions = (HashSet<string>)permissionsField.GetValue(service)!;
+            permissions.Add(PermCat.System.Admin);
+
+            await Assert.ThrowsAsync<ArgumentException>(() => service.LoadForUserAsync("  "));
+
+            Assert.False(service.Has(PermCat.System.Admin));
+            Assert.Empty(service.GetCurrentPermissions());
+        }
+
+        [Fact]
+        public void PermServ_GetCurrentPermissions_ShouldReturnImmutableSnapshot()
+        {
+            var service = new PermServ();
+            var permissionsField = typeof(PermServ).GetField("_perms", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            var permissions = (HashSet<string>)permissionsField.GetValue(service)!;
+            permissions.Add(PermCat.System.Admin);
+
+            var snapshot = service.GetCurrentPermissions();
+            permissions.Clear();
+
+            Assert.Contains(PermCat.System.Admin, snapshot);
+            Assert.Empty(service.GetCurrentPermissions());
+            Assert.IsNotType<HashSet<string>>(snapshot);
+        }
+
+        [Fact]
         public async Task RecycleBinSvc_ShouldDetectBooleanAndIntegerSoftDeleteColumns()
         {
             var settingsField = typeof(AppCfgSvc).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Static)!;
