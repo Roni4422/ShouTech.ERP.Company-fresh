@@ -307,10 +307,20 @@ public static class CustomerCardSvc
         var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         if (value is null or DBNull)
             throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "The active company is not registered in the connected database.");
-        if (IsPostgreSql && value is Guid guid)
-            return guid;
-        if (Guid.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out var parsed))
-            return IsPostgreSql ? parsed : parsed.ToString("D", CultureInfo.InvariantCulture);
+        if (IsPostgreSql)
+        {
+            if (value is Guid guid)
+                return guid;
+            if (Guid.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out var parsed))
+                return parsed;
+            throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "The active company identifier is invalid.");
+        }
+
+        // SQLite stores company_id as TEXT and existing databases may legitimately use
+        // non-GUID identifiers. Preserve the stored key instead of imposing a new format.
+        var sqliteCompanyId = Convert.ToString(value, CultureInfo.InvariantCulture);
+        if (!string.IsNullOrWhiteSpace(sqliteCompanyId))
+            return sqliteCompanyId;
         throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "The active company identifier is invalid.");
     }
 
