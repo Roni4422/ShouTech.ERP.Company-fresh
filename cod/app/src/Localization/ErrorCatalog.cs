@@ -43,6 +43,15 @@ namespace ShouTech.App.Localization
         public const string SalesRepDuplicateCode = "REP-VAL-002";
         public const string SalesRepCodeRequiresRestore = "REP-VAL-003";
         public const string SalesRepNotFound = "REP-VAL-004";
+        public const string ChequeContextFailed = "CHQ-DB-001";
+        public const string ChequeSaveFailed = "CHQ-DB-002";
+        public const string ChequeLoadFailed = "CHQ-DB-003";
+        public const string ChequeDeleteFailed = "CHQ-DEL-001";
+        public const string ChequeDeleteNotFound = "CHQ-DEL-002";
+        public const string ChequeValidationFailed = "CHQ-VAL-001";
+        public const string ChequeCodeRequiresRestore = "CHQ-VAL-002";
+        public const string ChequeNotFound = "CHQ-VAL-003";
+        public const string ChequePostedEditRejected = "CHQ-VAL-004";
         public const string ReportSaveFailed = "RPT-SAVE-001";
         public const string ReportSaveAsFailed = "RPT-SAVE-002";
         public const string ReportFormulaCompileFailed = "RPT-FORMULA-001";
