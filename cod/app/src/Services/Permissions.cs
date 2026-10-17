@@ -729,13 +729,29 @@ public sealed class PermServ : IPermServ
         _roleCode = string.Empty;
         _currentUserId = userId.Trim();
 
-        var provider = DatabaseRuntime.GetProvider();
-        if (DatabaseRuntime.IsSqlite(provider))
+        try
         {
-            await LoadSqliteAsync(connectionString, ct).ConfigureAwait(false);
-            return;
-        }
+            var provider = DatabaseRuntime.GetProvider();
+            if (DatabaseRuntime.IsSqlite(provider))
+            {
+                await LoadSqliteAsync(connectionString, ct).ConfigureAwait(false);
+                return;
+            }
+            if (!DatabaseRuntime.IsPostgreSql(provider))
+                throw new NotSupportedException($"Unsupported database provider: {provider}");
 
+            await LoadPostgresPermissionsAsync(connectionString, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Never leave partial or stale grants available after a failed login/load.
+            Clear();
+            throw;
+        }
+    }
+
+    private async Task LoadPostgresPermissionsAsync(string connectionString, CancellationToken ct)
+    {
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(ct).ConfigureAwait(false);
         const string sql = """
@@ -806,7 +822,7 @@ public sealed class PermServ : IPermServ
         _roleCode = string.Empty;
     }
 
-    public IReadOnlyCollection<string> GetCurrentPermissions() => _perms;
+    public IReadOnlyCollection<string> GetCurrentPermissions() => Array.AsReadOnly(_perms.ToArray());
 
     private async Task LoadSqliteAsync(string connectionString, CancellationToken ct)
     {
