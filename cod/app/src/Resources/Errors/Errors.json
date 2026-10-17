@@ -1711,5 +1711,131 @@
     "severity": "Error",
     "catalogRef": "CHART_OF_ACCOUNTS.IMPORT.ENCRYPTED.002",
     "location": "CHART_OF_ACCOUNTS.IMPORT.ENCRYPTED"
+  },
+  "CAT-000": {
+    "type": "System",
+    "name": "CategoryCardUnknownFailure",
+    "message": "The category card operation failed. Check the application log for details.",
+    "messageKey": "Errors.CAT-000",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.GENERAL.000",
+    "location": "CATEGORY_CARD.GENERAL"
+  },
+  "CAT-001": {
+    "type": "System",
+    "name": "CategoryCardSaveFailed",
+    "message": "The category card could not be saved. Check the database connection and application log.",
+    "messageKey": "Errors.CAT-001",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.SAVE.001",
+    "location": "CATEGORY_CARD.SAVE"
+  },
+  "CAT-002": {
+    "type": "System",
+    "name": "CategoryCardDeleteFailed",
+    "message": "The category card could not be deleted. It may be referenced by other records. Check the application log.",
+    "messageKey": "Errors.CAT-002",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.DELETE.002",
+    "location": "CATEGORY_CARD.DELETE"
+  },
+  "CAT-003": {
+    "type": "System",
+    "name": "CategoryCardLoadFailed",
+    "message": "Category cards could not be loaded. Check the active database and application log.",
+    "messageKey": "Errors.CAT-003",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.LOAD.003",
+    "location": "CATEGORY_CARD.LOAD"
+  },
+  "CAT-004": {
+    "type": "Validation",
+    "name": "CategoryCardSearchFailed",
+    "message": "The category card search could not be completed. Check the search criteria and application log.",
+    "messageKey": "Errors.CAT-004",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.SEARCH.004",
+    "location": "CATEGORY_CARD.SEARCH"
+  },
+  "CAT-005": {
+    "type": "System",
+    "name": "CategoryCardImageFailed",
+    "message": "The category card image could not be loaded. Verify the image file and permissions.",
+    "messageKey": "Errors.CAT-005",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.IMAGE.005",
+    "location": "CATEGORY_CARD.IMAGE"
+  },
+  "CAT-006": {
+    "type": "System",
+    "name": "CategoryCardRepositoryUnavailable",
+    "message": "Category card data is currently unavailable. Check the active database and application log.",
+    "messageKey": "Errors.CAT-006",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.REPOSITORY.006",
+    "location": "CATEGORY_CARD.REPOSITORY"
+  },
+  "CAT-007": {
+    "type": "Validation",
+    "name": "CategoryCardCodeRequired",
+    "message": "Enter a category code before saving.",
+    "messageKey": "Errors.CAT-007",
+    "severity": "Warning",
+    "catalogRef": "CATEGORY_CARD.VALIDATION.CODE.007",
+    "location": "CATEGORY_CARD.VALIDATION"
+  },
+  "CAT-008": {
+    "type": "Validation",
+    "name": "CategoryCardNameRequired",
+    "message": "Enter a category name before saving.",
+    "messageKey": "Errors.CAT-008",
+    "severity": "Warning",
+    "catalogRef": "CATEGORY_CARD.VALIDATION.NAME.008",
+    "location": "CATEGORY_CARD.VALIDATION"
+  },
+  "CAT-009": {
+    "type": "Validation",
+    "name": "CategoryCardDuplicateCode",
+    "message": "This category code already exists. Enter a unique code.",
+    "messageKey": "Errors.CAT-009",
+    "severity": "Warning",
+    "catalogRef": "CATEGORY_CARD.VALIDATION.DUPLICATE.009",
+    "location": "CATEGORY_CARD.VALIDATION"
+  },
+  "CAT-010": {
+    "type": "Validation",
+    "name": "CategoryCardNoCardToPrint",
+    "message": "Select or open a category card before printing.",
+    "messageKey": "Errors.CAT-010",
+    "severity": "Warning",
+    "catalogRef": "CATEGORY_CARD.PRINT.VALIDATION.010",
+    "location": "CATEGORY_CARD.PRINT"
+  },
+  "CAT-011": {
+    "type": "Validation",
+    "name": "CategoryCardSearchTextRequired",
+    "message": "Enter a code or name to search.",
+    "messageKey": "Errors.CAT-011",
+    "severity": "Warning",
+    "catalogRef": "CATEGORY_CARD.SEARCH.VALIDATION.011",
+    "location": "CATEGORY_CARD.SEARCH"
+  },
+  "CAT-012": {
+    "type": "Validation",
+    "name": "CategoryCardSearchNotFound",
+    "message": "No category cards matched the search criteria.",
+    "messageKey": "Errors.CAT-012",
+    "severity": "Information",
+    "catalogRef": "CATEGORY_CARD.SEARCH.NOT_FOUND.012",
+    "location": "CATEGORY_CARD.SEARCH"
+  },
+  "CAT-013": {
+    "type": "System",
+    "name": "CategoryCardInitializationFailed",
+    "message": "The category card window could not be initialized. Check the application log for details.",
+    "messageKey": "Errors.CAT-013",
+    "severity": "Error",
+    "catalogRef": "CATEGORY_CARD.INIT.013",
+    "location": "CATEGORY_CARD.INIT"
   }
 }
