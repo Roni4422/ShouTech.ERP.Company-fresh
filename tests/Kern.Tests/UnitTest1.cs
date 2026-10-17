@@ -8,9 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Xml.Linq;
+using System.Text.Json;
 using System.Windows;
 using ShouTech.App.Converters;
 using ShouTech.App.Configuration;
+using ShouTech.App.Localization;
 using ShouTech.App.Services;
 using ShouTech.App;
 using ShouTech.Domain.Entities;
@@ -23,6 +25,43 @@ namespace Kern.Tests
 {
     public class UnitTest1
     {
+        [Fact]
+        public void StartupErrorCodes_ShouldExistInEnglishJsonCatalog()
+        {
+            var current = new DirectoryInfo(AppContext.BaseDirectory);
+            string? catalogPath = null;
+            while (current != null)
+            {
+                var candidate = Path.Combine(current.FullName, "cod", "app", "src", "Resources", "Errors", "Errors.json");
+                if (File.Exists(candidate))
+                {
+                    catalogPath = candidate;
+                    break;
+                }
+                current = current.Parent;
+            }
+
+            Assert.False(string.IsNullOrWhiteSpace(catalogPath), "The repository error catalog could not be located from the test directory.");
+            using var document = JsonDocument.Parse(File.ReadAllText(catalogPath!));
+            var catalog = document.RootElement;
+            var startupCodes = typeof(ErrorCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Where(field => field.IsLiteral && !field.IsInitOnly)
+                .Select(field => field.GetRawConstantValue() as string)
+                .Where(code => code is not null && code.StartsWith("SPL-", StringComparison.Ordinal))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.NotEmpty(startupCodes);
+            foreach (var code in startupCodes)
+            {
+                Assert.True(catalog.TryGetProperty(code!, out var entry), $"Missing English error catalog entry for {code}.");
+                Assert.True(entry.TryGetProperty("message", out var message) && !string.IsNullOrWhiteSpace(message.GetString()),
+                    $"Missing English user-facing message for {code}.");
+                Assert.True(entry.TryGetProperty("location", out var location) && !string.IsNullOrWhiteSpace(location.GetString()),
+                    $"Missing error location for {code}.");
+            }
+        }
+
         [Fact]
         public async Task PermServ_ShouldClearPreviousGrantsBeforeRejectingInvalidUser()
         {
