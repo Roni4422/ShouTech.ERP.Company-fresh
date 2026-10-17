@@ -882,7 +882,7 @@ internal static class SteiSvc
                 if (!result.Success)
                 {
                     _log.LogError("Backup", $"Export failed: {result.Message}");
-                    throw new InvalidOperationException($"Backup export failed: {result.Message}");
+                    throw new InvalidOperationException(ErrorCatalog.Get("BKP-CREATE-001"));
                 }
 
                
@@ -963,7 +963,7 @@ internal static class SteiSvc
             {
                 _log.LogError("Backup",
                     $"Restore failed: {result.Message} ({result.FailedTables} tables, {result.FailedRows} rows)");
-                throw new InvalidOperationException($"Backup restore failed: {result.Message}");
+                throw new InvalidOperationException(ErrorCatalog.Get("BKP-RESTORE-001"));
             }
 
             _log.LogInfo("Backup",
@@ -991,7 +991,19 @@ internal static class SteiSvc
 
         public void PerformBackup()
         {
-            _ = CreateBackupAsync("001");
+            _ = PerformBackupCoreAsync();
+        }
+
+        private async Task PerformBackupCoreAsync()
+        {
+            try
+            {
+                await CreateBackupAsync("001").ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError("Backup", "BKP-ROTATE-001: Background backup creation failed.", ex);
+            }
         }
 
         public BackupResult PerformRotatedBackup()
@@ -1005,7 +1017,7 @@ internal static class SteiSvc
             catch (Exception ex)
             {
                 _log.LogError("Backup", "PerformRotatedBackup failed", ex);
-                return new BackupResult { Success = false, Message = ex.Message };
+                return new BackupResult { Success = false, Message = ErrorCatalog.Get("BKP-ROTATE-001") };
             }
         }
 
@@ -1074,7 +1086,7 @@ internal static class SteiSvc
             catch (Exception ex)
             {
                 _log.LogError("Backup", "RunOnlineBackupCycleAsync failed", ex);
-                return new BackupResult { Success = false, Message = ex.Message };
+                return new BackupResult { Success = false, Message = ErrorCatalog.Get("BKP-CYCLE-001") };
             }
         }
 
