@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using ShouTech.App.Services;
+using ShouTech.App.Localization;
 using ShouTech.Domain.Interfaces;
 
 namespace ShouTech.App.Views;
@@ -226,8 +227,9 @@ public partial class DatWin : Window
         }
         catch (Exception ex)
         {
+            LogError("DEX-UI-001: Failed to load available data exchange datasets.", ex);
             ResultStatusText.Text = L("Failed", "Operation failed");
-            ResultTextBox.Text = ex.Message;
+            ResultTextBox.Text = ErrorCatalog.Get("DEX-UI-001");
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
         }
@@ -342,8 +344,11 @@ public partial class DatWin : Window
         }
         catch (Exception ex)
         {
+            LogError("DEX-UI-002: Workbook preview validation failed.", ex);
             ResultStatusText.Text = L("PreviewFailed", "This workbook cannot be imported yet");
-            ResultTextBox.Text = ex.Message;
+            ResultTextBox.Text = ErrorCatalog.Get("DEX-UI-002");
+            _lastDetails = ResultTextBox.Text;
+            DetailsButton.IsEnabled = true;
         }
     }
 
@@ -596,7 +601,7 @@ public partial class DatWin : Window
         catch (Exception ex)
         {
             ResultStatusText.Text = L("Failed", "Operation failed");
-            ResultTextBox.Text = BuildFailureText(ex);
+            ResultTextBox.Text = BuildFailureText("DEX-UI-003");
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
             LogError($"Data exchange failed | mode={_mode} | {ex.Message}", ex);
@@ -650,7 +655,7 @@ public partial class DatWin : Window
         DetailsButton.IsEnabled = result.Errors.Count > 0;
     }
 
-    private static string BuildFailureText(Exception ex)
+    private static string BuildFailureText(string errorCode)
         => string.Join(Environment.NewLine,
             L("Failed", "Operation failed"),
             new string('─', 42),
@@ -660,7 +665,7 @@ public partial class DatWin : Window
             $"{L("Company", "Company")}: {GetCurrentCompanyCode()}",
             $"{L("Database", "Database")}: {GetCurrentDatabaseName()}",
             $"{L("Provider", "Provider")}: {GetCurrentProvider()}",
-            $"{L("Error", "Error")}: {ex.Message}");
+            $"{L("Error", "Error")}: {ErrorCatalog.Get(errorCode)}");
 
     private void DetailsButton_Click(object sender, RoutedEventArgs e)
     {
