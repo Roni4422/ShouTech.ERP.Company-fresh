@@ -1053,5 +1053,125 @@
     "severity": "Error",
     "catalogRef": "APPLICATION.OPERATION.011",
     "location": "APPLICATION.OPERATION.011"
+  },
+  "CUS-PER-001": {
+    "type": "System",
+    "name": "CustomerCardPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "CUSTOMER_CARD.PERSISTENCE.001",
+    "location": "CUSTOMER_CARD.PERSISTENCE.001"
+  },
+  "CUS-OPS-001": {
+    "type": "System",
+    "name": "CustomerCardOperationUnavailable",
+    "message": "This operation is not implemented in the current window.",
+    "severity": "Error",
+    "catalogRef": "CUSTOMER_CARD.OPERATION.001",
+    "location": "CUSTOMER_CARD.OPERATION.001"
+  },
+  "BNK-PER-001": {
+    "type": "System",
+    "name": "BankCardPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "BANK_CARD.PERSISTENCE.001",
+    "location": "BANK_CARD.PERSISTENCE.001"
+  },
+  "CC-PER-001": {
+    "type": "System",
+    "name": "CostCenterCardPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "COST_CENTER_CARD.PERSISTENCE.001",
+    "location": "COST_CENTER_CARD.PERSISTENCE.001"
+  },
+  "MFG-PER-001": {
+    "type": "System",
+    "name": "ManufacturingWindowPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "MANUFACTURING_WINDOW.PERSISTENCE.001",
+    "location": "MANUFACTURING_WINDOW.PERSISTENCE.001"
+  },
+  "CHQ-PER-001": {
+    "type": "System",
+    "name": "ChequeWindowPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "CHEQUE_WINDOW.PERSISTENCE.001",
+    "location": "CHEQUE_WINDOW.PERSISTENCE.001"
+  },
+  "CHQ-OPS-001": {
+    "type": "System",
+    "name": "ChequeWindowOperationUnavailable",
+    "message": "This operation is not implemented in the current window.",
+    "severity": "Error",
+    "catalogRef": "CHEQUE_WINDOW.OPERATION.001",
+    "location": "CHEQUE_WINDOW.OPERATION.001"
+  },
+  "ORD-PER-001": {
+    "type": "System",
+    "name": "OrderWindowPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "ORDER_WINDOW.PERSISTENCE.001",
+    "location": "ORDER_WINDOW.PERSISTENCE.001"
+  },
+  "ORD-OPS-001": {
+    "type": "System",
+    "name": "OrderWindowOperationUnavailable",
+    "message": "This operation is not implemented in the current window.",
+    "severity": "Error",
+    "catalogRef": "ORDER_WINDOW.OPERATION.001",
+    "location": "ORDER_WINDOW.OPERATION.001"
+  },
+  "RPT-PER-001": {
+    "type": "System",
+    "name": "ReportCardPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "REPORT_CARD.PERSISTENCE.001",
+    "location": "REPORT_CARD.PERSISTENCE.001"
+  },
+  "JRN-PER-001": {
+    "type": "System",
+    "name": "JournalWindowPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "JOURNAL_WINDOW.PERSISTENCE.001",
+    "location": "JOURNAL_WINDOW.PERSISTENCE.001"
+  },
+  "JRN-OPS-001": {
+    "type": "System",
+    "name": "JournalWindowOperationUnavailable",
+    "message": "This operation is not implemented in the current window.",
+    "severity": "Error",
+    "catalogRef": "JOURNAL_WINDOW.OPERATION.001",
+    "location": "JOURNAL_WINDOW.OPERATION.001"
+  },
+  "CUR-PER-001": {
+    "type": "System",
+    "name": "CurrencyCardPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "CURRENCY_CARD.PERSISTENCE.001",
+    "location": "CURRENCY_CARD.PERSISTENCE.001"
+  },
+  "CSH-PER-001": {
+    "type": "System",
+    "name": "CashWindowPersistenceUnavailable",
+    "message": "This window does not yet support database persistence.",
+    "severity": "Error",
+    "catalogRef": "CASH_WINDOW.PERSISTENCE.001",
+    "location": "CASH_WINDOW.PERSISTENCE.001"
+  },
+  "CSH-OPS-001": {
+    "type": "System",
+    "name": "CashWindowOperationUnavailable",
+    "message": "This operation is not implemented in the current window.",
+    "severity": "Error",
+    "catalogRef": "CASH_WINDOW.OPERATION.001",
+    "location": "CASH_WINDOW.OPERATION.001"
   }
 }
