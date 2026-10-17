@@ -787,7 +787,8 @@ public sealed class PermServ : IPermServ
             """;
 
         await using var command = new NpgsqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@UserId", _currentUserId);
+        command.Parameters.AddWithValue("@UserId",
+            _currentUserId ?? throw new InvalidOperationException("Permission loading requires a validated user identity."));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
         var found = false;
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
@@ -867,7 +868,8 @@ public sealed class PermServ : IPermServ
             WHERE u.is_active=1 AND u.is_deleted=0 AND p.is_active=1
               AND (u.username=@user_id OR u.user_id=@user_id)
             """, connection);
-        command.Parameters.AddWithValue("@user_id", _currentUserId);
+        command.Parameters.AddWithValue("@user_id",
+            _currentUserId ?? throw new InvalidOperationException("Permission loading requires a validated user identity."));
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
         var found = false;
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
