@@ -227,7 +227,7 @@ public partial class BkpWin : Window
                 "Backup creation failed.",
                 ex);
 
-            errorMessage = ex.Message;
+            errorMessage = ErrorCatalog.Get("BKP-UI-001");
             succeeded = false;
         }
         finally
@@ -339,8 +339,9 @@ public partial class BkpWin : Window
                 row.IsValid = false;
                 row.Status = L("StatusRejected", "Rejected");
                 lstBackups.Items.Refresh();
-                errorMessage = detailed.FailureReason
-                    ?? (L("ValidationFailed", "Backup validation failed."));
+                LogBackup(
+                    $"BKP-UI-002: Backup validation rejected file={row.FileName}; reason={detailed.FailureReason ?? "No validation detail was provided."}");
+                errorMessage = ErrorCatalog.Get("BKP-UI-002");
             }
             else
             {
@@ -361,7 +362,7 @@ public partial class BkpWin : Window
         {
             AppHost.Logging.LogOperation("Restore", "FAILED", ex.Message);
             LogBackupError("Backup restore failed.", ex);
-            errorMessage = ex.Message;
+            errorMessage = ErrorCatalog.Get("BKP-UI-002");
             succeeded = false;
         }
         finally
@@ -632,7 +633,7 @@ public partial class BkpWin : Window
         {
             AppHost.Logging.LogOperation("Restore", "LOGIN_HANDOFF_FAILED", ex.Message);
             AppHost.Logging.LogError("BkpWin", "Failed to open login after restore.", ex);
-            MessageBox.Show(ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(ErrorCatalog.Get("BKP-UI-004"), Title, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -654,7 +655,7 @@ public partial class BkpWin : Window
         catch (Exception ex)
         {
             AppHost.Logging.LogError("BkpWin", "Failed to open backup directory.", ex);
-            MessageBox.Show(ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ErrorCatalog.Get("BKP-UI-003"), Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
