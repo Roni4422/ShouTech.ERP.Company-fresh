@@ -150,8 +150,21 @@ public sealed class GlPostingTests
 
             var sale = NewSale(InvDocKind.SalesInvoice, "SAL-2026-0001", new DateTime(2026, 3, 10));
 
-            // No mappings: legacy behaviour, nothing is posted.
+            // Legacy sales invoices may still omit GL posting until mappings are configured.
             Assert.Null(Post(connection, sale, 1));
+            Assert.Equal(0L, ScalarLong(connection, "SELECT COUNT(*) FROM journal_entries;"));
+
+            // POS must never claim completion without a configured accounting route.
+            var posSale = new InvDoc
+            {
+                Kind = InvDocKind.PosSale,
+                DocNo = "POS-UNMAPPED",
+                CurrencyCode = "USD",
+                PaymentMethod = "Cash",
+                Lines = new() { new InvLine { LineNo = 1, Description = "Test item", Qty = 1, UnitPrice = 100m } }
+            };
+            var posError = Assert.Throws<InvalidOperationException>(() => Post(connection, posSale, 2));
+            Assert.Contains("account mappings", posError.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0L, ScalarLong(connection, "SELECT COUNT(*) FROM journal_entries;"));
 
             // Incomplete mappings: posting is refused and nothing is written.
