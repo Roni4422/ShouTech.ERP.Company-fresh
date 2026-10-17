@@ -28,11 +28,30 @@ namespace ShouTech.App.Views.Modules
 
         public void Bind(ReportDesignerVM vm)
         {
-            _vm = vm;
+            if (ReferenceEquals(_vm, vm))
+            {
+                DataContext = vm;
+                RebuildColumns();
+                return;
+            }
+
+            if (_vm is not null)
+            {
+                _vm.GridRebuildRequested -= Vm_GridRebuildRequested;
+                _vm.PropertyChanged -= Vm_PropertyChanged;
+            }
+
+            _vm = vm ?? throw new System.ArgumentNullException(nameof(vm));
             DataContext = vm;
-            vm.GridRebuildRequested += (_, _) => RebuildColumns();
+            vm.GridRebuildRequested += Vm_GridRebuildRequested;
             vm.PropertyChanged += Vm_PropertyChanged;
             RebuildColumns();
+        }
+
+        private void Vm_GridRebuildRequested(object? sender, System.EventArgs e)
+        {
+            if (ReferenceEquals(sender, _vm))
+                RebuildColumns();
         }
 
         private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -95,7 +114,9 @@ namespace ShouTech.App.Views.Modules
                         style.Setters.Add(new Setter(FrameworkElement.FlowDirectionProperty, FlowDirection.LeftToRight));
                         if (col.NegativeInRed)
                         {
-                            style.Setters.Add(new Setter(TextBlock.ForegroundProperty, Brushes.Black));
+                            style.Setters.Add(new Setter(
+                                TextBlock.ForegroundProperty,
+                                new DynamicResourceExtension("ErrorBrush")));
                         }
                         gridCol.ElementStyle = style;
                     }
