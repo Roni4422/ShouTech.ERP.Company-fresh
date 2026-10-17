@@ -288,7 +288,7 @@ public sealed class RepCard : BaseWin
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    private async Task<(ISalesRepresentativeRepository Repository, string CompanyCode, string Actor, Guid CompanyId)> ResolvePersistenceContextAsync()
+    private static async Task<(ISalesRepresentativeRepository Repository, string CompanyCode, string Actor, Guid CompanyId)> ResolvePersistenceContextAsync()
     {
         var user = UsrSession.Current;
         var companyCode = user?.CompanyId?.Trim();
