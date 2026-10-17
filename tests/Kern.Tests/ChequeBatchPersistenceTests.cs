@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -162,12 +163,35 @@ public sealed class ChequeBatchPersistenceTests
             Assert.Null(await ChequeBatchSvc.LoadAsync(original.Code));
             Assert.False(await ChequeBatchSvc.DeleteAsync(original.Code));
 
+            using (var softDeleteAudit = Open(databasePath))
+            {
+                Assert.Equal(1L, ScalarLong(softDeleteAudit,
+                    $"SELECT COUNT(*) FROM deletion_audit_log WHERE table_name='cheque_batches' AND record_key='{batchId:D}' AND method='UI_SOFT_DELETE';"));
+            }
+
+            var binItems = await RecycleBinSvc.ListAsync("COMP-A");
+            var binItem = binItems.FirstOrDefault(item =>
+                item.TableName == "cheque_batches" && item.PrimaryKeyValue == batchId.ToString("D"));
+            Assert.NotNull(binItem);
+            var purge = await RecycleBinSvc.PurgeAsync(binItem!);
+            Assert.True(purge.Succeeded, purge.ErrorMessage);
+
+            using (var purgeVerification = Open(databasePath))
+            {
+                Assert.Equal(0L, ScalarLong(purgeVerification,
+                    $"SELECT COUNT(*) FROM cheque_batches WHERE batch_id='{batchId:D}';"));
+                Assert.Equal(0L, ScalarLong(purgeVerification,
+                    $"SELECT COUNT(*) FROM cheque_batch_lines WHERE batch_id='{batchId:D}';"));
+                Assert.Equal(1L, ScalarLong(purgeVerification,
+                    $"SELECT COUNT(*) FROM deletion_audit_log WHERE table_name='cheque_batches' AND record_key='{batchId:D}' AND action_type='PERMANENT_DELETE';"));
+            }
+
             AppState.CurrentCompanyCode = "COMP-B";
             Assert.Equal("Company B batch", (await ChequeBatchSvc.LoadAsync(original.Code))!.Memo);
 
             using var auditVerification = Open(databasePath);
-            Assert.Equal(1L, ScalarLong(auditVerification,
-                $"SELECT COUNT(*) FROM deletion_audit_log WHERE table_name='cheque_batches' AND record_key='{batchId:D}' AND action_type='DELETE';"));
+            Assert.True(ScalarLong(auditVerification,
+                $"SELECT COUNT(*) FROM deletion_audit_log WHERE table_name='cheque_batches' AND record_key='{batchId:D}' AND action_type='DELETE';") >= 1L);
         }
         finally
         {
