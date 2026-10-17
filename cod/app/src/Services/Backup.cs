@@ -22,6 +22,7 @@ using System;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 using ShouTech.App.Configuration;
+using ShouTech.App.Localization;
 using System.Globalization;
 
 namespace ShouTech.App.Services
@@ -783,7 +784,13 @@ internal static class SteiSvc
                     }
                     catch (Exception ex) when (ex is CryptographicException or FormatException or InvalidDataException)
                     {
-                        rawKey = GenerateAndStore(path);
+                        AppHost.Logging?.LogError(
+                            "Backup",
+                            "BKP-KEY-001: The stored backup encryption key could not be recovered. The existing key file was preserved.",
+                            ex);
+                        throw new InvalidDataException(
+                            ErrorCatalog.Get("BKP-KEY-001"),
+                            ex);
                     }
                 }
                 else
