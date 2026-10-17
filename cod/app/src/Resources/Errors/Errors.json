@@ -1397,5 +1397,13 @@
     "severity": "Error",
     "catalogRef": "DATA_EXCHANGE.UI.OPERATION.001",
     "location": "DATA_EXCHANGE.UI.OPERATION"
+  },
+  "DEX-UI-004": {
+    "type": "Data",
+    "name": "DataExchangeRowsFailed",
+    "message": "One or more rows or tables could not be processed. Detailed diagnostics have been recorded in the application logs.",
+    "severity": "Error",
+    "catalogRef": "DATA_EXCHANGE.UI.RESULT.001",
+    "location": "DATA_EXCHANGE.UI.RESULT"
   }
 }
