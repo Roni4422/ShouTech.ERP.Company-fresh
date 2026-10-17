@@ -97,6 +97,23 @@ public sealed class Bank : EntBase
 
         if (modifiedBy != default) Touch(modifiedBy);
     }
+    /// <summary>Recreates a domain entity from persisted data without exposing audit setters.</summary>
+    public static Bank Rehydrate(BankSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Id == Guid.Empty)
+            throw new ArgumentException("A persisted bank snapshot must have a valid identifier.", nameof(snapshot));
+
+        var entity = new Bank(snapshot.CompanyId, snapshot.Code, snapshot.Name, snapshot.Type,
+            snapshot.GlAccountId, snapshot.AccountNumber, snapshot.Address, snapshot.Phone, snapshot.IsActive);
+        entity.Id = snapshot.Id;
+        entity.IsDeleted = snapshot.IsDeleted;
+        entity.CreatedAt = snapshot.CreatedAt;
+        entity.CreatedBy = snapshot.CreatedBy;
+        entity.ModifiedAt = snapshot.ModifiedAt;
+        entity.ModifiedBy = snapshot.ModifiedBy;
+        return entity;
+    }
 }
 
 /// <summary>
