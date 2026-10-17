@@ -135,10 +135,20 @@ public static class GlPost
         var companyId = ScalarObject(connection, transaction,
             "SELECT company_id FROM companies WHERE company_code=@code AND is_deleted=" + (isPostgres ? "false" : "0"),
             ("@code", companyCode));
-        if (companyId is null) return null;
+        if (companyId is null)
+        {
+            if (doc.Kind == InvDocKind.PosSale)
+                throw new InvalidOperationException("POS sale posting requires a registered active company.");
+            return null;
+        }
 
         var mappings = LoadMappings(connection, transaction, companyId);
-        if (mappings.Count == 0) return null;
+        if (mappings.Count == 0)
+        {
+            if (doc.Kind == InvDocKind.PosSale)
+                throw new InvalidOperationException("POS sale posting requires account mappings. Configure the required ledger accounts before completing a sale.");
+            return null;
+        }
 
         var isSales = doc.Kind is InvDocKind.SalesInvoice or InvDocKind.SalesReturn or InvDocKind.PosSale;
         var headerTable = isSales ? "sales_documents" : "purchase_documents";
