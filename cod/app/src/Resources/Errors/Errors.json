@@ -1373,5 +1373,29 @@
     "severity": "Critical",
     "catalogRef": "BACKUP.UI.LOGIN.001",
     "location": "BACKUP.WINDOW.LOGIN_HANDOFF"
+  },
+  "DEX-UI-001": {
+    "type": "System",
+    "name": "DataExchangeDatasetLoadFailed",
+    "message": "Available data exchange datasets could not be loaded. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "DATA_EXCHANGE.UI.DATASETS.001",
+    "location": "DATA_EXCHANGE.UI.LOAD_DATASETS"
+  },
+  "DEX-UI-002": {
+    "type": "Validation",
+    "name": "DataExchangeWorkbookPreviewFailed",
+    "message": "The workbook could not be validated for import. Check the file format and selected dataset, then review the application logs.",
+    "severity": "Error",
+    "catalogRef": "DATA_EXCHANGE.UI.PREVIEW.001",
+    "location": "DATA_EXCHANGE.UI.PREVIEW"
+  },
+  "DEX-UI-003": {
+    "type": "System",
+    "name": "DataExchangeOperationFailed",
+    "message": "The data exchange operation failed. Review the application logs for details.",
+    "severity": "Error",
+    "catalogRef": "DATA_EXCHANGE.UI.OPERATION.001",
+    "location": "DATA_EXCHANGE.UI.OPERATION"
   }
 }
