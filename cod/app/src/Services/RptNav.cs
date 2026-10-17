@@ -167,6 +167,21 @@ public static class RptNav
                 OpenShortageList(owner); return true;
             case "Reports.Statistics":
                 OpenTrialBalance(owner); return true;
+            case "Inventory.MaterialCard":
+                Show(new MatCard(), owner); return true;
+            case "Inventory.WarehouseCard":
+                Show(new WhsWin(), owner); return true;
+            case "Inventory.CategoryCard":
+            case "Inventory.MaterialGroups":
+                Show(new CatWin(), owner); return true;
+            case "Inventory.SerialNumbersReport":
+            case "Inventory.EditSerialNumber":
+                Show(new SerWin(), owner); return true;
+            case "Accounts.ChartOfAccounts":
+            case "View.ChartOfAccounts":
+                Show(new CoaWin(), owner); return true;
+            case "Tools.ActivityLog":
+                Show(new LogWin(), owner); return true;
             default:
                 return false;
         }
