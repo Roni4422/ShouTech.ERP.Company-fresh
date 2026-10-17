@@ -41,7 +41,7 @@ namespace ShouTech.App.Views.Modules
                 CustomersCount.Text = "—";
                 ProductsCount.Text = "—";
                 PendingCount.Text = "—";
-                DashboardError.Text = ErrorCatalog.Get("DSH-DB-001");
+                DashboardError.Text = ErrorCatalog.Get(ErrorCodes.DashboardDatabaseLoadFailed);
                 DashboardError.Visibility = System.Windows.Visibility.Visible;
                 AppHost.Logging?.LogError("Dashboard", "DSH-DB-001: Dashboard data could not be loaded from the active company database.", ex);
                 AppHost.Logging?.LogOperation("Dashboard", "LoadFailed", "DSH-DB-001; dashboard metrics unavailable; placeholders displayed instead of sample data.");
