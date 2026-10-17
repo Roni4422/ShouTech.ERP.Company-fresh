@@ -34,3 +34,11 @@ The SQLite migration sequence was applied to an in-memory database. A database-l
 - posted/reversed entries keep date, description, company, fiscal period and creator, and cannot be deleted.
 
 Verified by `tests/sql/test_journal_integrity.py` (run in the migration smoke workflow). **Not yet done:** the PostgreSQL equivalent — PostgreSQL currently relies on application-layer checks for these rules. Existing posted entries that were unbalanced before this migration are not rewritten; the triggers only guard future changes.
+
+## Invoice → General Ledger posting (migration 030, `GlPost`)
+
+- `gl_account_defaults(company_id, role, account_id)` maps roles AR, AP, SALES, SALES_RETURN, TAX_OUT, TAX_IN, INVENTORY, COGS to `chart_of_accounts`.
+- `InvRepo.Post` calls `GlPost.Post` inside the same transaction for sales/purchase invoices and returns; reversals reuse this path via the return document.
+- No defaults configured → no journal entry (legacy behavior). Partial defaults, duplicate reference or no open fiscal period → posting is blocked.
+- Entries are inserted as draft then set to posted so the 026 integrity triggers (balanced, immutable) apply.
+- Verified against real SQLite and PostgreSQL with a throwaway harness (not committed). There is no settings window yet; defaults are set via SQL. POS, stock documents and quotations create no GL entry.

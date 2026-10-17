@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 using ShouTech.App.Reporting.Invoices;
@@ -308,6 +309,42 @@ public static class InvRepo
             Add(led, "$cur", doc.CurrencyCode);
             Add(led, "$note", "Auto post");
             led.ExecuteNonQuery();
+        }
+
+        // General ledger: balanced journal entry in the same transaction (skipped until the company
+        // configures gl_account_defaults; incomplete configuration or a closed period blocks posting).
+        if (kind is InvDocKind.SalesInvoice or InvDocKind.SalesReturn or InvDocKind.PurchaseInvoice or InvDocKind.PurchaseReturn)
+        {
+            var glKind = kind switch
+            {
+                InvDocKind.SalesInvoice => GlPost.Kind.SalesInvoice,
+                InvDocKind.SalesReturn => GlPost.Kind.SalesReturn,
+                InvDocKind.PurchaseInvoice => GlPost.Kind.PurchaseInvoice,
+                _ => GlPost.Kind.PurchaseReturn
+            };
+            decimal cost = 0m;
+            if (isSales)
+            {
+                foreach (var line in doc.Lines.Where(x => x.MaterialId.HasValue))
+                {
+                    using var costCmd = connection.CreateCommand();
+                    costCmd.Transaction = tx;
+                    costCmd.CommandText = """
+                        SELECT COALESCE(average_cost, 0) FROM material_stock_balances
+                        WHERE company_id=@company AND material_id=@mid AND warehouse_id=@wh;
+                        """;
+                    Add(costCmd, "@company", Company);
+                    Add(costCmd, "@mid", line.MaterialId!.Value);
+                    Add(costCmd, "@wh", line.WarehouseId ?? doc.WarehouseId ?? 0);
+                    var avg = costCmd.ExecuteScalar();
+                    if (avg is not null and not DBNull)
+                        cost += line.Qty * Convert.ToDecimal(avg, CultureInfo.InvariantCulture);
+                }
+            }
+            GlPost.Post(connection, tx, new GlPost.Input(
+                glKind, Company, doc.DocNo, doc.DocDate, doc.CurrencyCode, doc.ExchangeRate,
+                doc.Subtotal, doc.TaxAmount, cost,
+                string.IsNullOrWhiteSpace(userId) ? Environment.UserName : userId, doc.PartyName));
         }
 
         // Inventory effects (same transaction as ledger + status).
