@@ -228,7 +228,7 @@ public partial class DatWin : Window
         catch (Exception ex)
         {
             LogError("DEX-UI-001: Failed to load available data exchange datasets.", ex);
-            ResultStatusText.Text = L("Failed", "Operation failed");
+            ResultStatusText.Text = "Error";
             ResultTextBox.Text = ErrorCatalog.Get("DEX-UI-001");
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
@@ -345,7 +345,7 @@ public partial class DatWin : Window
         catch (Exception ex)
         {
             LogError("DEX-UI-002: Workbook preview validation failed.", ex);
-            ResultStatusText.Text = L("PreviewFailed", "This workbook cannot be imported yet");
+            ResultStatusText.Text = "Error";
             ResultTextBox.Text = ErrorCatalog.Get("DEX-UI-002");
             _lastDetails = ResultTextBox.Text;
             DetailsButton.IsEnabled = true;
@@ -620,11 +620,11 @@ public partial class DatWin : Window
 
     private void ShowResult(SteiResult result, string path, bool export)
     {
-        ResultStatusText.Text = result.Success
+        ResultStatusText.Text = result.Success && result.Errors.Count == 0
             ? L("Success", "Completed successfully")
             : result.Partial
-                ? L("Partial", "Completed with issues")
-                : L("Failed", "Operation failed");
+                ? "Partial Failure"
+                : "Error";
 
         if (result.Errors.Count > 0)
         {
