@@ -2278,5 +2278,23 @@
     "severity": "Error",
     "catalogRef": "POS.SALE.POST.001",
     "location": "POS.SALE.POST"
+  },
+  "INV-SAVE-001": {
+    "type": "System",
+    "name": "InvoiceSaveFailed",
+    "message": "The invoice could not be saved. Review the application error log for technical details.",
+    "messageKey": "Errors.INV-SAVE-001",
+    "severity": "Error",
+    "catalogRef": "INVOICE.SAVE.001",
+    "location": "INVOICE.SAVE"
+  },
+  "INV-POST-001": {
+    "type": "System",
+    "name": "InvoicePostFailed",
+    "message": "The invoice could not be posted. The transaction was not confirmed; review the application error log for details.",
+    "messageKey": "Errors.INV-POST-001",
+    "severity": "Error",
+    "catalogRef": "INVOICE.POST.001",
+    "location": "INVOICE.POST"
   }
 }
