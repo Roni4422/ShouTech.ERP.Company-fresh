@@ -36,16 +36,28 @@ public static class TaxSvc
             var fromDb = TryLoadActiveRate();
             if (fromDb.HasValue) return fromDb.Value;
 
-            var country = GetCompanyCountry();
-            if (!string.IsNullOrWhiteSpace(country) &&
-                CountryDefaults.TryGetValue(country.Trim(), out var rate))
+            var country = NormalizeCountryCode(GetCompanyCountry());
+            if (country.Length > 0 && CountryDefaults.TryGetValue(country, out var rate))
                 return rate;
+
+            var missingRate = ShouTech.App.Localization.ErrorCatalog.Resolve(
+                ShouTech.App.Localization.ErrorCodes.TaxRateNotConfigured);
+            throw new InvalidOperationException($"[{missingRate.Code}] {missingRate.Message}");
         }
-        catch
+        catch (InvalidOperationException ex) when (ex.Message.Contains("TAX-RATE-001", StringComparison.Ordinal))
         {
-            // Fall through to conservative default.
+            throw;
         }
-        return 15m;
+        catch (Exception ex)
+        {
+            var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(
+                ShouTech.App.Localization.ErrorCodes.TaxConfigurationLoadFailed);
+            AppHost.Logging?.LogError(
+                "TaxService",
+                $"[{definition.Code}] {definition.Name} | Company={AppState.CurrentCompanyCode ?? "(none)"}",
+                ex);
+            throw new InvalidOperationException($"[{definition.Code}] {definition.Message}", ex);
+        }
     }
 
     public static IReadOnlyList<TaxCodeRec> LoadCodes()
@@ -200,23 +212,54 @@ public static class TaxSvc
     private static string GetCompanyCountry()
     {
         var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) return "SA";
-        try
+        if (string.IsNullOrWhiteSpace(cs))
+            return string.Empty;
+
+        using var connection = Open(cs);
+        using var cmd = connection.CreateCommand();
+        var activePredicate = DatabaseRuntime.IsPostgreSql()
+            ? "COALESCE(is_deleted, FALSE) = FALSE"
+            : "COALESCE(is_deleted, 0) = 0";
+        cmd.CommandText = $"""
+            SELECT COALESCE(country, '') FROM companies
+            WHERE company_code=$code AND {activePredicate}
+            LIMIT 1;
+            """;
+        Add(cmd, "$code", AppState.CurrentCompanyCode ?? string.Empty);
+        return Convert.ToString(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)?.Trim() ?? string.Empty;
+    }
+
+    private static string NormalizeCountryCode(string? country)
+    {
+        var value = country?.Trim() ?? string.Empty;
+        if (value.Length == 2)
+            return value.ToUpperInvariant();
+
+        return value.ToUpperInvariant() switch
         {
-            using var connection = Open(cs);
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = """
-                SELECT COALESCE(country_code, country, 'SA') FROM companies
-                WHERE company_id=$id LIMIT 1;
-                """;
-            Add(cmd, "$id", AppState.CurrentCompanyCode ?? "");
-            var v = cmd.ExecuteScalar();
-            return Convert.ToString(v, CultureInfo.InvariantCulture) ?? "SA";
-        }
-        catch
-        {
-            return "SA";
-        }
+            "SAUDI ARABIA" or "KINGDOM OF SAUDI ARABIA" or "السعودية" or "المملكة العربية السعودية" => "SA",
+            "UNITED ARAB EMIRATES" or "UAE" or "الإمارات" or "الإمارات العربية المتحدة" => "AE",
+            "BAHRAIN" or "البحرين" => "BH",
+            "OMAN" or "عمان" or "سلطنة عمان" => "OM",
+            "QATAR" or "قطر" => "QA",
+            "KUWAIT" or "الكويت" => "KW",
+            "SYRIA" or "SYRIAN ARAB REPUBLIC" or "سوريا" => "SY",
+            "JORDAN" or "الأردن" => "JO",
+            "LEBANON" or "لبنان" => "LB",
+            "PALESTINE" or "STATE OF PALESTINE" or "فلسطين" => "PS",
+            "IRAQ" or "العراق" => "IQ",
+            "EGYPT" or "مصر" => "EG",
+            "MOROCCO" or "المغرب" => "MA",
+            "TUNISIA" or "تونس" => "TN",
+            "ALGERIA" or "الجزائر" => "DZ",
+            "LIBYA" or "ليبيا" => "LY",
+            "TURKEY" or "TÜRKIYE" or "TURKIYE" or "تركيا" => "TR",
+            "GERMANY" or "ألمانيا" => "DE",
+            "FRANCE" or "فرنسا" => "FR",
+            "UNITED KINGDOM" or "UK" or "BRITAIN" or "المملكة المتحدة" => "GB",
+            "NETHERLANDS" or "THE NETHERLANDS" or "هولندا" => "NL",
+            _ => string.Empty
+        };
     }
 
     private static DbConnection Open(string connectionString)
