@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS cheque_batches (
     cash_box_code VARCHAR(100) NOT NULL DEFAULT '',
     currency_code VARCHAR(10) NOT NULL,
     memo VARCHAR(1000) NOT NULL DEFAULT '',
-    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    status VARCHAR(20) NOT NULL DEFAULT 'Draft',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL,
