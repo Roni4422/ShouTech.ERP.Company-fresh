@@ -34,7 +34,3 @@ CREATE INDEX IF NOT EXISTS idx_sales_reps_active ON sales_representatives(is_act
 CREATE INDEX IF NOT EXISTS idx_sales_reps_is_deleted ON sales_representatives(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_sales_reps_created_at ON sales_representatives(created_at);
 CREATE INDEX IF NOT EXISTS idx_sales_reps_company_active ON sales_representatives(company_id, is_active, is_deleted);
-
--- Migration history record
-INSERT OR IGNORE INTO schema_version (version, description, applied_at) 
-VALUES ('021_sales_representatives', 'Create sales_representatives table', datetime('now'));

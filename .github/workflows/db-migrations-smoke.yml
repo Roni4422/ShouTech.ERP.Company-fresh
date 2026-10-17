@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'dba/mig/**'
+      - 'tests/sql/**'
       - 'tools/SqlMigrator/**'
       - '.github/workflows/db-migrations-smoke.yml'
   pull_request:
     paths:
       - 'dba/mig/**'
+      - 'tests/sql/**'
       - 'tools/SqlMigrator/**'
       - '.github/workflows/db-migrations-smoke.yml'
   workflow_dispatch:
@@ -24,6 +26,8 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Create clean SQLite database and apply migrations
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
+      - name: Verify general-ledger reporting view against all SQLite migrations
+        run: python3 -I tests/sql/test_financial_views.py
       - name: Re-run migrations against the same SQLite database
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
       - name: Assert journal header columns exist in SQLite
