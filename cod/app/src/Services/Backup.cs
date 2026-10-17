@@ -991,7 +991,7 @@ internal static class SteiSvc
 
         private static string GetActiveCompanyCode()
         {
-            var companyCode = ShouTech.App.Views.AppState.CurrentCompanyCode?.Trim();
+            var companyCode = ShouTech.App.AppState.CurrentCompanyCode?.Trim();
             if (string.IsNullOrWhiteSpace(companyCode))
                 throw new InvalidOperationException(ErrorCatalog.Get("BKP-CYCLE-001"));
             return companyCode;
