@@ -34,6 +34,15 @@ namespace ShouTech.App.Localization
         public const string CostCenterValidationFailed = "CCTR-VAL-001";
         public const string CostCenterCodeRequiresRestore = "CCTR-VAL-002";
         public const string CostCenterNotFound = "CCTR-VAL-003";
+        public const string SalesRepContextFailed = "REP-DB-001";
+        public const string SalesRepSaveFailed = "REP-DB-002";
+        public const string SalesRepLoadFailed = "REP-DB-003";
+        public const string SalesRepDeleteFailed = "REP-DEL-001";
+        public const string SalesRepDeleteNotFound = "REP-DEL-002";
+        public const string SalesRepValidationFailed = "REP-VAL-001";
+        public const string SalesRepDuplicateCode = "REP-VAL-002";
+        public const string SalesRepCodeRequiresRestore = "REP-VAL-003";
+        public const string SalesRepNotFound = "REP-VAL-004";
         public const string ReportSaveFailed = "RPT-SAVE-001";
         public const string ReportSaveAsFailed = "RPT-SAVE-002";
         public const string ReportFormulaCompileFailed = "RPT-FORMULA-001";
