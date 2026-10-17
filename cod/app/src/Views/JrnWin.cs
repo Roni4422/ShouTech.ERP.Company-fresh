@@ -524,8 +524,8 @@ public sealed class JrnWin : BaseWin
             $"Code={definition.Code}; {context}; Error={exception.Message}");
         MessageBox.Show(
             this,
-            $"لم تنجح العملية ولم تُعرض كنجاح.\n[{definition.Code}] {exception.Message}",
-            "فشل حفظ القيد",
+            $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}\nThe operation failed. No data was saved.",
+            "Journal Save Failed",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
     }
