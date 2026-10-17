@@ -60,6 +60,9 @@ namespace ShouTech.App.Localization
         public const string SplashInitializationFailed = "APP-START-004";
         public const string CompanySchemaInitializationFailed = "APP-DB-001";
         public const string SchemaRefreshFailed = "APP-DB-002";
+        public const string MaterialDirectoryLoadFailed = "MAT-DIR-001";
+        public const string MaterialDirectoryDeleteFailed = "MAT-DIR-002";
+        public const string MaterialDirectoryOpenCardFailed = "MAT-DIR-003";
     }
 
     public static class ErrorCatalog
