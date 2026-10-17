@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Threading.Tasks;
 
 namespace ShouTech.App.Views;
 
@@ -92,6 +93,7 @@ public sealed class CstCard : BaseWin
     private readonly Button _btnSave = new();
     private readonly Button _btnDelete = new();
     private readonly Button _btnStmt = new();
+    private bool _isLoadingRecord;
 
     public CstCard()
     {
@@ -118,9 +120,17 @@ public sealed class CstCard : BaseWin
         StyleButton(_btnStmt, "CustCard.Statement");
 
         _btnNew.Click += (_, _) => ResetCard();
-        _btnSave.Click += (_, _) => ShowPersistenceUnavailable();
-        _btnDelete.Click += (_, _) => ShowPersistenceUnavailable();
+        _btnSave.Click += async (_, _) => await SaveCardAsync();
+        _btnDelete.Click += async (_, _) => await DeleteCardAsync();
         _btnStmt.Click += (_, _) => ShowOperationUnavailable("Customer statement");
+        _txtCode.KeyDown += async (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                e.Handled = true;
+                await LoadCardAsync();
+            }
+        };
 
         foreach (var b in new[] { _btnNew, _btnSave, _btnDelete, _btnStmt })
             toolbar.Children.Add(b);
@@ -211,29 +221,181 @@ public sealed class CstCard : BaseWin
 
     private void ResetCard()
     {
-        _txtCode.Text = "CUS-" + DateTime.Now.ToString("yyMMdd", CultureInfo.InvariantCulture);
+        _txtCode.Text = "CUS-" + DateTime.Now.ToString("yyMMddHHmmss", CultureInfo.InvariantCulture);
         _txtNameAr.Text = string.Empty;
         _txtNameEn.Text = string.Empty;
         _txtGroup.Text = string.Empty;
         _txtTaxNo.Text = string.Empty;
         _txtCrNo.Text = string.Empty;
-        _txtCreditLimit.Text = "50000.00";
+        _txtCreditLimit.Text = "0.00";
         _txtCreditDays.Text = "30";
-        _txtGlAcc.Text = "121101";
+        _txtGlAcc.Text = string.Empty;
         _txtPhone.Text = string.Empty;
         _txtMobile.Text = string.Empty;
         _txtEmail.Text = string.Empty;
         _txtAddress.Text = string.Empty;
-        UpdateBalances(0, 0);
+        UpdateBalancesUnavailable();
     }
 
-    private void UpdateBalances(decimal debit, decimal credit)
+    private void UpdateBalancesUnavailable()
     {
-        var balance = debit - credit;
-        _lblCurBal.Text = $"{T("CustCard.Balance")}: {balance:N2} SAR";
+        // A customer statement repository is not wired to this card yet; never show fabricated zero balances.
+        _lblCurBal.Text = $"{T("CustCard.Balance")}: —";
         _lblCurBal.FontWeight = FontWeights.Bold;
-        _lblTotDr.Text = $"{T("CustCard.TotalDebit")}: {debit:N2} SAR";
-        _lblTotCr.Text = $"{T("CustCard.TotalCredit")}: {credit:N2} SAR";
+        _lblTotDr.Text = $"{T("CustCard.TotalDebit")}: —";
+        _lblTotCr.Text = $"{T("CustCard.TotalCredit")}: —";
+    }
+
+
+    private CustomerCardRecord ReadCard()
+    {
+        if (!decimal.TryParse(_txtCreditLimit.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var creditLimit)
+            && !decimal.TryParse(_txtCreditLimit.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out creditLimit))
+            throw new CustomerCardException("CUS-VAL-001", "Enter a valid numeric credit limit.");
+        if (!int.TryParse(_txtCreditDays.Text, NumberStyles.Integer, CultureInfo.CurrentCulture, out var creditDays)
+            && !int.TryParse(_txtCreditDays.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out creditDays))
+            throw new CustomerCardException("CUS-VAL-001", "Enter a whole number for credit days.");
+
+        return new CustomerCardRecord
+        {
+            Code = _txtCode.Text,
+            NameAr = _txtNameAr.Text,
+            NameEn = _txtNameEn.Text,
+            Type = _cbType.SelectedIndex + 1,
+            GroupCode = _txtGroup.Text,
+            TaxNo = _txtTaxNo.Text,
+            CommercialRegistration = _txtCrNo.Text,
+            CreditLimit = creditLimit,
+            CreditDays = creditDays,
+            PriceTierCode = _cbPriceTier.SelectedIndex switch
+            {
+                1 => "WHOLESALE",
+                2 => "DISTRIBUTOR",
+                _ => "RETAIL"
+            },
+            GlAccountCode = _txtGlAcc.Text,
+            Phone = _txtPhone.Text,
+            Mobile = _txtMobile.Text,
+            Email = _txtEmail.Text,
+            Address = _txtAddress.Text
+        };
+    }
+
+    private async Task SaveCardAsync()
+    {
+        try
+        {
+            var record = ReadCard();
+            await CustomerCardSvc.SaveAsync(record);
+            _txtCode.Text = record.Code.Trim();
+            MessageBox.Show(this, T("CustCard.SaveSuccess"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ReportCustomerFailure(ex, "CUS-DB-002", "Save");
+        }
+    }
+
+    private async Task LoadCardAsync()
+    {
+        if (_isLoadingRecord) return;
+        _isLoadingRecord = true;
+        try
+        {
+            var record = await CustomerCardSvc.LoadByCodeAsync(_txtCode.Text);
+            if (record is null)
+            {
+                ReportCustomerNotFound();
+                return;
+            }
+
+            _txtCode.Text = record.Code;
+            _txtNameAr.Text = record.NameAr;
+            _txtNameEn.Text = record.NameEn;
+            _txtGroup.Text = record.GroupCode;
+            _txtTaxNo.Text = record.TaxNo;
+            _txtCrNo.Text = record.CommercialRegistration;
+            _txtCreditLimit.Text = record.CreditLimit.ToString("0.####", CultureInfo.CurrentCulture);
+            _txtCreditDays.Text = record.CreditDays.ToString(CultureInfo.CurrentCulture);
+            _txtGlAcc.Text = record.GlAccountCode;
+            _txtPhone.Text = record.Phone;
+            _txtMobile.Text = record.Mobile;
+            _txtEmail.Text = record.Email;
+            _txtAddress.Text = record.Address;
+            _cbType.SelectedIndex = Math.Clamp(record.Type - 1, 0, 2);
+            _cbPriceTier.SelectedIndex = record.PriceTierCode.ToUpperInvariant() switch
+            {
+                "WHOLESALE" => 1,
+                "DISTRIBUTOR" => 2,
+                _ => 0
+            };
+            UpdateBalancesUnavailable();
+            AppHost.Logging?.LogOperation("CustomerCard", "Load",
+                $"Company={AppState.CurrentCompanyCode}; Code={record.Code}; Outcome=Loaded");
+        }
+        catch (Exception ex)
+        {
+            ReportCustomerFailure(ex, "CUS-DB-003", "Load");
+        }
+        finally
+        {
+            _isLoadingRecord = false;
+        }
+    }
+
+    private async Task DeleteCardAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_txtCode.Text))
+        {
+            ReportCustomerFailure(new CustomerCardException("CUS-VAL-001", "Enter a customer code first."), "CUS-DEL-001", "Delete");
+            return;
+        }
+
+        var confirmation = MessageBox.Show(
+            this, T("CustCard.DeleteConfirmation"), Title,
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var deleted = await CustomerCardSvc.DeleteAsync(_txtCode.Text);
+            if (!deleted)
+            {
+                ReportCustomerFailure(
+                    new CustomerCardException("CUS-DEL-002", "The customer was not found in the active company or has already been deleted."),
+                    "CUS-DEL-001", "Delete");
+                return;
+            }
+
+            MessageBox.Show(this, T("CustCard.DeleteSuccess"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            ResetCard();
+        }
+        catch (Exception ex)
+        {
+            ReportCustomerFailure(ex, "CUS-DEL-001", "Delete");
+        }
+    }
+
+    private void ReportCustomerNotFound()
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve("CUS-VAL-003");
+        AppHost.Logging?.LogOperation("CustomerCard", "LoadNotFound",
+            $"Code={_txtCode.Text.Trim()}; Company={AppState.CurrentCompanyCode}");
+        MessageBox.Show(this, $"[{definition.Code}] {definition.Message}", Title,
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ReportCustomerFailure(Exception exception, string fallbackCode, string operation)
+    {
+        var code = exception is CustomerCardException cardException ? cardException.ErrorCode : fallbackCode;
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(code);
+        AppHost.Logging?.LogError("CustomerCard",
+            $"{definition.Code}: {definition.Name}; Operation={operation}; Company={AppState.CurrentCompanyCode}; Code={_txtCode.Text.Trim()}",
+            exception);
+        AppHost.Logging?.LogOperation("CustomerCard", "Failed",
+            $"ErrorCode={definition.Code}; Operation={operation}; Company={AppState.CurrentCompanyCode}; Code={_txtCode.Text.Trim()}");
+        MessageBox.Show(this, $"[{definition.Code}] {definition.Message}\nLocation: {definition.Location}",
+            Title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     protected override void ApplyLocalizedText()
@@ -253,7 +415,7 @@ public sealed class CstCard : BaseWin
         _cbPriceTier.SelectedIndex = 0;
 
         RefreshLocalizedContent(Content as DependencyObject);
-        UpdateBalances(0, 0);
+        UpdateBalancesUnavailable();
     }
 
     private static void RefreshLocalizedContent(DependencyObject? parent)
