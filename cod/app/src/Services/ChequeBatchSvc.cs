@@ -281,18 +281,41 @@ public static class ChequeBatchSvc
         var actor = GetActor();
         await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        Guid batchId;
         try
         {
             var companyId = await ResolveCompanyIdAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            await using (var find = connection.CreateCommand())
+            {
+                find.Transaction = transaction;
+                find.CommandText = $"""
+                    SELECT batch_id FROM cheque_batches
+                    WHERE company_id=@company AND batch_code=@code
+                      AND is_deleted={FalseLiteral} AND status='Draft'
+                    LIMIT 1;
+                    """;
+                Add(find, "@company", companyId);
+                Add(find, "@code", code.Trim());
+                var value = await find.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                if (value is null or DBNull)
+                {
+                    await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                    return false;
+                }
+                batchId = value is Guid guid
+                    ? guid
+                    : Guid.Parse(Convert.ToString(value, CultureInfo.InvariantCulture)!);
+            }
+
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = $"""
                 UPDATE cheque_batches SET is_deleted={TrueLiteral}, deleted_at=@deletedAt, deleted_by=@deletedBy,
                     modified_at=@modifiedAt, modified_by=@modifiedBy
-                WHERE company_id=@company AND batch_code=@code AND is_deleted={FalseLiteral} AND status='Draft';
+                WHERE company_id=@company AND batch_id=@batchId AND is_deleted={FalseLiteral} AND status='Draft';
                 """;
             Add(command, "@company", companyId);
-            Add(command, "@code", code.Trim());
+            Add(command, "@batchId", FormatId(batchId));
             Add(command, "@deletedAt", TimestampValue());
             Add(command, "@deletedBy", actor);
             Add(command, "@modifiedAt", TimestampValue());
@@ -304,15 +327,32 @@ public static class ChequeBatchSvc
                 return false;
             }
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            AppHost.Logging?.LogOperation("ChequeBatch", "SoftDelete",
-                $"Company={ActiveCompanyCode}; Code={code.Trim()}; Outcome=Committed");
-            return true;
         }
         catch
         {
             await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
             throw;
         }
+
+        // The business update is already committed. RecordDeletionAsync is separate so an audit
+        // storage problem never causes the UI to claim the delete itself rolled back.
+        try
+        {
+            await RecycleBinSvc.RecordDeletionAsync(
+                ActiveCompanyCode, "cheque_batches", batchId.ToString("D", CultureInfo.InvariantCulture),
+                actor, "UI_SOFT_DELETE", "Moved a draft cheque batch to the Recycle Bin",
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception auditException) when (auditException is not OperationCanceledException)
+        {
+            AppHost.Logging?.LogError("ChequeBatchAudit",
+                $"[CHQ-DEL-001] Failed to write the deletion audit event after committing batch '{code.Trim()}'.",
+                auditException);
+        }
+
+        AppHost.Logging?.LogOperation("ChequeBatch", "SoftDelete",
+            $"Company={ActiveCompanyCode}; Code={code.Trim()}; BatchId={batchId:D}; Outcome=Committed");
+        return true;
     }
 
     private static void Validate(ChequeBatchRecord batch)
