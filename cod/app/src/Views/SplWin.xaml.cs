@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,7 +13,7 @@ using WpfApp = System.Windows.Application;
 namespace ShouTech.App.Views
 {
     /// <summary>
-    /// Startup splash — runs offline integrity / license / dongle / user-data
+    /// Startup splash — runs startup-readiness, license, device, and user-data
     /// checks within a hard maximum of 4 seconds, showing status at the bottom.
     /// </summary>
     public partial class SplWin : BaseWin
@@ -99,7 +98,7 @@ namespace ShouTech.App.Views
         {
             // Step weights designed so the whole pipeline fits inside 4 seconds.
             await RunStepAsync(sw, 8,  L("Startup.CheckingStartupFiles", "Checking startup files and settings..."), VerifyApplicationBinariesAsync);
-            await RunStepAsync(sw, 18, L("Startup.CheckingStartupFiles", "Checking startup files and settings..."), VerifyIntegrityAsync);
+            await RunStepAsync(sw, 18, L("Startup.CheckingStartupFiles", "Checking startup files and settings..."), VerifyEntryAssemblyReadableAsync);
             await RunStepAsync(sw, 30, L("Startup.CheckingStartupFiles", "Checking startup files and settings..."), ScanUnauthorizedModificationsAsync);
             await RunStepAsync(sw, 42, L("Startup.CheckingStartupFiles", "Checking startup files and settings..."), ValidateConfigAndUserFilesAsync);
             await RunStepAsync(sw, 55, L("Startup.CheckingDeviceIdentity", "Checking device identity and dongle..."), CheckDeviceAndDongleAsync);
@@ -165,21 +164,21 @@ namespace ShouTech.App.Views
             return Task.CompletedTask;
         }
 
-        private static Task VerifyIntegrityAsync()
+        private static Task VerifyEntryAssemblyReadableAsync()
         {
-            // Lightweight integrity fingerprint of the entry assembly (size + SHA256 prefix).
+            // A locally computed hash without a trusted reference cannot establish integrity.
+            // This check therefore validates only that the entry assembly is present and readable.
             var entry = Assembly.GetEntryAssembly()?.Location
                         ?? Assembly.GetExecutingAssembly().Location;
-            if (string.IsNullOrWhiteSpace(entry) || !File.Exists(entry))
-                return Task.CompletedTask;
+            if (string.IsNullOrWhiteSpace(entry))
+                throw new InvalidOperationException("The entry assembly location is unavailable.");
+            if (!File.Exists(entry))
+                throw new FileNotFoundException("The entry assembly file is missing.", entry);
 
-            var bytes = File.ReadAllBytes(entry);
-            if (bytes.Length < 1024)
-                throw new InvalidOperationException("Entry assembly integrity check failed.");
+            using var stream = new FileStream(entry, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (stream.Length < 1024)
+                throw new InvalidOperationException("The entry assembly file is unexpectedly small.");
 
-            var hash = SHA256.HashData(bytes);
-            // Fingerprint retained for future online attestation; local check ensures readability.
-            _ = Convert.ToHexString(hash.AsSpan(0, 8));
             return Task.CompletedTask;
         }
 
