@@ -14,6 +14,8 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System;
 using CommunityToolkit.Mvvm.Input;
+using ShouTech.App.Localization;
+using ShouTech.App.Services;
 
 namespace ShouTech.App.Reporting
 {
@@ -321,7 +323,15 @@ namespace ShouTech.App.Reporting
             }
             catch (Exception ex)
             {
-                StatusMessage = $"فشل الحفظ: {ex.Message}";
+                StatusMessage = ErrorCatalog.Get("RPT-SAVE-001");
+                AppHost.Logging?.LogError(
+                    "ReportDesigner",
+                    "RPT-SAVE-001: Saving the report definition failed.",
+                    ex);
+                AppHost.Logging?.LogOperation(
+                    "ReportDesigner",
+                    "SaveFailed",
+                    "RPT-SAVE-001; report definition was not confirmed as saved.");
             }
             finally
             {
@@ -354,7 +364,15 @@ namespace ShouTech.App.Reporting
             }
             catch (Exception ex)
             {
-                StatusMessage = $"فشل الحفظ باسم: {ex.Message}";
+                StatusMessage = ErrorCatalog.Get("RPT-SAVE-002");
+                AppHost.Logging?.LogError(
+                    "ReportDesigner",
+                    "RPT-SAVE-002: Saving a copy of the report definition failed.",
+                    ex);
+                AppHost.Logging?.LogOperation(
+                    "ReportDesigner",
+                    "SaveAsFailed",
+                    "RPT-SAVE-002; report copy was not confirmed as saved.");
             }
             finally
             {
