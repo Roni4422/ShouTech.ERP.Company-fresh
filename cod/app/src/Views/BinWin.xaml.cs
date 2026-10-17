@@ -135,12 +135,14 @@ public partial class BinWin : Window
             }
             else
             {
-                var firstError = results.FirstOrDefault(result => !result.Succeeded)?.ErrorMessage;
+                foreach (var failure in results.Where(result => !result.Succeeded))
+                    ReportFailure("RestoreRecycleBinItem", new InvalidOperationException(
+                        $"Table={failure.Item.TableName}; Key={failure.Item.PrimaryKeyValue}; Reason={failure.ErrorMessage}"));
                 MessageBox.Show(this,
-                    FormatLocalized(
-                        "Restored {0:N0} item(s). {1:N0} failed.{2}{3}",
-                        "تمت استعادة {0:N0} عنصر، وفشلت استعادة {1:N0}.{2}{3}",
-                        restored, failed, Environment.NewLine, firstError ?? string.Empty),
+                    $"{FormatLocalized(
+                        "Restored {0:N0} item(s). {1:N0} failed.",
+                        "تمت استعادة {0:N0} عنصر، وفشلت استعادة {1:N0}.",
+                        restored, failed)}{Environment.NewLine}{FormatError("BIN-OP-001")}",
                     Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -187,6 +189,8 @@ public partial class BinWin : Window
                 {
                     failed++;
                     firstError ??= result.ErrorMessage;
+                    ReportFailure("PurgeRecycleBinItem", new InvalidOperationException(
+                        $"Table={item.TableName}; Key={item.PrimaryKeyValue}; Reason={result.ErrorMessage}"));
                 }
             }
 
@@ -199,10 +203,10 @@ public partial class BinWin : Window
             else
             {
                 MessageBox.Show(this,
-                    FormatLocalized(
-                        "Permanently deleted {0:N0} item(s). {1:N0} failed.{2}{3}",
-                        "تم حذف {0:N0} عنصر نهائياً، وفشل حذف {1:N0}.{2}{3}",
-                        purged, failed, Environment.NewLine, firstError ?? string.Empty),
+                    $"{FormatLocalized(
+                        "Permanently deleted {0:N0} item(s). {1:N0} failed.",
+                        "تم حذف {0:N0} عنصر نهائياً، وفشل حذف {1:N0}.",
+                        purged, failed)}{Environment.NewLine}{FormatError("BIN-OP-001")}",
                     Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
