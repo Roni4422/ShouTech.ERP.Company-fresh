@@ -375,6 +375,10 @@ namespace ShouTech.App.ViewModels
         {
             var key = actionKey ?? label ?? string.Empty;
 
+            // Phase 7 - dedicated modern windows (calculator, help, about, ...).
+            if (RibbonWinDisp.TryHandle(key, _ownerWindow))
+                return true;
+
             switch (key)
             {
                 case "Menu.Open":
@@ -420,17 +424,8 @@ namespace ShouTech.App.ViewModels
 
                 case "Help.About":
                 case "حول البرنامج":
-                    MessageBox.Show(
-                        $"{Loc.Get("Application.Title")}\n" +
-                        $"{Loc.Get("Shell.VersionLabel")}\n" +
-                        "© 2026 ShouTech Software\n\n" +
-                        $"{Loc.Get("Shell.Tagline")}",
-                        Loc.Get("Help.About"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-
-                    StatusMessage = StatBarEn.About;
-                    return true;
+                    // Phase 7 - replaced by the modern About window.
+                    return RibbonWinDisp.TryHandle("Help.About", _ownerWindow);
 
                 case "Tools.Backup":
                 case "النسخ الاحتياطي":
