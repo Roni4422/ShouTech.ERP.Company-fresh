@@ -24,3 +24,7 @@ Connection strings can be passed through `SHOUTECH_CONNECTION_STRING` or `SHOUTE
 The migration-managed `outbound_messages` table is available on both providers. The Windows service reads `SHOUTECH_DB_CONNECTION` (or `SHOUTECH_CONNECTION_STRING`) and `SHOUTECH_DB_PROVIDER` (`SQLite` by default or `PostgreSQL`). Only HTTP/HTTPS webhook dispatch is implemented; email/SMS require explicit connectors. Queue rows should be inserted by application code through a parameterized outbox API and should not be edited manually in production.
 
 The Al-Ameen SQL files are archived reference material. Their inventory and posting behavior can inform requirements, but SQL Server procedures must not be run against SQLite/PostgreSQL.
+
+## 023_company_features
+
+Adds `company_features` (per-company enterprise feature flags such as audit trail, multi-currency, multi-branch and approval workflow). Matching UI strings live under the `Enterprise` section of `Ar/En/Fr/Tr.json`.

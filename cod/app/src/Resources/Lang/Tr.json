@@ -1320,5 +1320,19 @@
     "Summary": "{1} üründen {0} tanesi gösteriliyor. Barkodsuz: {2}.",
     "Result": "Üretilen barkodlar: {0}. Atlanan (zaten kodlu): {1}. Toplam ürün: {2}. Kartlara yazmak için Kaydet'i kullanın.",
     "SavedSummary": "Ürün kartlarına kaydedildi: {0}. Hatalı: {1}."
+  },
+  "Enterprise": {
+    "Title": "Kurumsal Ayarlar",
+    "Features": "Özellik Bayrakları",
+    "FeatureEnabled": "Etkin",
+    "FeatureDisabled": "Devre Dışı",
+    "Edition": "Sürüm",
+    "LicenseStatus": "Lisans Durumu",
+    "AuditTrail": "Denetim İzi",
+    "MultiCurrency": "Çoklu Para Birimi",
+    "MultiBranch": "Çoklu Şube",
+    "ApprovalWorkflow": "Onay İş Akışı",
+    "Save": "Kaydet",
+    "Saved": "Ayarlar başarıyla kaydedildi"
   }
 }

@@ -1793,5 +1793,19 @@
     "EXL-3010": "Excel Duplicate Identity",
     "EXL-3011": "Excel Export Failed",
     "EXL-3012": "Error Catalog Unavailable"
+  },
+  "Enterprise": {
+    "Title": "إعدادات المؤسسة",
+    "Features": "مفاتيح الميزات",
+    "FeatureEnabled": "مفعّل",
+    "FeatureDisabled": "معطّل",
+    "Edition": "الإصدار",
+    "LicenseStatus": "حالة الترخيص",
+    "AuditTrail": "سجل التدقيق",
+    "MultiCurrency": "تعدد العملات",
+    "MultiBranch": "تعدد الفروع",
+    "ApprovalWorkflow": "سير عمل الموافقات",
+    "Save": "حفظ",
+    "Saved": "تم حفظ الإعدادات بنجاح"
   }
 }

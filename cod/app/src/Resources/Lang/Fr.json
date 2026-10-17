@@ -1320,5 +1320,19 @@
     "Summary": "{0} sur {1} article(s) affiché(s). Sans code-barres : {2}.",
     "Result": "Codes-barres générés : {0}. Ignorés (déjà codés) : {1}. Total des articles : {2}. Utilisez Enregistrer pour les écrire dans les fiches articles.",
     "SavedSummary": "Enregistrés dans les fiches articles : {0}. Échecs : {1}."
+  },
+  "Enterprise": {
+    "Title": "Paramètres entreprise",
+    "Features": "Indicateurs de fonctionnalités",
+    "FeatureEnabled": "Activé",
+    "FeatureDisabled": "Désactivé",
+    "Edition": "Édition",
+    "LicenseStatus": "État de la licence",
+    "AuditTrail": "Piste d'audit",
+    "MultiCurrency": "Multi-devises",
+    "MultiBranch": "Multi-succursales",
+    "ApprovalWorkflow": "Flux d'approbation",
+    "Save": "Enregistrer",
+    "Saved": "Paramètres enregistrés avec succès"
   }
 }
