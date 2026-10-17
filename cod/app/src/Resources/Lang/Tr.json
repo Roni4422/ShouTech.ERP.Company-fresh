@@ -286,7 +286,7 @@
     "CompleteSale": "Satışı tamamla",
     "ConfirmSale": "Bu POS satışını tamamlayıp onaylamak istiyor musunuz?",
     "SalePosted": "POS satışı onaylandı.",
-    "PaymentPostingNotice": "Seçilen ödeme yöntemi satış notlarına kaydedilir; ödeme defterine kayıt henüz uygulanmadı.",
+    "PaymentPostingNotice": "Nakit satışlar CASH, Visa/K-Net BANK, veresiye satışlar RECEIVABLES hesabına borç kaydeder. Kaydetmeden önce ilgili hesap eşleştirmelerini yapılandırın.",
     "CustomerNotFound": "Girilen müşteri kodu bulunamadı.",
     "CreditNeedsCustomer": "Veresiye satışını tamamlamadan önce bir müşteri seçin.",
     "CashDrawerOptionsTitle": "POS Kasa Çekmecesi Seçenekleri"
