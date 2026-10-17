@@ -42,6 +42,7 @@
   "Inventory": {
     "Title": "المستودعات",
     "MaterialCard": "بطاقة مادة",
+    "ItemCard": "بطاقة صنف",
     "Material": "مادة ",
     "Group": "مجموعة مواد",
     "CategoryCard": "بطاقة صنف",
