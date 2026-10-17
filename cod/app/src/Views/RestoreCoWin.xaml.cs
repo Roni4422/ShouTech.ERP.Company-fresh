@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using ShouTech.App.Configuration;
 using ShouTech.App.Services;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Views
 {
@@ -82,7 +83,13 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyRestore", "RCO-LOAD-001: Failed to load deleted companies.", ex);
+                AppHost.Logging?.LogOperation("CompanyRestore", "LoadFailed", "RCO-LOAD-001");
+                MessageBox.Show(
+                    ErrorCatalog.Get(ErrorCodes.DeletedCompanyLoadFailed),
+                    Title,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
@@ -108,18 +115,17 @@ namespace ShouTech.App.Views
                 var ok = await CoRegSvc.RestoreCompanyAsync(item.Code);
                 if (!ok)
                 {
+                    AppHost.Logging?.LogOperation("CompanyRestore", "RestoreRejected", "RCO-RESTORE-002; company service returned false.");
                     MessageBox.Show(
-                        (ShouTech.App.App.CurrentLanguageCode ?? "ar").StartsWith("ar", StringComparison.OrdinalIgnoreCase)
-                            ? "تعذر استعادة الشركة من قاعدة البيانات."
-                            : "Could not restore the company from the database.",
+                        ErrorCatalog.Get(ErrorCodes.DeletedCompanyRestoreRejected),
                         Title,
                         MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        MessageBoxImage.Error);
                     return;
                 }
 
                 MessageBox.Show(
-                    (ShouTech.App.App.CurrentLanguageCode ?? "ar").StartsWith("ar", StringComparison.OrdinalIgnoreCase)
+                    (ShouTech.App.App.CurrentLanguageCode ?? "en").StartsWith("ar", StringComparison.OrdinalIgnoreCase)
                         ? $"تمت استعادة «{item.DisplayName}» وإعادة فهرستها."
                         : $"«{item.DisplayName}» was restored and re-indexed.",
                     Title,
@@ -130,7 +136,13 @@ namespace ShouTech.App.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+                AppHost.Logging?.LogError("CompanyRestore", "RCO-RESTORE-001: Failed to restore deleted company.", ex);
+                AppHost.Logging?.LogOperation("CompanyRestore", "RestoreFailed", $"RCO-RESTORE-001; company={item.Code}");
+                MessageBox.Show(
+                    ErrorCatalog.Get(ErrorCodes.DeletedCompanyRestoreFailed),
+                    Title,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
