@@ -107,6 +107,12 @@ namespace ShouTech.App.Localization
         public const string UnhandledApplicationException = "APP-START-002";
         public const string ApplicationStartupFailed = "APP-START-003";
         public const string SplashInitializationFailed = "APP-START-004";
+        public const string StartupConfigPathValidationFailed = "SPL-CFG-001";
+        public const string StartupPreferencesLoadFailed = "SPL-CFG-002";
+        public const string StartupLicenseServiceMissing = "SPL-LIC-001";
+        public const string StartupUserSnapshotServiceMissing = "SPL-SYNC-001";
+        public const string StartupBackgroundServiceMissing = "SPL-SVC-001";
+        public const string StartupDirectoryInspectionFailed = "SPL-SEC-002";
         public const string CompanySchemaInitializationFailed = "APP-DB-001";
         public const string SchemaRefreshFailed = "APP-DB-002";
         public const string MaterialDirectoryLoadFailed = "MAT-DIR-001";
