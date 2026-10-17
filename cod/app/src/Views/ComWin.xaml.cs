@@ -591,6 +591,7 @@ namespace ShouTech.App.Views
                 : DatabaseProviderNames.Normalize(record.DatabaseProvider);
 
             defaultConnection.Provider = provider;
+            AppState.CurrentDatabaseProvider = provider;
             settings.Database ??= new DatabaseSettings();
             settings.Database.DefaultProvider = provider;
 
