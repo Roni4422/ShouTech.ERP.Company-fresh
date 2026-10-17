@@ -63,8 +63,10 @@ public static class TaxSvc
     public static IReadOnlyList<TaxCodeRec> LoadCodes()
     {
         var list = new List<TaxCodeRec>();
-        var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) return list;
+        var cs = RequireConnectionString("LoadCodes");
+        var companyCode = AppState.CurrentCompanyCode;
+        if (string.IsNullOrWhiteSpace(companyCode))
+            throw CreateTaxDatabaseError("LoadCodes", new InvalidOperationException("No active company is selected."));
 
         try
         {
@@ -77,8 +79,14 @@ public static class TaxSvc
                 SELECT tax_code, COALESCE(tax_name, tax_code), COALESCE(rate, 0), COALESCE(country_code, '')
                 FROM tax_codes
                 WHERE {activePredicate}
+                  AND company_id = (
+                      SELECT company_id FROM companies
+                      WHERE company_code = $companyCode
+                      LIMIT 1
+                  )
                 ORDER BY tax_code;
                 """;
+            Add(cmd, "$companyCode", companyCode);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -105,9 +113,10 @@ public static class TaxSvc
     public static (long? Id, string Name)? ResolveParty(string code, bool customer)
     {
         if (string.IsNullOrWhiteSpace(code)) return null;
-        var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) return null;
+        var cs = RequireConnectionString("ResolveParty");
         var company = AppState.CurrentCompanyCode ?? "";
+        if (company.Length == 0)
+            throw CreateTaxDatabaseError("ResolveParty", new InvalidOperationException("No active company is selected."));
         var activeRowPredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
 
         try
@@ -150,9 +159,10 @@ public static class TaxSvc
     public static (long? Id, string Name, decimal Price, string Unit, decimal TaxRate)? ResolveMaterial(string code)
     {
         if (string.IsNullOrWhiteSpace(code)) return null;
-        var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) return null;
+        var cs = RequireConnectionString("ResolveMaterial");
         var company = AppState.CurrentCompanyCode ?? "";
+        if (company.Length == 0)
+            throw CreateTaxDatabaseError("ResolveMaterial", new InvalidOperationException("No active company is selected."));
 
         try
         {
@@ -223,8 +233,10 @@ public static class TaxSvc
 
     private static decimal? TryLoadActiveRate()
     {
-        var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs)) return null;
+        var cs = RequireConnectionString("TryLoadActiveRate");
+        var companyCode = AppState.CurrentCompanyCode;
+        if (string.IsNullOrWhiteSpace(companyCode))
+            throw new InvalidOperationException("No active company is selected.");
         using var connection = Open(cs);
         using var cmd = connection.CreateCommand();
         var activePredicate = DatabaseRuntime.IsPostgreSql()
@@ -236,8 +248,14 @@ public static class TaxSvc
         cmd.CommandText = $"""
             SELECT rate FROM tax_codes
             WHERE {activePredicate} AND {defaultPredicate}
+              AND company_id = (
+                  SELECT company_id FROM companies
+                  WHERE company_code = $companyCode
+                  LIMIT 1
+              )
             LIMIT 1;
             """;
+        Add(cmd, "$companyCode", companyCode);
         var v = cmd.ExecuteScalar();
         if (v is null or DBNull) return null;
         return Convert.ToDecimal(v, CultureInfo.InvariantCulture);
@@ -245,10 +263,7 @@ public static class TaxSvc
 
     private static string GetCompanyCountry()
     {
-        var cs = DatabaseRuntime.GetConnectionString();
-        if (string.IsNullOrWhiteSpace(cs))
-            return string.Empty;
-
+        var cs = RequireConnectionString("GetCompanyCountry");
         using var connection = Open(cs);
         using var cmd = connection.CreateCommand();
         var activePredicate = DatabaseRuntime.IsPostgreSql()
@@ -261,6 +276,29 @@ public static class TaxSvc
             """;
         Add(cmd, "$code", AppState.CurrentCompanyCode ?? string.Empty);
         return Convert.ToString(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)?.Trim() ?? string.Empty;
+    }
+
+
+    private static string RequireConnectionString(string operation)
+    {
+        var connectionString = DatabaseRuntime.GetConnectionString();
+        if (!string.IsNullOrWhiteSpace(connectionString))
+            return connectionString;
+
+        throw CreateTaxDatabaseError(
+            operation,
+            new InvalidOperationException("The active database connection is not configured."));
+    }
+
+    private static InvalidOperationException CreateTaxDatabaseError(string operation, Exception exception)
+    {
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(
+            ShouTech.App.Localization.ErrorCodes.TaxConfigurationLoadFailed);
+        AppHost.Logging?.LogError(
+            "TaxService",
+            $"[{definition.Code}] {definition.Name} | Operation={operation} | Company={AppState.CurrentCompanyCode ?? "(none)"}",
+            exception);
+        return new InvalidOperationException($"[{definition.Code}] {definition.Message}", exception);
     }
 
     private static string NormalizeCountryCode(string? country)
