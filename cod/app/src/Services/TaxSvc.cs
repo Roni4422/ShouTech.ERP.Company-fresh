@@ -87,6 +87,7 @@ public static class TaxSvc
         var cs = DatabaseRuntime.GetConnectionString();
         if (string.IsNullOrWhiteSpace(cs)) return null;
         var company = AppState.CurrentCompanyCode ?? "";
+        var activeRowPredicate = DatabaseRuntime.IsPostgreSql() ? "is_deleted=FALSE" : "is_deleted=0";
 
         try
         {
@@ -94,16 +95,16 @@ public static class TaxSvc
             using var cmd = connection.CreateCommand();
             if (customer)
             {
-                cmd.CommandText = """
+                cmd.CommandText = $"""
                     SELECT customer_id, customer_name_ar FROM customers
-                    WHERE company_id=$c AND customer_code=$code AND is_deleted=0 LIMIT 1;
+                    WHERE company_id=$c AND customer_code=$code AND {activeRowPredicate} LIMIT 1;
                     """;
             }
             else
             {
-                cmd.CommandText = """
+                cmd.CommandText = $"""
                     SELECT supplier_id, supplier_name_ar FROM suppliers
-                    WHERE company_id=$c AND supplier_code=$code AND is_deleted=0 LIMIT 1;
+                    WHERE company_id=$c AND supplier_code=$code AND {activeRowPredicate} LIMIT 1;
                     """;
             }
             Add(cmd, "$c", company);
