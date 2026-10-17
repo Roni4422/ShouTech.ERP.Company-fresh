@@ -2188,5 +2188,86 @@
     "severity": "Warning",
     "catalogRef": "SALES_REP.REP-VAL-004",
     "location": "SALES_REP.LOAD"
+  },
+  "CHQ-DB-001": {
+    "type": "Database",
+    "name": "ChequeBatchCompanyContextFailed",
+    "message": "The active company could not be verified in the connected database. No data was changed.",
+    "messageKey": "Errors.CHQ-DB-001",
+    "severity": "Error",
+    "catalogRef": "CHEQUE_BATCH.CHQ-DB-001",
+    "location": "CHEQUE_BATCH.CONTEXT"
+  },
+  "CHQ-DB-002": {
+    "type": "Database",
+    "name": "ChequeBatchSaveFailed",
+    "message": "The cheque batch could not be saved completely. Review the database log before retrying.",
+    "messageKey": "Errors.CHQ-DB-002",
+    "severity": "Error",
+    "catalogRef": "CHEQUE_BATCH.CHQ-DB-002",
+    "location": "CHEQUE_BATCH.SAVE"
+  },
+  "CHQ-DB-003": {
+    "type": "Database",
+    "name": "ChequeBatchLoadFailed",
+    "message": "The cheque batch could not be loaded from the selected company.",
+    "messageKey": "Errors.CHQ-DB-003",
+    "severity": "Error",
+    "catalogRef": "CHEQUE_BATCH.CHQ-DB-003",
+    "location": "CHEQUE_BATCH.LOAD"
+  },
+  "CHQ-DEL-001": {
+    "type": "Database",
+    "name": "ChequeBatchSoftDeleteFailed",
+    "message": "The cheque batch could not be moved to the Recycle Bin. No permanent deletion was attempted.",
+    "messageKey": "Errors.CHQ-DEL-001",
+    "severity": "Error",
+    "catalogRef": "CHEQUE_BATCH.CHQ-DEL-001",
+    "location": "CHEQUE_BATCH.DELETE"
+  },
+  "CHQ-DEL-002": {
+    "type": "Validation",
+    "name": "ChequeBatchDeleteNotFound",
+    "message": "The cheque batch was not found in the selected company, was already deleted, or is no longer a draft.",
+    "messageKey": "Errors.CHQ-DEL-002",
+    "severity": "Warning",
+    "catalogRef": "CHEQUE_BATCH.CHQ-DEL-002",
+    "location": "CHEQUE_BATCH.DELETE"
+  },
+  "CHQ-VAL-001": {
+    "type": "Validation",
+    "name": "ChequeBatchInputInvalid",
+    "message": "One or more cheque-batch fields are invalid. Review the header and cheque lines.",
+    "messageKey": "Errors.CHQ-VAL-001",
+    "severity": "Warning",
+    "catalogRef": "CHEQUE_BATCH.CHQ-VAL-001",
+    "location": "CHEQUE_BATCH.VALIDATION"
+  },
+  "CHQ-VAL-002": {
+    "type": "Validation",
+    "name": "ChequeBatchCodeRequiresRestore",
+    "message": "This batch code belongs to a deleted record. Restore it from the Recycle Bin before reusing the code.",
+    "messageKey": "Errors.CHQ-VAL-002",
+    "severity": "Warning",
+    "catalogRef": "CHEQUE_BATCH.CHQ-VAL-002",
+    "location": "CHEQUE_BATCH.RESTORE_REQUIRED"
+  },
+  "CHQ-VAL-003": {
+    "type": "Validation",
+    "name": "ChequeBatchNotFound",
+    "message": "No active cheque batch was found for this code in the selected company.",
+    "messageKey": "Errors.CHQ-VAL-003",
+    "severity": "Warning",
+    "catalogRef": "CHEQUE_BATCH.CHQ-VAL-003",
+    "location": "CHEQUE_BATCH.LOAD"
+  },
+  "CHQ-VAL-004": {
+    "type": "Validation",
+    "name": "ChequeBatchPostedEditRejected",
+    "message": "A non-draft cheque batch cannot be edited. Use the approved accounting reversal workflow.",
+    "messageKey": "Errors.CHQ-VAL-004",
+    "severity": "Warning",
+    "catalogRef": "CHEQUE_BATCH.CHQ-VAL-004",
+    "location": "CHEQUE_BATCH.POSTED_EDIT"
   }
 }
