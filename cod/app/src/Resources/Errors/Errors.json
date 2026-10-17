@@ -1269,5 +1269,37 @@
     "severity": "Warning",
     "catalogRef": "REPORT.DESIGNER.VALIDATION.004",
     "location": "REPORT.DESIGNER.SAVE_AS"
+  },
+  "XPT-EXP-001": {
+    "type": "IO",
+    "name": "ExcelReportExportFailed",
+    "message": "The Excel report could not be exported. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "REPORT.EXPORT.EXCEL.001",
+    "location": "REPORT.EXPORT.EXCEL"
+  },
+  "XPT-EXP-002": {
+    "type": "IO",
+    "name": "PdfReportExportFailed",
+    "message": "The PDF report could not be exported. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "REPORT.EXPORT.PDF.001",
+    "location": "REPORT.EXPORT.PDF"
+  },
+  "XPT-EXP-003": {
+    "type": "Security",
+    "name": "EncryptedReportExportFailed",
+    "message": "The encrypted report data could not be exported. Review the application logs.",
+    "severity": "Error",
+    "catalogRef": "REPORT.EXPORT.ENCRYPTED.001",
+    "location": "REPORT.EXPORT.ENCRYPTED"
+  },
+  "XPT-EXP-004": {
+    "type": "IO",
+    "name": "ReportPrintFailed",
+    "message": "The report could not be printed. Review the application logs and printer configuration.",
+    "severity": "Error",
+    "catalogRef": "REPORT.EXPORT.PRINT.001",
+    "location": "REPORT.EXPORT.PRINT"
   }
 }
