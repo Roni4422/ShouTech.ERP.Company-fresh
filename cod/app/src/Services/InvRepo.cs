@@ -161,7 +161,7 @@ public static class InvRepo
                       grand_total=$grand, tax_code=$tcode, tax_rate=$trate, notes=$notes{(isSales ? ", payment_method=$payment" : "")}
                     WHERE doc_id=$id AND company_id=$company AND status='Draft' AND is_deleted=0;
                     """;
-                BindHeader(cmd, doc);
+                BindHeader(cmd, doc, isSales);
                 Add(cmd, "$id", docId);
                 var affected = cmd.ExecuteNonQuery();
                 if (affected == 0)
