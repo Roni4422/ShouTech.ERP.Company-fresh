@@ -100,10 +100,9 @@ namespace ShouTech.App.Views
         {
             if (lstDeleted.SelectedItem is not DeletedCompanyItem item)
             {
+                AppHost.Logging?.LogOperation("CompanyRestore", "ValidationFailed", "RCO-SELECT-001; no company selected.");
                 MessageBox.Show(
-                    (ShouTech.App.App.CurrentLanguageCode ?? "ar").StartsWith("ar", StringComparison.OrdinalIgnoreCase)
-                        ? "يرجى اختيار شركة."
-                        : "Please select a company.",
+                    ErrorCatalog.Get(ErrorCodes.DeletedCompanySelectionRequired),
                     Title,
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
