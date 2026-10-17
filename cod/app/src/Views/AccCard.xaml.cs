@@ -349,7 +349,7 @@ public partial class AccCard : BaseWin
             }
 
             var confirmation = MessageBox.Show(this,
-                $"سيتم حذف الحساب نهائيًا:\n\n{_current.Code} - {_current.NameAr}\n\nلا يمكن التراجع عن هذه العملية. هل تريد المتابعة؟",
+                $"سيتم نقل الحساب إلى سلة المحذوفات مع الاحتفاظ بسجله التدقيقي:\n\n{_current.Code} - {_current.NameAr}\n\nيمكن استعادته لاحقًا إذا لم توجد موانع. هل تريد المتابعة؟",
                 "تأكيد حذف الحساب", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
             if (confirmation != MessageBoxResult.Yes) return;
 
