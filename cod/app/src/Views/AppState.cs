@@ -14,6 +14,7 @@ namespace ShouTech.App
         public static string? CurrentCompanyNameEn { get; set; }
         public static UserInfo? CurrentUser { get; set; }
 		public static string? CurrentDatabaseName { get; set; }
+		public static string? CurrentDatabaseProvider { get; set; }
 		
 
         /// <summary>

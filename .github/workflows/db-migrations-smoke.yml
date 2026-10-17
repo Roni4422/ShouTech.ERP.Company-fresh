@@ -28,6 +28,10 @@ jobs:
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
       - name: Verify general-ledger reporting view against all SQLite migrations
         run: python3 -I tests/sql/test_financial_views.py
+      - name: Verify journal integrity invariants (balanced posting, immutability, status transitions)
+        run: python3 -I tests/sql/test_journal_integrity.py
+      - name: General database tests (migrations, views, GL defaults, reconciliation)
+        run: python3 -I tests/sql/test_general.py
       - name: Re-run migrations against the same SQLite database
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
       - name: Assert journal header columns exist in SQLite
@@ -68,6 +72,17 @@ jobs:
           missing_rate_columns = sorted(required_rate_columns - rate_columns)
           if missing_rate_columns:
               raise SystemExit(f"SQLite currency_rates columns are missing: {missing_rate_columns}")
+          for table, cols in {
+              "company_features": {"company_id", "feature_key", "is_enabled"},
+              "lookup_items": {"company_id", "kind", "code", "name_ar", "name_en", "is_active", "is_deleted"},
+          }.items():
+              found = {row[1] for row in con.execute(f"PRAGMA table_info({table})")}
+              if not cols <= found:
+                  raise SystemExit(f"SQLite {table} columns are missing: {sorted(cols - found)}")
+          triggers = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='trigger'")}
+          for t in ("trg_audit_soft_delete_lookup_items", "trg_audit_hard_delete_customers", "trg_audit_hard_delete_materials"):
+              if t not in triggers:
+                  raise SystemExit(f"SQLite delete-audit trigger is missing: {t}")
           print("SQLite journal, cash voucher, and currency schemas verified.")
           PY
       - name: Test existing SQLite migration-history table
@@ -150,32 +165,24 @@ jobs:
           dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN_HISTORY"
           dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$PG_CONN_HISTORY"
 
-  postgresql-migrations:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: shoutech
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      CONN: Host=localhost;Port=5432;Database=shoutech;Username=postgres;Password=postgres
-      PGPASSWORD: postgres
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '8.0.x'
-      - name: Apply migrations to a clean PostgreSQL database
-        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$CONN"
-      - name: Re-run migrations (must be idempotent)
-        run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider postgresql --connection "$CONN"
       - name: Verify general-ledger reporting view
-        run: psql -h localhost -U postgres -d shoutech -v ON_ERROR_STOP=1 -f tests/sql/test_financial_views_pg.sql
+        env:
+          PGPASSWORD: shoutest
+        run: psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -f tests/sql/test_financial_views_pg.sql
+      - name: Verify journal integrity triggers
+        env:
+          PGPASSWORD: shoutest
+        run: psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -f tests/sql/test_journal_integrity_pg.sql
+      - name: Assert delete-audit triggers exist in PostgreSQL
+        env:
+          PGPASSWORD: shoutest
+        run: |
+          n=$(psql -h localhost -U shoutest -d shoutest -Atc "SELECT count(*) FROM pg_trigger WHERE tgname LIKE 'trg_audit_hd_%'")
+          test "$n" -ge 30 || { echo "Expected delete-audit triggers, found $n"; exit 1; }
+      - name: Assert report views exist in PostgreSQL
+        env:
+          PGPASSWORD: shoutest
+        run: |
+          for v in invoice_profit quotations packing_list negative_stock stagnant_stock cash_journal profit_loss sales_by_party daily_journal dormant_accounts cost_center_balance active_materials; do
+            psql -h localhost -U shoutest -d shoutest -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM v_rpt_$v" >/dev/null
+          done

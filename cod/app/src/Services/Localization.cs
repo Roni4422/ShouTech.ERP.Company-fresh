@@ -24,7 +24,7 @@ public static class LangDirSv
     {
         private static readonly HashSet<string> RtlLanguageCodes = new(StringComparer.OrdinalIgnoreCase)
         {
-            "ar", "ku", "he", "fa", "ur"
+            "ar"
         };
 
         public const string DefaultLanguageCode = "en";
@@ -59,6 +59,7 @@ public static class LangDirSv
 
             var code = NormalizeLanguageCode(languageCode ?? App.CurrentLanguageCode);
             window.FlowDirection = GetFlowDirection(code);
+            ApplyCodeFieldsLtr(window);
 
             try
             {
@@ -76,6 +77,47 @@ public static class LangDirSv
             {
                 // Keep existing window language if culture code is invalid.
             }
+        }
+
+        private static readonly string[] CodeFieldMarkers = { "code", "barcode", "gtin", "sku" };
+
+        /// <summary>
+        /// Keeps code/identifier inputs left-to-right even when the window is RTL (Arabic).
+        /// A TextBox is a code field when its name contains a marker or its Tag is "Code".
+        /// </summary>
+        public static void ApplyCodeFieldsLtr(DependencyObject root)
+        {
+            if (root == null)
+                return;
+
+            if (root is System.Windows.Controls.TextBox tb && IsCodeField(tb))
+            {
+                tb.FlowDirection = FlowDirection.LeftToRight;
+                tb.TextAlignment = TextAlignment.Left;
+            }
+
+            foreach (var child in LogicalTreeHelper.GetChildren(root))
+            {
+                if (child is DependencyObject d)
+                    ApplyCodeFieldsLtr(d);
+            }
+        }
+
+        private static bool IsCodeField(System.Windows.Controls.TextBox tb)
+        {
+            if (tb.Tag is string tag && tag.Equals("Code", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var name = tb.Name;
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            foreach (var marker in CodeFieldMarkers)
+            {
+                if (name.Contains(marker, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         public static void ApplyToAllWindows(string languageCode)

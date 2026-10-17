@@ -231,6 +231,20 @@
     "RepostInvoices": "Reposter les Factures"
   },
   "POS": {
+    "StBegin": "Scannez un code-barres ou saisissez un code ou nom d'article pour commencer.",
+    "StSelectLine": "Sélectionnez d'abord une ligne d'article.",
+    "StBadQty": "Saisissez une quantité positive valide ou un prix non négatif.",
+    "StNoId": "L'article sélectionné n'a pas d'identifiant valide.",
+    "StNoUnits": "Aucune unité n'est configurée pour cet article.",
+    "StUnitsFail": "Impossible de charger les unités de l'article. Voir le journal.",
+    "StCleared": "Vente effacée.",
+    "StAddItem": "Ajoutez au moins un article avant de continuer.",
+    "ClearConfirm": "Supprimer tous les articles de cette vente ?",
+    "StAdded": "{0} ajouté à la vente.",
+    "StPayMethod": "Mode de paiement sélectionné : {0}.",
+    "StUnitSel": "Unité « {0} » sélectionnée pour {1}.",
+    "StCheckLine": "Vérifiez la quantité, le prix ou la taxe de « {0} ». La quantité doit être supérieure à zéro.",
+    "StatusSalePosted": "Vente POS comptabilisée.",
     "Title": "ShouTech | Point de vente",
     "Points": "Points",
     "DefinePOS": "Définir le POS",
@@ -1320,5 +1334,37 @@
     "Summary": "{0} sur {1} article(s) affiché(s). Sans code-barres : {2}.",
     "Result": "Codes-barres générés : {0}. Ignorés (déjà codés) : {1}. Total des articles : {2}. Utilisez Enregistrer pour les écrire dans les fiches articles.",
     "SavedSummary": "Enregistrés dans les fiches articles : {0}. Échecs : {1}."
+  },
+  "Enterprise": {
+    "Title": "Paramètres entreprise",
+    "Features": "Indicateurs de fonctionnalités",
+    "FeatureEnabled": "Activé",
+    "FeatureDisabled": "Désactivé",
+    "Edition": "Édition",
+    "LicenseStatus": "État de la licence",
+    "AuditTrail": "Piste d'audit",
+    "MultiCurrency": "Multi-devises",
+    "MultiBranch": "Multi-succursales",
+    "ApprovalWorkflow": "Flux d'approbation",
+    "Save": "Enregistrer",
+    "Saved": "Paramètres enregistrés avec succès"
+  },
+  "Qry": {
+    "Type": "Type",
+    "Amount": "Montant",
+    "CostCenter": "Centre de coûts",
+    "MoveCount": "Mouvements",
+    "Revenue": "Revenus",
+    "Cost": "Coût",
+    "Profit": "Bénéfice",
+    "DocCount": "Documents"
+  },
+  "Lkp": {
+    "Code": "Code",
+    "NameAr": "Nom (arabe)",
+    "NameEn": "Nom (anglais)",
+    "Active": "Actif",
+    "Delete": "Supprimer la ligne",
+    "Saved": "Enregistré avec succès"
   }
 }

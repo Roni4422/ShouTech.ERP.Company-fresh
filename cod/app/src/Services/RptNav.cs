@@ -167,7 +167,31 @@ public static class RptNav
                 OpenShortageList(owner); return true;
             case "Reports.Statistics":
                 OpenTrialBalance(owner); return true;
+            case "Inventory.MaterialCard":
+                Show(new MatCard(), owner); return true;
+            case "Inventory.WarehouseCard":
+                Show(new WhsWin(), owner); return true;
+            case "Inventory.CategoryCard":
+            case "Inventory.MaterialGroups":
+                Show(new CatWin(), owner); return true;
+            case "Inventory.SerialNumbersReport":
+            case "Inventory.EditSerialNumber":
+                Show(new SerWin(), owner); return true;
+            case "Accounts.ChartOfAccounts":
+            case "View.ChartOfAccounts":
+                Show(new CoaWin(), owner); return true;
+            case "Tools.ActivityLog":
+                Show(new LogWin(), owner); return true;
+            case "Invoices.SearchInvoices":
+                OpenSalesInvoiceList(owner); return true;
+            case "Customers.CustomerDue":
+                OpenCustomerBalances(owner); return true;
             default:
+                if (Views.Reports.QryWin.TryResolve(actionKey.Trim(), out var qryKey))
+                {
+                    Show(new Views.Reports.QryWin(qryKey), owner);
+                    return true;
+                }
                 return false;
         }
     }

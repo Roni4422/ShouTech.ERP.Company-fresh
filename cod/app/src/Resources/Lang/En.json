@@ -759,6 +759,20 @@
     "UnitsOfMeasure": "Define Units of Measure"
   },
   "POS": {
+    "StBegin": "Scan a barcode or enter an item code or name to begin.",
+    "StSelectLine": "Select a material line first.",
+    "StBadQty": "Enter a valid positive quantity or non-negative price.",
+    "StNoId": "The selected material has no valid identifier.",
+    "StNoUnits": "No units are configured for this material.",
+    "StUnitsFail": "Unable to load units for the selected material. See application log.",
+    "StCleared": "Sale cleared.",
+    "StAddItem": "Add at least one item before continuing.",
+    "ClearConfirm": "Clear all items from this sale?",
+    "StAdded": "Added {0} to the sale.",
+    "StPayMethod": "Payment method selected: {0}.",
+    "StUnitSel": "Unit '{0}' selected for {1}.",
+    "StCheckLine": "Check quantity, price, or tax for '{0}'. Quantity must be greater than zero.",
+    "StatusSalePosted": "POS sale posted.",
     "AdjustPrice": "Adjust Material Price",
     "AdjustQuantity": "Adjust Material Quantity",
     "DefinePOS": "Define POS",
@@ -1651,5 +1665,37 @@
     "EXL-3010": "Excel Duplicate Identity",
     "EXL-3011": "Excel Export Failed",
     "EXL-3012": "Error Catalog Unavailable"
+  },
+  "Enterprise": {
+    "Title": "Enterprise Settings",
+    "Features": "Feature Flags",
+    "FeatureEnabled": "Enabled",
+    "FeatureDisabled": "Disabled",
+    "Edition": "Edition",
+    "LicenseStatus": "License Status",
+    "AuditTrail": "Audit Trail",
+    "MultiCurrency": "Multi-Currency",
+    "MultiBranch": "Multi-Branch",
+    "ApprovalWorkflow": "Approval Workflow",
+    "Save": "Save",
+    "Saved": "Settings saved successfully"
+  },
+  "Qry": {
+    "Type": "Type",
+    "Amount": "Amount",
+    "CostCenter": "Cost center",
+    "MoveCount": "Movements",
+    "Revenue": "Revenue",
+    "Cost": "Cost",
+    "Profit": "Profit",
+    "DocCount": "Documents"
+  },
+  "Lkp": {
+    "Code": "Code",
+    "NameAr": "Name (Arabic)",
+    "NameEn": "Name (English)",
+    "Active": "Active",
+    "Delete": "Delete row",
+    "Saved": "Saved successfully"
   }
 }

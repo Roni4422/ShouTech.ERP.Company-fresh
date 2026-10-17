@@ -842,7 +842,7 @@ namespace ShouTech.App.Views
 
             {
                 var reportKey = LocProps.GetKey(button);
-                if (RptNav.TryHandle(reportKey, this))
+                if (LkpWin.TryOpen(reportKey, this) || RptNav.TryHandle(reportKey, this))
                     return;
             }
 

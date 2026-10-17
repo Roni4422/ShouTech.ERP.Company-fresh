@@ -47,6 +47,25 @@ public sealed class RepCard : BaseWin
     }
 
 
+    private bool _busy;
+    private Guid? _currentRepId;
+
+    private void ReportPersistenceFailure(string operation, Exception exception)
+    {
+        const string errorCode = "APP-2010";
+        var definition = ShouTech.App.Localization.ErrorCatalog.Resolve(errorCode);
+        var context = $"Operation={operation}; Window={GetType().Name}; Company={ShouTech.App.Services.UsrSession.Current?.CompanyId ?? "(none)"}";
+        ShouTech.App.Services.AppHost.Logging?.LogError(
+            "WindowPersistence",
+            $"[{definition.Code}] {definition.Name} | {context} | {exception.Message}",
+            exception);
+        MessageBox.Show(this,
+            $"[{definition.Code}] {exception.Message}",
+            Title,
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+    }
+
     private readonly TextBox _txtCode = new() { Width = 110, Height = 26 };
     private readonly TextBox _txtName = new() { Width = 220, Height = 26 };
     private readonly TextBox _txtPhone = new() { Width = 130, Height = 26 };

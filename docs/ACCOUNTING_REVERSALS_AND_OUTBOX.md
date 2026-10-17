@@ -23,3 +23,22 @@ Webhook dispatch is the only active channel. EMAIL and SMS stay queued/retry and
 ## Validation performed
 
 The SQLite migration sequence was applied to an in-memory database. A database-level smoke test exercised the reversal schema, balanced swapped lines, original status transition, duplicate-reversal prevention, and stale outbox recovery. A C# build and a live PostgreSQL integration test still need to be run in an environment with the .NET SDK and PostgreSQL available.
+
+## Database-enforced journal invariants (SQLite migration 026)
+
+`dba/mig/sqlite/026_journal_integrity.sql` enforces in the database (not only in services):
+
+- posting requires at least one line and total debit = total credit (rounded to 6 decimals);
+- lines of posted or reversed entries cannot be added, edited or deleted;
+- status moves only draft → posted → reversed (no un-posting, no re-posting, no reversing a draft);
+- posted/reversed entries keep date, description, company, fiscal period and creator, and cannot be deleted.
+
+Verified by `tests/sql/test_journal_integrity.py` (run in the migration smoke workflow). **Not yet done:** the PostgreSQL equivalent — PostgreSQL currently relies on application-layer checks for these rules. Existing posted entries that were unbalanced before this migration are not rewritten; the triggers only guard future changes.
+
+## Invoice → General Ledger posting (migration 030, `GlPost`)
+
+- `gl_account_defaults(company_id, role, account_id)` maps roles AR, AP, SALES, SALES_RETURN, TAX_OUT, TAX_IN, INVENTORY, COGS to `chart_of_accounts`.
+- `InvRepo.Post` calls `GlPost.Post` inside the same transaction for sales/purchase invoices and returns; reversals reuse this path via the return document.
+- No defaults configured → no journal entry (legacy behavior). Partial defaults, duplicate reference or no open fiscal period → posting is blocked.
+- Entries are inserted as draft then set to posted so the 026 integrity triggers (balanced, immutable) apply.
+- Verified against real SQLite and PostgreSQL with a throwaway harness (not committed). There is no settings window yet; defaults are set via SQL. POS, stock documents and quotations create no GL entry.

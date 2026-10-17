@@ -38,7 +38,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
         command.Parameters.Add(parameter);
     }
 
-    private static string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
+    private string FormatGuid(Guid guid) => _provider == "PostgreSQL" ? guid.ToString() : guid.ToString("D");
 
     private static DbCommand CreateCommand(DbConnection connection, DbTransaction? transaction, string commandText)
     {
@@ -221,7 +221,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
                     is_active = @isActive,
                     modified_at = @modifiedAt,
                     modified_by = @modifiedBy
-                WHERE cost_center_id = @id";
+                WHERE cost_center_id = @id");
 
             Add(updateCmd, "@id", FormatGuid(costCenter.Id));
             Add(updateCmd, "@nameAr", costCenter.NameAr);
@@ -433,7 +433,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
             FROM cost_centers
             WHERE company_id = @company AND is_deleted = " +
             (_provider == "PostgreSQL" ? "false" : "0") +
-            " AND (cost_center_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search)
+            @" AND (cost_center_code LIKE @search OR name_ar LIKE @search OR name_en LIKE @search)
             ORDER BY name_ar
             LIMIT @limit";
 
@@ -464,7 +464,7 @@ public sealed class CostCenterRepository : ICostCenterRepository
         return Convert.ToInt32(await command.ExecuteScalarAsync(ct).ConfigureAwait(false), CultureInfo.InvariantCulture);
     }
 
-    private CostCenterSnapshot MapCostCenterSnapshot(IDataReader reader)
+    private CostCenterSnapshot MapCostCenterSnapshot(DbDataReader reader)
     {
         var costCenterId = Guid.Parse(Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture)!);
         var companyId = Guid.Parse(Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture)!);
@@ -477,11 +477,11 @@ public sealed class CostCenterRepository : ICostCenterRepository
         var createdAt = _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(8)
             : DateTime.Parse(Convert.ToString(reader.GetValue(8), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var createdBy = reader.IsDBNull(9) ? null : Guid.Parse(Convert.ToString(reader.GetValue(9), CultureInfo.InvariantCulture)!);
-        var modifiedAt = reader.IsDBNull(10) ? null : _provider == "PostgreSQL"
+        var createdBy = reader.IsDBNull(9) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(9), CultureInfo.InvariantCulture)!);
+        var modifiedAt = reader.IsDBNull(10) ? (DateTime?)null : _provider == "PostgreSQL"
             ? reader.GetFieldValue<DateTime>(10)
             : DateTime.Parse(Convert.ToString(reader.GetValue(10), CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
-        var modifiedBy = reader.IsDBNull(11) ? null : Guid.Parse(Convert.ToString(reader.GetValue(11), CultureInfo.InvariantCulture)!);
+        var modifiedBy = reader.IsDBNull(11) ? (Guid?)null : Guid.Parse(Convert.ToString(reader.GetValue(11), CultureInfo.InvariantCulture)!);
 
         return new CostCenterSnapshot(
             costCenterId,
@@ -522,19 +522,14 @@ public static class CostCenterRepositoryExtensions
         if (snapshot == null)
             return null;
 
-        return new CostCenter(
+        var entity = new CostCenter(
             snapshot.CompanyId,
             snapshot.Code,
             snapshot.NameAr,
             snapshot.NameEn,
             snapshot.Description,
-            snapshot.IsActive)
-        {
-            Id = snapshot.Id,
-            CreatedAt = snapshot.CreatedAt,
-            CreatedBy = snapshot.CreatedBy,
-            ModifiedAt = snapshot.ModifiedAt,
-            ModifiedBy = snapshot.ModifiedBy
-        };
+            snapshot.IsActive);
+        entity.Rehydrate(snapshot.Id, snapshot.CreatedAt, snapshot.CreatedBy, snapshot.ModifiedAt, snapshot.ModifiedBy);
+        return entity;
     }
 }
