@@ -84,7 +84,7 @@ namespace ShouTech.App.Views.Modules
                 foreach (var col in _vm.Definition.VisibleColumns)
                 {
                     var isArabic = string.Equals(
-                        App.CurrentLanguageCode?.Trim(),
+                        ShouTech.App.App.CurrentLanguageCode?.Trim(),
                         "ar",
                         System.StringComparison.OrdinalIgnoreCase);
                     var localizedCaption = isArabic
