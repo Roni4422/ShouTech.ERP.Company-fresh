@@ -1513,5 +1513,14 @@
     "severity": "Warning",
     "catalogRef": "COMPANY_RESTORE.SELECT.001",
     "location": "COMPANY_RESTORE.SELECT"
+  },
+  "CO-CREATE-WH-001": {
+    "type": "System",
+    "name": "CompanyDefaultWarehouseFailed",
+    "message": "The company was created, but its default warehouse could not be initialized. Check the application log and create or repair the warehouse before posting inventory transactions.",
+    "messageKey": "Errors.CO-CREATE-WH-001",
+    "severity": "Error",
+    "catalogRef": "COMPANY.CREATE.WAREHOUSE.001",
+    "location": "COMPANY.CREATE.WAREHOUSE"
   }
 }
