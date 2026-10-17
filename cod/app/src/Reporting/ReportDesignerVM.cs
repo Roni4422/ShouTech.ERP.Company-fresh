@@ -403,7 +403,7 @@ namespace ShouTech.App.Reporting
                     StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-002");
                     return false;
                 }
-                if (!CompiledFormula.TryCompile(col.FormulaText, out var err))
+                if (!CompiledFormula.TryCompile(col.FormulaText, out _))
                 {
                     StatusMessage = ErrorCatalog.Get("RPT-VALIDATE-003");
                     return false;
