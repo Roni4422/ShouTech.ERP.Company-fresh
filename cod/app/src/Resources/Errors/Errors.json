@@ -1504,5 +1504,14 @@
     "severity": "Error",
     "catalogRef": "COMPANY.LOGIN.OPEN.001",
     "location": "COMPANY.LOGIN.OPEN"
+  },
+  "RCO-SELECT-001": {
+    "type": "Validation",
+    "name": "DeletedCompanySelectionRequired",
+    "message": "Select a deleted company before attempting to restore it.",
+    "messageKey": "Errors.RCO-SELECT-001",
+    "severity": "Warning",
+    "catalogRef": "COMPANY_RESTORE.SELECT.001",
+    "location": "COMPANY_RESTORE.SELECT"
   }
 }
