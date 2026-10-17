@@ -15,6 +15,7 @@ using System.Windows.Threading;
 using ShouTech.App.Common;
 using ShouTech.App.Configuration;
 using ShouTech.App.Services;
+using ShouTech.App.Localization;
 
 namespace ShouTech.App.Views
 {
@@ -1435,7 +1436,29 @@ namespace ShouTech.App.Views
                     await AppHost.CompanyCreation
                         .CreateAsync(request);
 
-                if (result.Success)
+                if (result.PartialFailure)
+                {
+                    AppHost.Logging.LogWarning(
+                        "CompanyCreation",
+                        $"Partial company creation: code={result.ErrorCode}; company={result.CompanyCode}");
+
+                    CompletedSuccessfully = true;
+                    CreatedCompanyCode = result.CompanyCode;
+
+                    MessageBox.Show(
+                        string.IsNullOrWhiteSpace(result.ErrorCode)
+                            ? result.Message
+                            : ErrorCatalog.Get(result.ErrorCode),
+                        "ShouTech ERP",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    // A partial result may already have created local/database records.
+                    // Close the wizard to prevent duplicate creation on a blind retry.
+                    _isSaving = false;
+                    CompleteWizard();
+                }
+                else if (result.Success)
                 {
                     AppHost.Logging.LogInfo(
                         "CompanyCreation",
