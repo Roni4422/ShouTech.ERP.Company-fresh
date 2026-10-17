@@ -3,691 +3,806 @@
     "type": "System",
     "name": "UnknownSystemError",
     "message": "Unknown System Error",
-    "messageKey": "Errors.SYS-1000"
+    "messageKey": "Errors.SYS-1000",
+    "location": "SYS.GENERAL"
   },
   "SYS-1001": {
     "type": "System",
     "name": "UnhandledException",
     "message": "Unhandled Exception",
-    "messageKey": "Errors.SYS-1001"
+    "messageKey": "Errors.SYS-1001",
+    "location": "SYS.GENERAL"
   },
   "SYS-1002": {
     "type": "System",
     "name": "UnobservedTaskException",
     "message": "Unobserved Task Exception",
-    "messageKey": "Errors.SYS-1002"
+    "messageKey": "Errors.SYS-1002",
+    "location": "SYS.GENERAL"
   },
   "SYS-1003": {
     "type": "System",
     "name": "DispatcherException",
     "message": "Dispatcher Exception",
-    "messageKey": "Errors.SYS-1003"
+    "messageKey": "Errors.SYS-1003",
+    "location": "SYS.GENERAL"
   },
   "SYS-1004": {
     "type": "System",
     "name": "StartupInitializationFailed",
     "message": "Startup Initialization Failed",
-    "messageKey": "Errors.SYS-1004"
+    "messageKey": "Errors.SYS-1004",
+    "location": "SYS.GENERAL"
   },
   "SYS-1010": {
     "type": "System",
     "name": "ConfigFileLoadFailed",
     "message": "Config File Load Failed",
-    "messageKey": "Errors.SYS-1010"
+    "messageKey": "Errors.SYS-1010",
+    "location": "SYS.GENERAL"
   },
   "SYS-1011": {
     "type": "System",
     "name": "UserPrefFileLoadFailed",
     "message": "User Pref File Load Failed",
-    "messageKey": "Errors.SYS-1011"
+    "messageKey": "Errors.SYS-1011",
+    "location": "SYS.GENERAL"
   },
   "SYS-1012": {
     "type": "System",
     "name": "ConfigFileWriteFailed",
     "message": "Config File Write Failed",
-    "messageKey": "Errors.SYS-1012"
+    "messageKey": "Errors.SYS-1012",
+    "location": "SYS.GENERAL"
   },
   "SYS-1013": {
     "type": "System",
     "name": "ConfigFileCorrupted",
     "message": "Config File Corrupted",
-    "messageKey": "Errors.SYS-1013"
+    "messageKey": "Errors.SYS-1013",
+    "location": "SYS.GENERAL"
   },
   "SYS-1014": {
     "type": "System",
     "name": "ResourceFileMissing",
     "message": "Resource File Missing",
-    "messageKey": "Errors.SYS-1014"
+    "messageKey": "Errors.SYS-1014",
+    "location": "SYS.GENERAL"
   },
   "SYS-1020": {
     "type": "System",
     "name": "DatabaseConnectionFailed",
     "message": "Database Connection Failed",
-    "messageKey": "Errors.SYS-1020"
+    "messageKey": "Errors.SYS-1020",
+    "location": "SYS.GENERAL"
   },
   "SYS-1021": {
     "type": "System",
     "name": "DatabaseQueryFailed",
     "message": "Database Query Failed",
-    "messageKey": "Errors.SYS-1021"
+    "messageKey": "Errors.SYS-1021",
+    "location": "SYS.GENERAL"
   },
   "SYS-1022": {
     "type": "System",
     "name": "DatabaseIntegrityCheckFailed",
     "message": "Database Integrity Check Failed",
-    "messageKey": "Errors.SYS-1022"
+    "messageKey": "Errors.SYS-1022",
+    "location": "SYS.GENERAL"
   },
   "SYS-1023": {
     "type": "System",
     "name": "DatabaseTimeout",
     "message": "Database Timeout",
-    "messageKey": "Errors.SYS-1023"
+    "messageKey": "Errors.SYS-1023",
+    "location": "SYS.GENERAL"
   },
   "SYS-1024": {
     "type": "System",
     "name": "DatabaseMigrationFailed",
     "message": "Database Migration Failed",
-    "messageKey": "Errors.SYS-1024"
+    "messageKey": "Errors.SYS-1024",
+    "location": "SYS.GENERAL"
   },
   "SYS-1030": {
     "type": "System",
     "name": "BackupFileInvalid",
     "message": "Backup File Invalid",
-    "messageKey": "Errors.SYS-1030"
+    "messageKey": "Errors.SYS-1030",
+    "location": "SYS.GENERAL"
   },
   "SYS-1031": {
     "type": "System",
     "name": "BackupSignatureInvalid",
     "message": "Backup Signature Invalid",
-    "messageKey": "Errors.SYS-1031"
+    "messageKey": "Errors.SYS-1031",
+    "location": "SYS.GENERAL"
   },
   "SYS-1032": {
     "type": "System",
     "name": "RestoreFailed",
     "message": "Restore Failed",
-    "messageKey": "Errors.SYS-1032"
+    "messageKey": "Errors.SYS-1032",
+    "location": "SYS.GENERAL"
   },
   "SYS-1033": {
     "type": "System",
     "name": "ExportFailed",
     "message": "Export Failed",
-    "messageKey": "Errors.SYS-1033"
+    "messageKey": "Errors.SYS-1033",
+    "location": "SYS.GENERAL"
   },
   "SYS-1034": {
     "type": "System",
     "name": "ImportFailed",
     "message": "Import Failed",
-    "messageKey": "Errors.SYS-1034"
+    "messageKey": "Errors.SYS-1034",
+    "location": "SYS.GENERAL"
   },
   "SYS-1040": {
     "type": "System",
     "name": "LicenseFileInvalid",
     "message": "License File Invalid",
-    "messageKey": "Errors.SYS-1040"
+    "messageKey": "Errors.SYS-1040",
+    "location": "SYS.GENERAL"
   },
   "SYS-1041": {
     "type": "System",
     "name": "SecurityIntegrityViolation",
     "message": "Security Integrity Violation",
-    "messageKey": "Errors.SYS-1041"
+    "messageKey": "Errors.SYS-1041",
+    "location": "SYS.GENERAL"
   },
   "SYS-1042": {
     "type": "System",
     "name": "LicenseExpired",
     "message": "License Expired",
-    "messageKey": "Errors.SYS-1042"
+    "messageKey": "Errors.SYS-1042",
+    "location": "SYS.GENERAL"
   },
   "SYS-1043": {
     "type": "System",
     "name": "EncryptionKeyMissing",
     "message": "Encryption Key Missing",
-    "messageKey": "Errors.SYS-1043"
+    "messageKey": "Errors.SYS-1043",
+    "location": "SYS.GENERAL"
   },
   "SYS-1044": {
     "type": "System",
     "name": "DecryptionFailed",
     "message": "Decryption Failed",
-    "messageKey": "Errors.SYS-1044"
+    "messageKey": "Errors.SYS-1044",
+    "location": "SYS.GENERAL"
   },
   "SYS-1050": {
     "type": "System",
     "name": "WindowLoadFailed",
     "message": "Window Load Failed",
-    "messageKey": "Errors.SYS-1050"
+    "messageKey": "Errors.SYS-1050",
+    "location": "SYS.GENERAL"
   },
   "SYS-1051": {
     "type": "System",
     "name": "LanguageResourceLoadFailed",
     "message": "Language Resource Load Failed",
-    "messageKey": "Errors.SYS-1051"
+    "messageKey": "Errors.SYS-1051",
+    "location": "SYS.GENERAL"
   },
   "SYS-1052": {
     "type": "System",
     "name": "ThemeResourceMissing",
     "message": "Theme Resource Missing",
-    "messageKey": "Errors.SYS-1052"
+    "messageKey": "Errors.SYS-1052",
+    "location": "SYS.GENERAL"
   },
   "SYS-1053": {
     "type": "System",
     "name": "XamlParseFailed",
     "message": "Xaml Parse Failed",
-    "messageKey": "Errors.SYS-1053"
+    "messageKey": "Errors.SYS-1053",
+    "location": "SYS.GENERAL"
   },
   "SYS-1054": {
     "type": "System",
     "name": "NavigationFailed",
     "message": "Navigation Failed",
-    "messageKey": "Errors.SYS-1054"
+    "messageKey": "Errors.SYS-1054",
+    "location": "SYS.GENERAL"
   },
   "SYS-1060": {
     "type": "System",
     "name": "NetworkUnavailable",
     "message": "Network Unavailable",
-    "messageKey": "Errors.SYS-1060"
+    "messageKey": "Errors.SYS-1060",
+    "location": "SYS.GENERAL"
   },
   "SYS-1061": {
     "type": "System",
     "name": "CloudSyncFailed",
     "message": "Cloud Sync Failed",
-    "messageKey": "Errors.SYS-1061"
+    "messageKey": "Errors.SYS-1061",
+    "location": "SYS.GENERAL"
   },
   "SYS-1062": {
     "type": "System",
     "name": "ApiRequestFailed",
     "message": "Api Request Failed",
-    "messageKey": "Errors.SYS-1062"
+    "messageKey": "Errors.SYS-1062",
+    "location": "SYS.GENERAL"
   },
   "SYS-1063": {
     "type": "System",
     "name": "ApiTimeout",
     "message": "Api Timeout",
-    "messageKey": "Errors.SYS-1063"
+    "messageKey": "Errors.SYS-1063",
+    "location": "SYS.GENERAL"
   },
   "SYS-1064": {
     "type": "System",
     "name": "ServerUnreachable",
     "message": "Server Unreachable",
-    "messageKey": "Errors.SYS-1064"
+    "messageKey": "Errors.SYS-1064",
+    "location": "SYS.GENERAL"
   },
   "SYS-1070": {
     "type": "System",
     "name": "ReportGenerationFailed",
     "message": "Report Generation Failed",
-    "messageKey": "Errors.SYS-1070"
+    "messageKey": "Errors.SYS-1070",
+    "location": "SYS.GENERAL"
   },
   "SYS-1071": {
     "type": "System",
     "name": "ReportTemplateMissing",
     "message": "Report Template Missing",
-    "messageKey": "Errors.SYS-1071"
+    "messageKey": "Errors.SYS-1071",
+    "location": "SYS.GENERAL"
   },
   "SYS-1072": {
     "type": "System",
     "name": "PrintSpoolerError",
     "message": "Print Spooler Error",
-    "messageKey": "Errors.SYS-1072"
+    "messageKey": "Errors.SYS-1072",
+    "location": "SYS.GENERAL"
   },
   "SYS-1073": {
     "type": "System",
     "name": "PrinterNotFound",
     "message": "Printer Not Found",
-    "messageKey": "Errors.SYS-1073"
+    "messageKey": "Errors.SYS-1073",
+    "location": "SYS.GENERAL"
   },
   "SYS-1074": {
     "type": "System",
     "name": "PdfExportFailed",
     "message": "Pdf Export Failed",
-    "messageKey": "Errors.SYS-1074"
+    "messageKey": "Errors.SYS-1074",
+    "location": "SYS.GENERAL"
   },
   "SYS-1080": {
     "type": "System",
     "name": "ScheduledBackupFailed",
     "message": "Scheduled Backup Failed",
-    "messageKey": "Errors.SYS-1080"
+    "messageKey": "Errors.SYS-1080",
+    "location": "SYS.GENERAL"
   },
   "SYS-1081": {
     "type": "System",
     "name": "RestorePointNotFound",
     "message": "Restore Point Not Found",
-    "messageKey": "Errors.SYS-1081"
+    "messageKey": "Errors.SYS-1081",
+    "location": "SYS.GENERAL"
   },
   "SYS-1082": {
     "type": "System",
     "name": "ArchiveExtractionFailed",
     "message": "Archive Extraction Failed",
-    "messageKey": "Errors.SYS-1082"
+    "messageKey": "Errors.SYS-1082",
+    "location": "SYS.GENERAL"
   },
   "SYS-1083": {
     "type": "System",
     "name": "BackupTargetPathUnreachable",
     "message": "Backup Target Path Unreachable",
-    "messageKey": "Errors.SYS-1083"
+    "messageKey": "Errors.SYS-1083",
+    "location": "SYS.GENERAL"
   },
   "SYS-1084": {
     "type": "System",
     "name": "BackupCreationFailed",
     "message": "Backup Creation Failed",
-    "messageKey": "Errors.SYS-1084"
+    "messageKey": "Errors.SYS-1084",
+    "location": "SYS.GENERAL"
   },
   "SYS-1090": {
     "type": "System",
     "name": "DependencyInjectionResolutionFailed",
     "message": "Dependency Injection Resolution Failed",
-    "messageKey": "Errors.SYS-1090"
+    "messageKey": "Errors.SYS-1090",
+    "location": "SYS.GENERAL"
   },
   "SYS-1091": {
     "type": "System",
     "name": "ThreadingDeadlockDetected",
     "message": "Threading Deadlock Detected",
-    "messageKey": "Errors.SYS-1091"
+    "messageKey": "Errors.SYS-1091",
+    "location": "SYS.GENERAL"
   },
   "SYS-1092": {
     "type": "System",
     "name": "DiskSpaceInsufficient",
     "message": "Disk Space Insufficient",
-    "messageKey": "Errors.SYS-1092"
+    "messageKey": "Errors.SYS-1092",
+    "location": "SYS.GENERAL"
   },
   "SYS-1093": {
     "type": "System",
     "name": "FileAccessDenied",
     "message": "File Access Denied",
-    "messageKey": "Errors.SYS-1093"
+    "messageKey": "Errors.SYS-1093",
+    "location": "SYS.GENERAL"
   },
   "SYS-1094": {
     "type": "System",
     "name": "TempFileCreationFailed",
     "message": "Temp File Creation Failed",
-    "messageKey": "Errors.SYS-1094"
+    "messageKey": "Errors.SYS-1094",
+    "location": "SYS.GENERAL"
   },
   "USR-2000": {
     "type": "User",
     "name": "UnknownUserError",
     "message": "Unknown User Error",
-    "messageKey": "Errors.USR-2000"
+    "messageKey": "Errors.USR-2000",
+    "location": "USR.GENERAL"
   },
   "USR-2001": {
     "type": "User",
     "name": "InvalidLogin",
     "message": "Invalid Login",
-    "messageKey": "Errors.USR-2001"
+    "messageKey": "Errors.USR-2001",
+    "location": "USR.GENERAL"
   },
   "USR-2002": {
     "type": "User",
     "name": "SessionExpired",
     "message": "Session Expired",
-    "messageKey": "Errors.USR-2002"
+    "messageKey": "Errors.USR-2002",
+    "location": "USR.GENERAL"
   },
   "USR-2003": {
     "type": "User",
     "name": "AccountLocked",
     "message": "Account Locked",
-    "messageKey": "Errors.USR-2003"
+    "messageKey": "Errors.USR-2003",
+    "location": "USR.GENERAL"
   },
   "USR-2004": {
     "type": "User",
     "name": "PasswordExpired",
     "message": "Password Expired",
-    "messageKey": "Errors.USR-2004"
+    "messageKey": "Errors.USR-2004",
+    "location": "USR.GENERAL"
   },
   "USR-2005": {
     "type": "User",
     "name": "TooManyFailedAttempts",
     "message": "Too Many Failed Attempts",
-    "messageKey": "Errors.USR-2005"
+    "messageKey": "Errors.USR-2005",
+    "location": "USR.GENERAL"
   },
   "USR-2006": {
     "type": "User",
     "name": "UserInactive",
     "message": "User Inactive",
-    "messageKey": "Errors.USR-2006"
+    "messageKey": "Errors.USR-2006",
+    "location": "USR.GENERAL"
   },
   "USR-2007": {
     "type": "User",
     "name": "TwoFactorRequired",
     "message": "Two Factor Required",
-    "messageKey": "Errors.USR-2007"
+    "messageKey": "Errors.USR-2007",
+    "location": "USR.GENERAL"
   },
   "USR-2010": {
     "type": "User",
     "name": "RequiredFieldMissing",
     "message": "Required Field Missing",
-    "messageKey": "Errors.USR-2010"
+    "messageKey": "Errors.USR-2010",
+    "location": "USR.GENERAL"
   },
   "USR-2011": {
     "type": "User",
     "name": "InvalidFieldFormat",
     "message": "Invalid Field Format",
-    "messageKey": "Errors.USR-2011"
+    "messageKey": "Errors.USR-2011",
+    "location": "USR.GENERAL"
   },
   "USR-2012": {
     "type": "User",
     "name": "DuplicateRecord",
     "message": "Duplicate Record",
-    "messageKey": "Errors.USR-2012"
+    "messageKey": "Errors.USR-2012",
+    "location": "USR.GENERAL"
   },
   "USR-2013": {
     "type": "User",
     "name": "RecordNotFound",
     "message": "Record Not Found",
-    "messageKey": "Errors.USR-2013"
+    "messageKey": "Errors.USR-2013",
+    "location": "USR.GENERAL"
   },
   "USR-2014": {
     "type": "User",
     "name": "ValueOutOfRange",
     "message": "Value Out Of Range",
-    "messageKey": "Errors.USR-2014"
+    "messageKey": "Errors.USR-2014",
+    "location": "USR.GENERAL"
   },
   "USR-2015": {
     "type": "User",
     "name": "InvalidDateRange",
     "message": "Invalid Date Range",
-    "messageKey": "Errors.USR-2015"
+    "messageKey": "Errors.USR-2015",
+    "location": "USR.GENERAL"
   },
   "USR-2016": {
     "type": "User",
     "name": "InvalidEmailFormat",
     "message": "Invalid Email Format",
-    "messageKey": "Errors.USR-2016"
+    "messageKey": "Errors.USR-2016",
+    "location": "USR.GENERAL"
   },
   "USR-2017": {
     "type": "User",
     "name": "FieldTooLong",
     "message": "Field Too Long",
-    "messageKey": "Errors.USR-2017"
+    "messageKey": "Errors.USR-2017",
+    "location": "USR.GENERAL"
   },
   "USR-2020": {
     "type": "User",
     "name": "PermissionDenied",
     "message": "Permission Denied",
-    "messageKey": "Errors.USR-2020"
+    "messageKey": "Errors.USR-2020",
+    "location": "USR.GENERAL"
   },
   "USR-2021": {
     "type": "User",
     "name": "ActionBlockedByRole",
     "message": "Action Blocked By Role",
-    "messageKey": "Errors.USR-2021"
+    "messageKey": "Errors.USR-2021",
+    "location": "USR.GENERAL"
   },
   "USR-2022": {
     "type": "User",
     "name": "ModuleAccessDenied",
     "message": "Module Access Denied",
-    "messageKey": "Errors.USR-2022"
+    "messageKey": "Errors.USR-2022",
+    "location": "USR.GENERAL"
   },
   "USR-2023": {
     "type": "User",
     "name": "CompanyAccessDenied",
     "message": "Company Access Denied",
-    "messageKey": "Errors.USR-2023"
+    "messageKey": "Errors.USR-2023",
+    "location": "USR.GENERAL"
   },
   "USR-2024": {
     "type": "User",
     "name": "ReadOnlyModeActive",
     "message": "Read Only Mode Active",
-    "messageKey": "Errors.USR-2024"
+    "messageKey": "Errors.USR-2024",
+    "location": "USR.GENERAL"
   },
   "USR-2025": {
     "type": "User",
     "name": "CannotDeleteProtectedRecord",
     "message": "Cannot Delete Protected Record",
-    "messageKey": "Errors.USR-2025"
+    "messageKey": "Errors.USR-2025",
+    "location": "USR.GENERAL"
   },
   "USR-2026": {
     "type": "User",
     "name": "ApprovalRequired",
     "message": "Approval Required",
-    "messageKey": "Errors.USR-2026"
+    "messageKey": "Errors.USR-2026",
+    "location": "USR.GENERAL"
   },
   "USR-2030": {
     "type": "User",
     "name": "InvalidCompanySelection",
     "message": "Invalid Company Selection",
-    "messageKey": "Errors.USR-2030"
+    "messageKey": "Errors.USR-2030",
+    "location": "USR.GENERAL"
   },
   "USR-2031": {
     "type": "User",
     "name": "CompanyCodeAlreadyExists",
     "message": "Company Code Already Exists",
-    "messageKey": "Errors.USR-2031"
+    "messageKey": "Errors.USR-2031",
+    "location": "USR.GENERAL"
   },
   "USR-2032": {
     "type": "User",
     "name": "InvalidTaxNumber",
     "message": "Invalid Tax Number",
-    "messageKey": "Errors.USR-2032"
+    "messageKey": "Errors.USR-2032",
+    "location": "USR.GENERAL"
   },
   "USR-2033": {
     "type": "User",
     "name": "DatabasePathInvalid",
     "message": "Database Path Invalid",
-    "messageKey": "Errors.USR-2033"
+    "messageKey": "Errors.USR-2033",
+    "location": "USR.GENERAL"
   },
   "USR-2034": {
     "type": "User",
     "name": "AdminAccountAlreadyExists",
     "message": "Admin Account Already Exists",
-    "messageKey": "Errors.USR-2034"
+    "messageKey": "Errors.USR-2034",
+    "location": "USR.GENERAL"
   },
   "USR-2035": {
     "type": "User",
     "name": "InvalidLicenseKeyEntered",
     "message": "Invalid License Key Entered",
-    "messageKey": "Errors.USR-2035"
+    "messageKey": "Errors.USR-2035",
+    "location": "USR.GENERAL"
   },
   "USR-2040": {
     "type": "User",
     "name": "UnbalancedJournalEntry",
     "message": "Unbalanced Journal Entry",
-    "messageKey": "Errors.USR-2040"
+    "messageKey": "Errors.USR-2040",
+    "location": "USR.GENERAL"
   },
   "USR-2041": {
     "type": "User",
     "name": "FiscalPeriodClosed",
     "message": "Fiscal Period Closed",
-    "messageKey": "Errors.USR-2041"
+    "messageKey": "Errors.USR-2041",
+    "location": "USR.GENERAL"
   },
   "USR-2042": {
     "type": "User",
     "name": "AccountAlreadyExists",
     "message": "Account Already Exists",
-    "messageKey": "Errors.USR-2042"
+    "messageKey": "Errors.USR-2042",
+    "location": "USR.GENERAL"
   },
   "USR-2043": {
     "type": "User",
     "name": "NegativeBalanceNotAllowed",
     "message": "Negative Balance Not Allowed",
-    "messageKey": "Errors.USR-2043"
+    "messageKey": "Errors.USR-2043",
+    "location": "USR.GENERAL"
   },
   "USR-2044": {
     "type": "User",
     "name": "CurrencyMismatch",
     "message": "Currency Mismatch",
-    "messageKey": "Errors.USR-2044"
+    "messageKey": "Errors.USR-2044",
+    "location": "USR.GENERAL"
   },
   "USR-2045": {
     "type": "User",
     "name": "CannotDeletePostedEntry",
     "message": "Cannot Delete Posted Entry",
-    "messageKey": "Errors.USR-2045"
+    "messageKey": "Errors.USR-2045",
+    "location": "USR.GENERAL"
   },
   "USR-2046": {
     "type": "User",
     "name": "InvalidExchangeRate",
     "message": "Invalid Exchange Rate",
-    "messageKey": "Errors.USR-2046"
+    "messageKey": "Errors.USR-2046",
+    "location": "USR.GENERAL"
   },
   "USR-2050": {
     "type": "User",
     "name": "InsufficientStock",
     "message": "Insufficient Stock",
-    "messageKey": "Errors.USR-2050"
+    "messageKey": "Errors.USR-2050",
+    "location": "USR.GENERAL"
   },
   "USR-2051": {
     "type": "User",
     "name": "InvalidItemCode",
     "message": "Invalid Item Code",
-    "messageKey": "Errors.USR-2051"
+    "messageKey": "Errors.USR-2051",
+    "location": "USR.GENERAL"
   },
   "USR-2052": {
     "type": "User",
     "name": "DuplicateItemCode",
     "message": "Duplicate Item Code",
-    "messageKey": "Errors.USR-2052"
+    "messageKey": "Errors.USR-2052",
+    "location": "USR.GENERAL"
   },
   "USR-2053": {
     "type": "User",
     "name": "NegativeQuantityNotAllowed",
     "message": "Negative Quantity Not Allowed",
-    "messageKey": "Errors.USR-2053"
+    "messageKey": "Errors.USR-2053",
+    "location": "USR.GENERAL"
   },
   "USR-2054": {
     "type": "User",
     "name": "WarehouseNotSelected",
     "message": "Warehouse Not Selected",
-    "messageKey": "Errors.USR-2054"
+    "messageKey": "Errors.USR-2054",
+    "location": "USR.GENERAL"
   },
   "USR-2055": {
     "type": "User",
     "name": "UnitConversionInvalid",
     "message": "Unit Conversion Invalid",
-    "messageKey": "Errors.USR-2055"
+    "messageKey": "Errors.USR-2055",
+    "location": "USR.GENERAL"
   },
   "USR-2056": {
     "type": "User",
     "name": "BarcodeAlreadyAssigned",
     "message": "Barcode Already Assigned",
-    "messageKey": "Errors.USR-2056"
+    "messageKey": "Errors.USR-2056",
+    "location": "USR.GENERAL"
   },
   "USR-2060": {
     "type": "User",
     "name": "InvoiceAlreadyPaid",
     "message": "Invoice Already Paid",
-    "messageKey": "Errors.USR-2060"
+    "messageKey": "Errors.USR-2060",
+    "location": "USR.GENERAL"
   },
   "USR-2061": {
     "type": "User",
     "name": "InvalidDiscountValue",
     "message": "Invalid Discount Value",
-    "messageKey": "Errors.USR-2061"
+    "messageKey": "Errors.USR-2061",
+    "location": "USR.GENERAL"
   },
   "USR-2062": {
     "type": "User",
     "name": "CustomerCreditLimitExceeded",
     "message": "Customer Credit Limit Exceeded",
-    "messageKey": "Errors.USR-2062"
+    "messageKey": "Errors.USR-2062",
+    "location": "USR.GENERAL"
   },
   "USR-2063": {
     "type": "User",
     "name": "CashDrawerMismatch",
     "message": "Cash Drawer Mismatch",
-    "messageKey": "Errors.USR-2063"
+    "messageKey": "Errors.USR-2063",
+    "location": "USR.GENERAL"
   },
   "USR-2064": {
     "type": "User",
     "name": "ShiftAlreadyOpen",
     "message": "Shift Already Open",
-    "messageKey": "Errors.USR-2064"
+    "messageKey": "Errors.USR-2064",
+    "location": "USR.GENERAL"
   },
   "USR-2065": {
     "type": "User",
     "name": "ShiftNotOpen",
     "message": "Shift Not Open",
-    "messageKey": "Errors.USR-2065"
+    "messageKey": "Errors.USR-2065",
+    "location": "USR.GENERAL"
   },
   "USR-2066": {
     "type": "User",
     "name": "ReturnPeriodExpired",
     "message": "Return Period Expired",
-    "messageKey": "Errors.USR-2066"
+    "messageKey": "Errors.USR-2066",
+    "location": "USR.GENERAL"
   },
   "USR-2070": {
     "type": "User",
     "name": "SupplierNotSelected",
     "message": "Supplier Not Selected",
-    "messageKey": "Errors.USR-2070"
+    "messageKey": "Errors.USR-2070",
+    "location": "USR.GENERAL"
   },
   "USR-2071": {
     "type": "User",
     "name": "PurchaseOrderAlreadyClosed",
     "message": "Purchase Order Already Closed",
-    "messageKey": "Errors.USR-2071"
+    "messageKey": "Errors.USR-2071",
+    "location": "USR.GENERAL"
   },
   "USR-2072": {
     "type": "User",
     "name": "ReceivedQuantityMismatch",
     "message": "Received Quantity Mismatch",
-    "messageKey": "Errors.USR-2072"
+    "messageKey": "Errors.USR-2072",
+    "location": "USR.GENERAL"
   },
   "USR-2073": {
     "type": "User",
     "name": "InvalidPurchasePrice",
     "message": "Invalid Purchase Price",
-    "messageKey": "Errors.USR-2073"
+    "messageKey": "Errors.USR-2073",
+    "location": "USR.GENERAL"
   },
   "USR-2074": {
     "type": "User",
     "name": "DuplicateSupplierInvoiceNumber",
     "message": "Duplicate Supplier Invoice Number",
-    "messageKey": "Errors.USR-2074"
+    "messageKey": "Errors.USR-2074",
+    "location": "USR.GENERAL"
   },
   "USR-2080": {
     "type": "User",
     "name": "EmployeeAlreadyExists",
     "message": "Employee Already Exists",
-    "messageKey": "Errors.USR-2080"
+    "messageKey": "Errors.USR-2080",
+    "location": "USR.GENERAL"
   },
   "USR-2081": {
     "type": "User",
     "name": "InvalidNationalId",
     "message": "Invalid National Id",
-    "messageKey": "Errors.USR-2081"
+    "messageKey": "Errors.USR-2081",
+    "location": "USR.GENERAL"
   },
   "USR-2082": {
     "type": "User",
     "name": "LeaveBalanceInsufficient",
     "message": "Leave Balance Insufficient",
-    "messageKey": "Errors.USR-2082"
+    "messageKey": "Errors.USR-2082",
+    "location": "USR.GENERAL"
   },
   "USR-2083": {
     "type": "User",
     "name": "PayrollAlreadyProcessed",
     "message": "Payroll Already Processed",
-    "messageKey": "Errors.USR-2083"
+    "messageKey": "Errors.USR-2083",
+    "location": "USR.GENERAL"
   },
   "USR-2084": {
     "type": "User",
     "name": "InvalidSalaryStructure",
     "message": "Invalid Salary Structure",
-    "messageKey": "Errors.USR-2084"
+    "messageKey": "Errors.USR-2084",
+    "location": "USR.GENERAL"
   },
   "USR-2090": {
     "type": "User",
     "name": "CustomerAlreadyExists",
     "message": "Customer Already Exists",
-    "messageKey": "Errors.USR-2090"
+    "messageKey": "Errors.USR-2090",
+    "location": "USR.GENERAL"
   },
   "USR-2091": {
     "type": "User",
     "name": "LeadAlreadyConverted",
     "message": "Lead Already Converted",
-    "messageKey": "Errors.USR-2091"
+    "messageKey": "Errors.USR-2091",
+    "location": "USR.GENERAL"
   },
   "USR-2092": {
     "type": "User",
     "name": "DuplicateOpportunity",
     "message": "Duplicate Opportunity",
-    "messageKey": "Errors.USR-2092"
+    "messageKey": "Errors.USR-2092",
+    "location": "USR.GENERAL"
   },
   "USR-2100": {
     "type": "User",
     "name": "BomNotDefined",
     "message": "Bom Not Defined",
-    "messageKey": "Errors.USR-2100"
+    "messageKey": "Errors.USR-2100",
+    "location": "USR.GENERAL"
   },
   "USR-2101": {
     "type": "User",
     "name": "InsufficientRawMaterial",
     "message": "Insufficient Raw Material",
-    "messageKey": "Errors.USR-2101"
+    "messageKey": "Errors.USR-2101",
+    "location": "USR.GENERAL"
   },
   "INV-TRF-001": {
     "type": "User",
@@ -695,7 +810,8 @@
     "message": "Invalid Stock Transfer",
     "severity": "Warning",
     "catalogRef": "INVENTORY.TRANSFER.001",
-    "messageKey": "Errors.INV-TRF-001"
+    "messageKey": "Errors.INV-TRF-001",
+    "location": "INVENTORY.TRANSFER.001"
   },
   "INV-TRF-002": {
     "type": "System",
@@ -703,7 +819,8 @@
     "message": "Stock Transfer Context Unavailable",
     "severity": "Error",
     "catalogRef": "INVENTORY.TRANSFER.002",
-    "messageKey": "Errors.INV-TRF-002"
+    "messageKey": "Errors.INV-TRF-002",
+    "location": "INVENTORY.TRANSFER.002"
   },
   "INV-TRF-003": {
     "type": "System",
@@ -711,7 +828,8 @@
     "message": "Stock Transfer Load Failed",
     "severity": "Error",
     "catalogRef": "INVENTORY.TRANSFER.003",
-    "messageKey": "Errors.INV-TRF-003"
+    "messageKey": "Errors.INV-TRF-003",
+    "location": "INVENTORY.TRANSFER.003"
   },
   "INV-TRF-004": {
     "type": "User",
@@ -719,7 +837,8 @@
     "message": "Stock Transfer Insufficient Quantity",
     "severity": "Warning",
     "catalogRef": "INVENTORY.TRANSFER.004",
-    "messageKey": "Errors.INV-TRF-004"
+    "messageKey": "Errors.INV-TRF-004",
+    "location": "INVENTORY.TRANSFER.004"
   },
   "INV-TRF-005": {
     "type": "System",
@@ -727,7 +846,8 @@
     "message": "Stock Transfer Posting Failed",
     "severity": "Error",
     "catalogRef": "INVENTORY.TRANSFER.005",
-    "messageKey": "Errors.INV-TRF-005"
+    "messageKey": "Errors.INV-TRF-005",
+    "location": "INVENTORY.TRANSFER.005"
   },
   "INV-MRG-001": {
     "type": "User",
@@ -735,7 +855,8 @@
     "message": "Invalid Material History Move",
     "severity": "Warning",
     "catalogRef": "INVENTORY.MATERIAL_MOVE.001",
-    "messageKey": "Errors.INV-MRG-001"
+    "messageKey": "Errors.INV-MRG-001",
+    "location": "INVENTORY.MATERIAL_MOVE.001"
   },
   "INV-MRG-002": {
     "type": "System",
@@ -743,7 +864,8 @@
     "message": "Material History Move Context Unavailable",
     "severity": "Error",
     "catalogRef": "INVENTORY.MATERIAL_MOVE.002",
-    "messageKey": "Errors.INV-MRG-002"
+    "messageKey": "Errors.INV-MRG-002",
+    "location": "INVENTORY.MATERIAL_MOVE.002"
   },
   "INV-MRG-003": {
     "type": "User",
@@ -751,7 +873,8 @@
     "message": "Material History Unit Mismatch",
     "severity": "Warning",
     "catalogRef": "INVENTORY.MATERIAL_MOVE.003",
-    "messageKey": "Errors.INV-MRG-003"
+    "messageKey": "Errors.INV-MRG-003",
+    "location": "INVENTORY.MATERIAL_MOVE.003"
   },
   "INV-MRG-004": {
     "type": "User",
@@ -759,7 +882,8 @@
     "message": "Material History Not Found",
     "severity": "Warning",
     "catalogRef": "INVENTORY.MATERIAL_MOVE.004",
-    "messageKey": "Errors.INV-MRG-004"
+    "messageKey": "Errors.INV-MRG-004",
+    "location": "INVENTORY.MATERIAL_MOVE.004"
   },
   "INV-MRG-005": {
     "type": "System",
@@ -767,7 +891,8 @@
     "message": "Material History Move Failed",
     "severity": "Error",
     "catalogRef": "INVENTORY.MATERIAL_MOVE.005",
-    "messageKey": "Errors.INV-MRG-005"
+    "messageKey": "Errors.INV-MRG-005",
+    "location": "INVENTORY.MATERIAL_MOVE.005"
   },
   "INV-CNT-001": {
     "type": "User",
@@ -775,7 +900,8 @@
     "message": "Invalid Stock Count Input",
     "severity": "Warning",
     "catalogRef": "INVENTORY.COUNT.001",
-    "messageKey": "Errors.INV-CNT-001"
+    "messageKey": "Errors.INV-CNT-001",
+    "location": "INVENTORY.COUNT.001"
   },
   "INV-CNT-002": {
     "type": "System",
@@ -783,7 +909,8 @@
     "message": "Stock Count Load Failed",
     "severity": "Error",
     "catalogRef": "INVENTORY.COUNT.002",
-    "messageKey": "Errors.INV-CNT-002"
+    "messageKey": "Errors.INV-CNT-002",
+    "location": "INVENTORY.COUNT.002"
   },
   "INV-CNT-003": {
     "type": "System",
@@ -791,7 +918,8 @@
     "message": "Stock Count Posting Failed",
     "severity": "Error",
     "catalogRef": "INVENTORY.COUNT.003",
-    "messageKey": "Errors.INV-CNT-003"
+    "messageKey": "Errors.INV-CNT-003",
+    "location": "INVENTORY.COUNT.003"
   },
   "EXL-3000": {
     "type": "User",
@@ -799,7 +927,8 @@
     "message": "Clipboard Data Empty",
     "severity": "Warning",
     "catalogRef": "EXCEL.CLIPBOARD.001",
-    "messageKey": "Errors.EXL-3000"
+    "messageKey": "Errors.EXL-3000",
+    "location": "EXCEL.CLIPBOARD.001"
   },
   "EXL-3001": {
     "type": "User",
@@ -807,7 +936,8 @@
     "message": "Paste Row Type Unavailable",
     "severity": "Error",
     "catalogRef": "EXCEL.PASTE.001",
-    "messageKey": "Errors.EXL-3001"
+    "messageKey": "Errors.EXL-3001",
+    "location": "EXCEL.PASTE.001"
   },
   "EXL-3002": {
     "type": "User",
@@ -815,7 +945,8 @@
     "message": "Paste Too Many Columns",
     "severity": "Error",
     "catalogRef": "EXCEL.PASTE.002",
-    "messageKey": "Errors.EXL-3002"
+    "messageKey": "Errors.EXL-3002",
+    "location": "EXCEL.PASTE.002"
   },
   "EXL-3003": {
     "type": "User",
@@ -823,7 +954,8 @@
     "message": "Paste Column Read Only",
     "severity": "Error",
     "catalogRef": "EXCEL.PASTE.003",
-    "messageKey": "Errors.EXL-3003"
+    "messageKey": "Errors.EXL-3003",
+    "location": "EXCEL.PASTE.003"
   },
   "EXL-3004": {
     "type": "User",
@@ -831,7 +963,8 @@
     "message": "Paste Invalid Value",
     "severity": "Error",
     "catalogRef": "EXCEL.PASTE.004",
-    "messageKey": "Errors.EXL-3004"
+    "messageKey": "Errors.EXL-3004",
+    "location": "EXCEL.PASTE.004"
   },
   "EXL-3005": {
     "type": "User",
@@ -839,7 +972,8 @@
     "message": "Paste Insert Not Supported",
     "severity": "Error",
     "catalogRef": "EXCEL.PASTE.005",
-    "messageKey": "Errors.EXL-3005"
+    "messageKey": "Errors.EXL-3005",
+    "location": "EXCEL.PASTE.005"
   },
   "EXL-3006": {
     "type": "User",
@@ -847,7 +981,8 @@
     "message": "Excel Import Failed",
     "severity": "Error",
     "catalogRef": "EXCEL.IMPORT.001",
-    "messageKey": "Errors.EXL-3006"
+    "messageKey": "Errors.EXL-3006",
+    "location": "EXCEL.IMPORT.001"
   },
   "EXL-3007": {
     "type": "User",
@@ -855,7 +990,8 @@
     "message": "Excel Map Invalid",
     "severity": "Error",
     "catalogRef": "EXCEL.IMPORT.002",
-    "messageKey": "Errors.EXL-3007"
+    "messageKey": "Errors.EXL-3007",
+    "location": "EXCEL.IMPORT.002"
   },
   "EXL-3008": {
     "type": "User",
@@ -863,7 +999,8 @@
     "message": "Excel Field Not Mapped",
     "severity": "Error",
     "catalogRef": "EXCEL.IMPORT.003",
-    "messageKey": "Errors.EXL-3008"
+    "messageKey": "Errors.EXL-3008",
+    "location": "EXCEL.IMPORT.003"
   },
   "EXL-3009": {
     "type": "User",
@@ -871,7 +1008,8 @@
     "message": "Excel Cell Invalid",
     "severity": "Error",
     "catalogRef": "EXCEL.IMPORT.004",
-    "messageKey": "Errors.EXL-3009"
+    "messageKey": "Errors.EXL-3009",
+    "location": "EXCEL.IMPORT.004"
   },
   "EXL-3010": {
     "type": "User",
@@ -879,7 +1017,8 @@
     "message": "Excel Duplicate Identity",
     "severity": "Error",
     "catalogRef": "EXCEL.IMPORT.005",
-    "messageKey": "Errors.EXL-3010"
+    "messageKey": "Errors.EXL-3010",
+    "location": "EXCEL.IMPORT.005"
   },
   "EXL-3011": {
     "type": "System",
@@ -887,7 +1026,8 @@
     "message": "Excel Export Failed",
     "severity": "Error",
     "catalogRef": "EXCEL.EXPORT.001",
-    "messageKey": "Errors.EXL-3011"
+    "messageKey": "Errors.EXL-3011",
+    "location": "EXCEL.EXPORT.001"
   },
   "EXL-3012": {
     "type": "System",
@@ -895,20 +1035,23 @@
     "message": "Error Catalog Unavailable",
     "severity": "Critical",
     "catalogRef": "CATALOG.001",
-    "messageKey": "Errors.EXL-3012"
-  }
-  ,"APP-2010": {
+    "messageKey": "Errors.EXL-3012",
+    "location": "CATALOG.001"
+  },
+  "APP-2010": {
     "type": "System",
     "name": "WindowPersistenceUnavailable",
     "message": "This window does not yet support database persistence.",
     "severity": "Error",
-    "catalogRef": "APPLICATION.PERSISTENCE.010"
+    "catalogRef": "APPLICATION.PERSISTENCE.010",
+    "location": "APPLICATION.PERSISTENCE.010"
   },
   "APP-2011": {
     "type": "System",
     "name": "WindowOperationUnavailable",
     "message": "This operation is not implemented in the current window.",
     "severity": "Error",
-    "catalogRef": "APPLICATION.OPERATION.011"
+    "catalogRef": "APPLICATION.OPERATION.011",
+    "location": "APPLICATION.OPERATION.011"
   }
 }
