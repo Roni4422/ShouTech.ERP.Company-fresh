@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Threading.Tasks;
+using ShouTech.App.Services;
 
 namespace ShouTech.App.Views;
 
@@ -288,7 +289,7 @@ public sealed class CstCard : BaseWin
             var record = ReadCard();
             await CustomerCardSvc.SaveAsync(record);
             _txtCode.Text = record.Code.Trim();
-            MessageBox.Show(this, T("CustCard.SaveSuccess"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, T("CustCard.Saved"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -367,7 +368,7 @@ public sealed class CstCard : BaseWin
                 return;
             }
 
-            MessageBox.Show(this, T("CustCard.DeleteSuccess"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, T("CustCard.Deleted"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
             ResetCard();
         }
         catch (Exception ex)
