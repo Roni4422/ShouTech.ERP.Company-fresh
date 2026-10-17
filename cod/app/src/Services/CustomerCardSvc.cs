@@ -173,7 +173,7 @@ public static class CustomerCardSvc
                     """;
                 Add(update, "@company", companyId);
                 Add(update, "@id", existingId);
-                BindCustomer(update, customer);
+                BindCustomer(update, customer, includeCode: false);
                 Add(update, "@modifiedAt", now);
                 Add(update, "@modifiedBy", ActorValue());
                 var affected = await update.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -324,9 +324,10 @@ public static class CustomerCardSvc
         throw new CustomerCardException(ErrorCodes.CustomerContextFailed, "The active company identifier is invalid.");
     }
 
-    private static void BindCustomer(DbCommand command, CustomerCardRecord customer)
+    private static void BindCustomer(DbCommand command, CustomerCardRecord customer, bool includeCode = true)
     {
-        Add(command, "@code", customer.Code.Trim());
+        if (includeCode)
+            Add(command, "@code", customer.Code.Trim());
         Add(command, "@nameAr", customer.NameAr.Trim());
         Add(command, "@nameEn", customer.NameEn.Trim());
         Add(command, "@type", customer.Type);
