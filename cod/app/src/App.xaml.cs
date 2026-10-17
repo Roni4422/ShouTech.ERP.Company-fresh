@@ -693,6 +693,7 @@ namespace ShouTech.App
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("App", "APP-START-003: Startup splash flow failed.", ex);
                 try
                 {
                     MessageBox.Show(
@@ -731,6 +732,7 @@ namespace ShouTech.App
             }
             catch (Exception ex)
             {
+                AppHost.Logging?.LogError("App", "APP-START-004: Splash screen initialization failed.", ex);
                 try
                 {
                     MessageBox.Show(
