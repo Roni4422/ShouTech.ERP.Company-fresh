@@ -30,6 +30,8 @@ jobs:
         run: python3 -I tests/sql/test_financial_views.py
       - name: Verify journal integrity invariants (balanced posting, immutability, status transitions)
         run: python3 -I tests/sql/test_journal_integrity.py
+      - name: General database tests (migrations, views, GL defaults, reconciliation)
+        run: python3 -I tests/sql/test_general.py
       - name: Re-run migrations against the same SQLite database
         run: dotnet run --project tools/SqlMigrator/SqlMigrator.csproj -- --provider sqlite --connection "Data Source=$RUNNER_TEMP/shoutech-fresh.db"
       - name: Assert journal header columns exist in SQLite
